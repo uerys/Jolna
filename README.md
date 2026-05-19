@@ -1,6 +1,6 @@
 # Recovry
 
-Recovry is a rehabilitation platform built with React, Vite, Express, tRPC, Drizzle, and MySQL.
+Recovry is a physiotherapy rehab platform a capstone for paragon university.
 
 ## Requirements
 
