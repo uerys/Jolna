@@ -52,6 +52,27 @@ pnpm dev
 
 The app runs on the localhost URL printed in the terminal, usually `http://localhost:3000`.
 
+## Docker Compose (Backend + DB)
+
+The repository includes a `docker-compose.yml` stack with:
+
+- `backend`: Node.js production container on port `3000`
+- `db`: MySQL 8.4 on port `3306`
+
+For local Docker:
+
+```bash
+docker compose up -d --build
+```
+
+For Portainer Stack deployment, set at least:
+
+- `JWT_SECRET` (required, long random value)
+- `MYSQL_ROOT_PASSWORD` (recommended override from default)
+- `MYSQL_DATABASE` (optional, defaults to `appdb`)
+
+Then deploy the stack from this repository and expose port `3000` for the app.
+
 ## Demo Credentials
 
 The seed script creates the following local accounts, all using the same password:
