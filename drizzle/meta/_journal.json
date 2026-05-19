@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777048006293,
+      "tag": "0000_secret_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777048660721,
+      "tag": "0001_long_pete_wisdom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779124351909,
+      "tag": "0002_optimal_the_liberteens",
+      "breakpoints": true
+    }
+  ]
+}
