@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import AdminUsers from "./pages/admin/Users";
 import PhysioDashboard from "./pages/physio/Dashboard";
 import PhysioClientDetail from "./pages/physio/ClientDetail";
+import Profile from "./pages/Profile";
 import ClientToday from "./pages/client/Today";
 import ClientHistory from "./pages/client/History";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
+      <Route path={"/profile"} component={Profile} />
 
       {/* Admin */}
       <Route path={"/admin/users"} component={AdminUsers} />

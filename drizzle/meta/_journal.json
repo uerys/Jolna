@@ -22,6 +22,20 @@
       "when": 1779124351909,
       "tag": "0002_optimal_the_liberteens",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1779264336986,
+      "tag": "0003_conscious_maverick",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1779269000000,
+      "tag": "0004_profile_avatar_longtext",
+      "breakpoints": true
     }
   ]
 }

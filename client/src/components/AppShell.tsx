@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -49,6 +50,7 @@ export default function AppShell({ children, sidebar }: Props) {
   
   // Filter out current user from targets
   const otherUsers = (targets.data ?? []).filter((t) => t.id !== user?.id);
+  const userInitials = (user?.name ?? user?.email ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "U";
   
   const impersonate = trpc.dev.impersonate.useMutation({
     onSuccess: async () => {
@@ -103,6 +105,7 @@ export default function AppShell({ children, sidebar }: Props) {
                   — the server returns empty in production or for non-admins). */}
               {otherUsers.length > 0 && (
                 <Select
+                  value={impersonating ? String(user?.id ?? "") : "__switch"}
                   onValueChange={(v) => {
                     if (v === "__stop") {
                       stopImpersonation.mutate();
@@ -114,13 +117,17 @@ export default function AppShell({ children, sidebar }: Props) {
                   }}
                 >
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="View as…" />
+                    <SelectValue>
+                      {impersonating
+                        ? `Viewing as ${user?.name ?? user?.email ?? "user"}`
+                        : "Switch user"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {impersonating && (
                       <>
                         <SelectItem value="__stop" className="text-red-600">
-                          ✕ {intl.formatMessage({ id: "nav.stopImpersonation" })}
+                          Stop impersonating
                         </SelectItem>
                         <hr className="my-1" />
                       </>
@@ -135,12 +142,18 @@ export default function AppShell({ children, sidebar }: Props) {
                 </Select>
               )}
 
-              <div className="hidden sm:flex flex-col text-right leading-tight">
-                <span className="text-sm font-medium">{user?.name ?? user?.email ?? "—"}</span>
-                <span className="text-xs text-muted-foreground">
-                  <FormattedMessage id={roleToKey(user?.role)} />
-                </span>
-              </div>
+              <Link href="/profile" className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/70">
+                <Avatar className="h-9 w-9 border shrink-0">
+                  <AvatarImage src={(user as { avatarUrl?: string | null } | null)?.avatarUrl ?? undefined} alt={user?.name ?? user?.email ?? "Profile"} />
+                  <AvatarFallback className="text-xs font-medium">{userInitials}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col text-left leading-tight">
+                  <span className="text-sm font-medium">{user?.name ?? user?.email ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    <FormattedMessage id={roleToKey(user?.role)} />
+                  </span>
+                </div>
+              </Link>
               <Button variant="outline" size="sm" onClick={() => logout()}>
                 <LogOut className="size-4 mr-1" />
                 <FormattedMessage id="nav.signOut" />
