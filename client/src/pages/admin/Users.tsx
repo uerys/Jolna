@@ -41,7 +41,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { UserCog } from "lucide-react";
 
 type Role = "user" | "admin" | "client" | "physiotherapist";
-type Status = "pending" | "active" | "suspended";
+type Status = "active" | "inactive";
 
 function roleLabel(role: string | null | undefined) {
   switch (role) {
@@ -60,9 +60,7 @@ function statusVariant(status: string | null | undefined) {
   switch (status) {
     case "active":
       return "default";
-    case "pending":
-      return "secondary";
-    case "suspended":
+    case "inactive":
       return "destructive";
     default:
       return "outline";
@@ -98,7 +96,7 @@ export default function AdminUsers() {
   const suspend = trpc.admin.suspendUser.useMutation({
     onSuccess: async () => {
       await utils.admin.listUsers.invalidate();
-      toast.success(intl.formatMessage({ id: "admin.toast.suspended" }));
+      toast.success(intl.formatMessage({ id: "admin.toast.inactive" }));
     },
   });
   const del = trpc.admin.deleteUser.useMutation({
@@ -181,14 +179,11 @@ export default function AdminUsers() {
                 <SelectItem value="all">
                   {intl.formatMessage({ id: "admin.filter.all" })}
                 </SelectItem>
-                <SelectItem value="pending">
-                  {intl.formatMessage({ id: "status.pending" })}
-                </SelectItem>
                 <SelectItem value="active">
                   {intl.formatMessage({ id: "status.active" })}
                 </SelectItem>
-                <SelectItem value="suspended">
-                  {intl.formatMessage({ id: "status.suspended" })}
+                <SelectItem value="inactive">
+                  {intl.formatMessage({ id: "status.inactive" })}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -341,9 +336,8 @@ function EditUserDialog({
               <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">{intl.formatMessage({ id: "status.pending" })}</SelectItem>
                   <SelectItem value="active">{intl.formatMessage({ id: "status.active" })}</SelectItem>
-                  <SelectItem value="suspended">{intl.formatMessage({ id: "status.suspended" })}</SelectItem>
+                  <SelectItem value="inactive">{intl.formatMessage({ id: "status.inactive" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -15,9 +15,8 @@
   "role.client": "អ្នកជំងឺ",
   "role.user": "អ្នកជំងឺ",
 
-  "status.pending": "រង់ចាំការអនុម័ត",
   "status.active": "សកម្ម",
-  "status.suspended": "ផ្អាក",
+  "status.inactive": "អសកម្ម",
 
   "home.heroTitle": "ការស្តារនីតិសម្បទា ប្រចាំថ្ងៃ។",
   "home.heroSubtitle": "Recovry ភ្ជាប់អ្នកស្តារកាយ ជាមួយអ្នកជំងឺរបស់ពួកគេ ដើម្បីប្រែផែនការហាត់ប្រាណ ឲ្យទៅជាទម្លាប់ប្រចាំថ្ងៃ ដោយមានការគាំទ្រពីរភាសា គឺអង់គ្លេស និងខ្មែរ។",
@@ -55,7 +54,7 @@
   "admin.edit.cancel": "បោះបង់",
   "admin.toast.saved": "បានធ្វើបច្ចុប្បន្នភាពអ្នកប្រើប្រាស់។",
   "admin.toast.approved": "គណនីត្រូវបានអនុម័ត។",
-  "admin.toast.suspended": "គណនីត្រូវបានផ្អាក។",
+  "admin.toast.inactive": "គណនីអសកម្ម។",
   "admin.toast.deleted": "គណនីត្រូវបានលុប។",
 
   "physio.dashboard.title": "ផ្ទាំងគ្រប់គ្រងរបស់អ្នកស្តារកាយ",

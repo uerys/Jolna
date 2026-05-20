@@ -66,7 +66,7 @@ export const adminRouter = router({
   suspendUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ input }) =>
-      updateUserFields(input.id, { status: "suspended" }),
+      updateUserFields(input.id, { status: "inactive" }),
     ),
 
   deleteUser: adminProcedure

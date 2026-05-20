@@ -37,7 +37,7 @@ CREATE TABLE `feedback_logs` (
 );
 --> statement-breakpoint
 ALTER TABLE `users` MODIFY COLUMN `role` enum('user','admin','client','physiotherapist') NOT NULL DEFAULT 'user';--> statement-breakpoint
-ALTER TABLE `users` ADD `status` enum('pending','active','suspended') DEFAULT 'active' NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `status` enum('active','inactive') DEFAULT 'active' NOT NULL;--> statement-breakpoint
 ALTER TABLE `users` ADD `languagePreference` enum('en','kh') DEFAULT 'en' NOT NULL;--> statement-breakpoint
 ALTER TABLE `users` ADD `physiotherapistId` int;--> statement-breakpoint
 CREATE INDEX `assignments_client_idx` ON `assignments` (`clientId`);--> statement-breakpoint

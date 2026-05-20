@@ -354,7 +354,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('pending','active','suspended')",
+          "type": "enum('active','inactive')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

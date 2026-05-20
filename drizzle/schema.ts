@@ -29,7 +29,7 @@ export const ROLES = [
 ] as const;
 export type RecovryRole = (typeof ROLES)[number];
 
-export const ACCOUNT_STATUSES = ["pending", "active", "suspended"] as const;
+export const ACCOUNT_STATUSES = ["active", "inactive"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 export const LANGUAGES = ["en", "kh"] as const;

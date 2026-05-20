@@ -15,9 +15,8 @@
   "role.client": "Client",
   "role.user": "Client",
 
-  "status.pending": "Pending",
   "status.active": "Active",
-  "status.suspended": "Suspended",
+  "status.inactive": "Inactive",
 
   "home.heroTitle": "Rehabilitation, delivered daily.",
   "home.heroSubtitle": "Recovry connects physiotherapists with their clients, turning every exercise plan into a daily routine they can actually follow — with bilingual support in English and Khmer.",
@@ -55,7 +54,7 @@
   "admin.edit.cancel": "Cancel",
   "admin.toast.saved": "User updated.",
   "admin.toast.approved": "Account approved.",
-  "admin.toast.suspended": "Account suspended.",
+  "admin.toast.inactive": "Account inactive.",
   "admin.toast.deleted": "Account deleted.",
 
   "physio.dashboard.title": "Physiotherapist dashboard",
