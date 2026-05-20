@@ -1,6 +1,6 @@
 # Recovry
 
-Recovry is a physiotherapy rehab platform for admins, physiotherapists, and clients. The browser app lives in `client/` and is served by the Node.js backend in development and production.
+Recovry is a specialized physiotherapy rehab platform supporting three user tiers: admins, physiotherapists, and clients. Created as a Paragon University capstone project, the application is powered by a Node.js backend.
 
 ## What The App Does
 
