@@ -1,6 +1,12 @@
 # Recovry
 
-Recovry is a physiotherapy rehab platform a capstone for paragon university.
+Recovry is a physiotherapy rehab platform for admins, physiotherapists, and clients. The browser app lives in `client/` and is served by the Node.js backend in development and production.
+
+## What The App Does
+
+- Admins manage users and assignments.
+- Physiotherapists track client progress and review recovery history.
+- Clients see today’s routine, complete exercises, and log feedback.
 
 ## Requirements
 
@@ -15,14 +21,14 @@ Recovry is a physiotherapy rehab platform a capstone for paragon university.
 pnpm db:up
 ```
 
-2. Create a `.env` file in the project root with the local values below.
+2. Create a `.env` file in the project root.
 
 ```bash
 DATABASE_URL=mysql://root:password@localhost:3306/appdb
 JWT_SECRET=replace-with-a-long-random-secret
 ```
 
-Optional environment variables can be left blank for local development:
+Optional environment variables used by the current app can be left blank for local development:
 
 ```bash
 VITE_APP_ID=
@@ -51,6 +57,34 @@ pnpm dev
 ```
 
 The app runs on the localhost URL printed in the terminal, usually `http://localhost:3000`.
+
+## Main Routes
+
+The current client routes are:
+
+- `/` landing page and role-based redirect
+- `/login` sign in
+- `/register` sign up
+- `/admin/users` admin user management
+- `/physio` physiotherapist dashboard
+- `/physio/clients/:id` physiotherapist client detail view
+- `/client/today` client daily plan
+- `/client/history` client recovery history
+
+## Backend Surface
+
+The backend is exposed through tRPC at `/api/trpc`.
+
+Main router groups currently available:
+
+- `system`
+- `auth`
+- `admin`
+- `physio`
+- `clientApp`
+- `settings`
+
+There is also a health check route used by the app runtime.
 
 ## Docker Compose (Backend + DB)
 
@@ -95,13 +129,3 @@ Password: `Password1!`
 ## Seeding
 
 Running `node scripts/seed.mjs` is safe to repeat. It upserts the demo users, exercises, assignments, and feedback logs so you can reseed after a reset without manually clearing the database.
-
-## API Endpoints
-
-- `GET /api/health` checks database connectivity.
-- `GET /api/notes` lists notes.
-- `POST /api/notes` creates a note with a JSON body such as:
-
-```json
-{ "content": "hello" }
-```
