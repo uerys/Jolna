@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
@@ -32,6 +32,17 @@ function Router() {
 
       {/* Client */}
       <Route path={"/client/exercises"} component={ClientExercises} />
+      <Route
+        path={"/client/today"}
+        component={() => {
+          const [, navigate] = useLocation();
+          // redirect client/today -> client/exercises
+          // navigate is synchronous here; use effect to avoid render loop
+          // but wouter's navigate can be called directly in render for simple redirect
+          navigate("/client/exercises", { replace: true });
+          return null;
+        }}
+      />
       <Route path={"/client/history"} component={ClientHistory} />
 
       <Route path={"/404"} component={NotFound} />
