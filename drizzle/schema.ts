@@ -117,6 +117,7 @@ export const assignments = mysqlTable(
     physiotherapistId: int("physiotherapistId").notNull(),
     clientId: int("clientId").notNull(),
     reps: int("reps").notNull(),
+    sets: int("sets").notNull().default(1),
     startDate: date("startDate", { mode: "string" }).notNull(),
     endDate: date("endDate", { mode: "string" }).notNull(),
     status: mysqlEnum("status", ASSIGNMENT_STATUSES)

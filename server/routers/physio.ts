@@ -89,21 +89,27 @@ export const physioRouter = router({
       z.object({
         exerciseId: z.number().int().positive(),
         clientId: z.number().int().positive(),
-        reps: z.number().int().min(1).max(500),
+        reps: z.number().int().min(1).max(500).optional(),
+        sets: z.number().int().min(1).max(100).optional(),
         startDate: dateString,
         endDate: dateString,
       }),
     )
-    .mutation(({ ctx, input }) =>
-      createAssignment({
+    .mutation(async ({ ctx, input }) => {
+      const ex = await getExerciseById(input.exerciseId);
+      if (!ex) throw new TRPCError({ code: "NOT_FOUND" });
+      const repsToUse = input.reps ?? ex.defaultReps;
+      const setsToUse = input.sets ?? ex.defaultSets ?? 1;
+      return createAssignment({
         exerciseId: input.exerciseId,
         clientId: input.clientId,
         physiotherapistId: ctx.user.id,
-        reps: input.reps,
+        reps: repsToUse,
+        sets: setsToUse,
         startDate: input.startDate,
         endDate: input.endDate,
-      }),
-    ),
+      });
+    }),
 
   updateAssignmentStatus: physioProcedure
     .input(

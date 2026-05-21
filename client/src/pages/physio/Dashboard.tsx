@@ -405,6 +405,17 @@ function AssignmentsTab() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(fortnight);
   const [reps, setReps] = useState(10);
+  const [sets, setSets] = useState(1);
+
+  // When an exercise is selected, default reps to the exercise's defaultReps
+  useEffect(() => {
+    if (!exerciseId) return;
+    const ex = exercises.data?.find((e) => String(e.id) === exerciseId);
+    if (ex) {
+      if (typeof ex.defaultReps === "number") setReps(ex.defaultReps);
+      if (typeof ex.defaultSets === "number") setSets(ex.defaultSets);
+    }
+  }, [exerciseId, exercises.data]);
 
   const assign = trpc.physio.assignExercise.useMutation({
     onSuccess: async () => {
@@ -447,10 +458,14 @@ function AssignmentsTab() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <Label><FormattedMessage id="physio.assign.reps" /></Label>
                     <Input type="number" min={1} max={500} value={reps} onChange={(e) => setReps(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <Label><FormattedMessage id="physio.assign.sets" /></Label>
+                    <Input type="number" min={1} max={100} value={sets} onChange={(e) => setSets(Number(e.target.value))} />
                   </div>
                   <div>
                     <Label><FormattedMessage id="physio.assign.startDate" /></Label>
@@ -471,6 +486,7 @@ function AssignmentsTab() {
                       clientId: Number(clientId),
                       exerciseId: Number(exerciseId),
                       reps,
+                      sets,
                       startDate,
                       endDate,
                     })
@@ -484,11 +500,11 @@ function AssignmentsTab() {
         </div>
 
         <Table className="mt-4">
-          <TableHeader>
+              <TableHeader>
             <TableRow>
               <TableHead>Client</TableHead>
               <TableHead>Exercise</TableHead>
-              <TableHead>Reps</TableHead>
+                  <TableHead>Reps · Sets</TableHead>
               <TableHead>Period</TableHead>
               <TableHead>Status</TableHead>
               <TableHead />
@@ -502,7 +518,7 @@ function AssignmentsTab() {
               <TableRow key={row.assignment.id}>
                 <TableCell>{row.client.name ?? row.client.email ?? `#${row.client.id}`}</TableCell>
                 <TableCell>{row.exercise.title}</TableCell>
-                <TableCell>{row.assignment.reps}</TableCell>
+                <TableCell>{row.assignment.reps} · {row.assignment.sets}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{row.assignment.startDate} → {row.assignment.endDate}</TableCell>
                 <TableCell><Badge variant="outline">{row.assignment.status}</Badge></TableCell>
                 <TableCell className="text-right">
