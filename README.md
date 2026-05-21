@@ -68,7 +68,7 @@ The current client routes are:
 - `/admin/users` admin user management
 - `/physio` physiotherapist dashboard
 - `/physio/clients/:id` physiotherapist client detail view
-- `/client/today` client daily plan
+- `/client/exercises` client daily plan
 - `/client/history` client recovery history
 
 ## Backend Surface

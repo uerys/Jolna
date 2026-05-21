@@ -28,7 +28,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { CalendarDays, History } from "lucide-react";
 
-export default function ClientToday() {
+export default function ClientExercises() {
   const { user, loading } = useAuth();
   const { language } = useI18n();
   const [, navigate] = useLocation();

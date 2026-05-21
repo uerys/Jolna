@@ -12,7 +12,7 @@ import AdminUsers from "./pages/admin/Users";
 import PhysioDashboard from "./pages/physio/Dashboard";
 import PhysioClientDetail from "./pages/physio/ClientDetail";
 import Profile from "./pages/Profile";
-import ClientToday from "./pages/client/Today";
+import ClientExercises from "./pages/client/Exercises";
 import ClientHistory from "./pages/client/History";
 
 function Router() {
@@ -31,7 +31,7 @@ function Router() {
       <Route path={"/physio/clients/:id"} component={PhysioClientDetail} />
 
       {/* Client */}
-      <Route path={"/client/today"} component={ClientToday} />
+      <Route path={"/client/exercises"} component={ClientExercises} />
       <Route path={"/client/history"} component={ClientHistory} />
 
       <Route path={"/404"} component={NotFound} />

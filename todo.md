@@ -45,7 +45,7 @@
 - [x] List and manage active assignments
 
 ## 6. Client Exercise Access
-- [x] `/client/today` listing today's active assignments
+- [x] `/client/exercises` listing today's active assignments
 - [x] Embedded video + bilingual instructions based on `languagePreference`
 
 ## 7. Client Feedback Submission
