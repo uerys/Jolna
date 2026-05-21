@@ -55,7 +55,13 @@ export const adminRouter = router({
         }),
       }),
     )
-    .mutation(async ({ input }) => updateUserFields(input.id, input.patch)),
+    .mutation(async ({ input, ctx }) => {
+      // Prevent an admin from changing their own role (must use another admin account)
+      if (ctx.originalUser && ctx.originalUser.id === input.id && input.patch.role && input.patch.role !== ctx.originalUser.role) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own role" });
+      }
+      return updateUserFields(input.id, input.patch);
+    }),
 
   approveUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
@@ -65,9 +71,13 @@ export const adminRouter = router({
 
   suspendUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(async ({ input }) =>
-      updateUserFields(input.id, { status: "inactive" }),
-    ),
+    .mutation(async ({ input, ctx }) => {
+      // Prevent an admin from suspending their own account
+      if (ctx.originalUser && ctx.originalUser.id === input.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot suspend your own account" });
+      }
+      return updateUserFields(input.id, { status: "inactive" });
+    }),
 
   deleteUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
@@ -94,6 +104,7 @@ export const adminRouter = router({
       z.object({
         name: z.string().min(1).max(120),
         email: z.string().email().max(320),
+        phoneNumber: z.string().min(1).max(32),
         password: z.string().min(8),
         role: RoleEnum.default("client"),
         status: StatusEnum.default("active"),
@@ -103,6 +114,7 @@ export const adminRouter = router({
       const result = await sdk.register({
         name: input.name,
         email: input.email,
+        phone: input.phoneNumber,
         password: input.password,
         role: input.role,
       });

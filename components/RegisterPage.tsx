@@ -6,6 +6,7 @@ type RegisterPageProps = {
   onRegister?: (
     name: string,
     email: string,
+    phoneNumber: string,
     password: string,
   ) => Promise<void> | void;
   pageTitle?: string;
@@ -31,6 +32,7 @@ export default function RegisterPage({
 }: Readonly<RegisterPageProps>) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,6 +50,7 @@ export default function RegisterPage({
       if (
         !name.trim() ||
         !email.trim() ||
+        !phoneNumber.trim() ||
         !password.trim() ||
         !confirmPassword.trim()
       ) {
@@ -68,7 +71,7 @@ export default function RegisterPage({
 
       try {
         setLoading(true);
-        await onRegister?.(name, email, password);
+        await onRegister?.(name, email, phoneNumber, password);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Sign up failed.");
       } finally {
@@ -103,6 +106,15 @@ export default function RegisterPage({
             placeholder="Email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          />
+
+          <input
+            id="phoneNumber"
+            type="tel"
+            placeholder="Phone number"
+            value={phoneNumber}
+            onChange={(event) => setPhoneNumber(event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
           />
 

@@ -36,6 +36,13 @@
       "when": 1779269000000,
       "tag": "0004_profile_avatar_longtext",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1779269001000,
+      "tag": "0005_phone_number",
+      "breakpoints": true
     }
   ]
 }

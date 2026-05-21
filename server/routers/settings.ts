@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getUserById, setLanguagePreference, updateUserFields } from "../db";
+import { getUserById, listUsers, setLanguagePreference, updateUserFields } from "../db";
 import { LANGUAGES } from "../../drizzle/schema";
 
 /**
@@ -12,6 +12,9 @@ export const settingsRouter = router({
     const physiotherapist = ctx.user.physiotherapistId
       ? await getUserById(ctx.user.physiotherapistId)
       : null;
+    const assignedClients = ctx.user.role === "physiotherapist"
+      ? await listUsers({ role: "client", status: "active", physiotherapistId: ctx.user.id })
+      : [];
 
     return {
       user: ctx.user,
@@ -21,25 +24,48 @@ export const settingsRouter = router({
             name: physiotherapist.name,
             email: physiotherapist.email,
             avatarUrl: physiotherapist.avatarUrl,
+            phoneNumber: physiotherapist.phoneNumber,
           }
         : null,
+      assignedClients: assignedClients.map((client) => ({
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        avatarUrl: client.avatarUrl,
+        phoneNumber: client.phoneNumber,
+        status: client.status,
+      })),
     };
+  }),
+
+  // Contacts for clinic admins so users (clients/physios) can reach out
+  getAdminsContacts: protectedProcedure.query(async ({ ctx }) => {
+    const admins = await listUsers({ role: "admin", status: "active" });
+    return admins.map((a) => ({
+      id: a.id,
+      name: a.name,
+      email: a.email,
+      phoneNumber: a.phoneNumber,
+    }));
   }),
 
   updateMyProfile: protectedProcedure
     .input(
       z.object({
         name: z.string().min(1).max(120).optional(),
+        phoneNumber: z.string().min(1).max(32).nullable().optional(),
         avatarUrl: z.string().max(2_000_000).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const patch: {
         name?: string | null;
+        phoneNumber?: string | null;
         avatarUrl?: string | null;
       } = {};
 
       if (input.name !== undefined) patch.name = input.name;
+      if (input.phoneNumber !== undefined) patch.phoneNumber = input.phoneNumber;
       if (input.avatarUrl !== undefined) patch.avatarUrl = input.avatarUrl;
 
       return updateUserFields(ctx.user.id, patch);

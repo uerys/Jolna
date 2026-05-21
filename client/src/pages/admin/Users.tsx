@@ -87,10 +87,10 @@ export default function AdminUsers() {
   });
   const utils = trpc.useUtils();
 
-  const approve = trpc.admin.approveUser.useMutation({
+  const reactivate = trpc.admin.approveUser.useMutation({
     onSuccess: async () => {
       await utils.admin.listUsers.invalidate();
-      toast.success(intl.formatMessage({ id: "admin.toast.approved" }));
+      toast.success(intl.formatMessage({ id: "admin.toast.reactivated" }));
     },
   });
   const suspend = trpc.admin.suspendUser.useMutation({
@@ -230,12 +230,17 @@ export default function AdminUsers() {
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     {u.status !== "active" && (
-                      <Button size="sm" variant="outline" onClick={() => approve.mutate({ id: u.id })}>
-                        <FormattedMessage id="admin.action.approve" />
+                      <Button size="sm" variant="outline" onClick={() => reactivate.mutate({ id: u.id })}>
+                        <FormattedMessage id="admin.action.reactivate" />
                       </Button>
                     )}
                     {u.status === "active" && (
-                      <Button size="sm" variant="outline" onClick={() => suspend.mutate({ id: u.id })}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => suspend.mutate({ id: u.id })}
+                        disabled={u.id === user?.id}
+                      >
                         <FormattedMessage id="admin.action.suspend" />
                       </Button>
                     )}
@@ -274,6 +279,7 @@ function EditUserDialog({
   onClose: () => void;
 }) {
   const intl = useIntl();
+  const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
   const update = trpc.admin.updateUser.useMutation({
     onSuccess: async () => {
@@ -322,14 +328,21 @@ function EditUserDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label><FormattedMessage id="admin.edit.role" /></Label>
-              <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">{intl.formatMessage({ id: "role.admin" })}</SelectItem>
-                  <SelectItem value="physiotherapist">{intl.formatMessage({ id: "role.physiotherapist" })}</SelectItem>
-                  <SelectItem value="client">{intl.formatMessage({ id: "role.client" })}</SelectItem>
-                </SelectContent>
-              </Select>
+              {currentUser && currentUser.id === user?.id ? (
+                <div className="text-sm text-muted-foreground">
+                  <FormattedMessage id={roleLabel(role)} />
+                  <div className="text-xs text-muted-foreground">(Cannot change your own role)</div>
+                </div>
+              ) : (
+                <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">{intl.formatMessage({ id: "role.admin" })}</SelectItem>
+                    <SelectItem value="physiotherapist">{intl.formatMessage({ id: "role.physiotherapist" })}</SelectItem>
+                    <SelectItem value="client">{intl.formatMessage({ id: "role.client" })}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label><FormattedMessage id="admin.edit.status" /></Label>

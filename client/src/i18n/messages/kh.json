@@ -54,6 +54,7 @@
   "admin.edit.cancel": "បោះបង់",
   "admin.toast.saved": "បានធ្វើបច្ចុប្បន្នភាពអ្នកប្រើប្រាស់។",
   "admin.toast.approved": "គណនីត្រូវបានអនុម័ត។",
+  "admin.toast.reactivated": "គណនីត្រូវបានដាក់សកម្មឡើងវិញ។",
   "admin.toast.inactive": "គណនីអសកម្ម។",
   "admin.toast.deleted": "គណនីត្រូវបានលុប។",
 
@@ -65,6 +66,10 @@
   "physio.tab.monitoring": "ការតាមដាន",
 
   "physio.clients.empty": "មិនទាន់មានអ្នកជំងឺត្រូវបានផ្ដល់ជូនអ្នកនៅឡើយ។",
+  "physio.clients.activeSection": "អ្នកជំងឺសកម្ម",
+  "physio.clients.activeEmpty": "មិនទាន់មានអ្នកជំងឺសកម្មនៅក្នុងផ្នែកនេះទេ។",
+  "physio.clients.inactiveSection": "អ្នកជំងឺអសកម្ម",
+  "physio.clients.inactiveEmpty": "មិនទាន់មានអ្នកជំងឺអសកម្មនៅក្នុងផ្នែកនេះទេ។",
   "physio.clients.completion": "ភាគរយបញ្ចប់",
   "physio.clients.viewDetails": "មើលលម្អិត",
 

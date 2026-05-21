@@ -114,6 +114,55 @@ function ExerciseCard({
 }) {
   const instructions = language === "kh" ? exercise.instructionsKh : exercise.instructionsEn;
   const [open, setOpen] = useState(false);
+  const { embedSrc, watchUrl, thumbnail } = useMemo(() => {
+    if (!exercise.videoUrl) return { embedSrc: null, watchUrl: null, thumbnail: null };
+    try {
+      const u = new URL(exercise.videoUrl);
+      // youtube embed path
+      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/embed/")) {
+        const id = u.pathname.split("/embed/")[1];
+        return {
+          embedSrc: `https://www.youtube.com/embed/${id}`,
+          watchUrl: `https://www.youtube.com/watch?v=${id}`,
+          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        };
+      }
+      // watch?v= style -> extract id
+      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+        const id = u.searchParams.get("v")!;
+        return {
+          embedSrc: `https://www.youtube.com/embed/${id}`,
+          watchUrl: `https://www.youtube.com/watch?v=${id}`,
+          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        };
+      }
+      // youtu.be short link
+      if (u.hostname === "youtu.be") {
+        const id = u.pathname.replace(/^\//, "");
+        return {
+          embedSrc: `https://www.youtube.com/embed/${id}`,
+          watchUrl: `https://www.youtube.com/watch?v=${id}`,
+          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        };
+      }
+      // fallback: if contains embed or video provider, return embed as-is
+      if (exercise.videoUrl.includes("embed")) {
+        return { embedSrc: exercise.videoUrl, watchUrl: exercise.videoUrl, thumbnail: null };
+      }
+    } catch (e) {
+      // fallback regex for youtube id
+      const m = exercise.videoUrl.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
+      if (m && m[1]) {
+        const id = m[1];
+        return {
+          embedSrc: `https://www.youtube.com/embed/${id}`,
+          watchUrl: `https://www.youtube.com/watch?v=${id}`,
+          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        };
+      }
+    }
+    return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
+  }, [exercise.videoUrl]);
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
@@ -127,14 +176,24 @@ function ExerciseCard({
       </CardHeader>
       <CardContent className="space-y-4 pb-4">
         {/* Video Container */}
-        <div className="aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border/50">
-          <iframe
-            src={exercise.videoUrl}
-            title={exercise.title}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border/50 flex items-center justify-center">
+          {thumbnail ? (
+            <a href={watchUrl ?? exercise.videoUrl} target="_blank" rel="noreferrer" className="block w-full h-full relative">
+              <img src={thumbnail} alt={`Video thumbnail for ${exercise.title}`} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="rounded-full bg-white/90 p-3 shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#ff0000">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            </a>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-6">
+              <p className="mb-2 text-sm text-muted-foreground">Video will open in a new tab.</p>
+              <a href={watchUrl ?? exercise.videoUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">Open video</a>
+            </div>
+          )}
         </div>
 
         {/* Instructions */}

@@ -54,6 +54,7 @@
   "admin.edit.cancel": "Cancel",
   "admin.toast.saved": "User updated.",
   "admin.toast.approved": "Account approved.",
+  "admin.toast.reactivated": "Account reactivated.",
   "admin.toast.inactive": "Account inactive.",
   "admin.toast.deleted": "Account deleted.",
 
@@ -65,6 +66,10 @@
   "physio.tab.monitoring": "Monitoring",
 
   "physio.clients.empty": "No clients have been assigned to you yet.",
+  "physio.clients.activeSection": "Active clients",
+  "physio.clients.activeEmpty": "No active clients in this section.",
+  "physio.clients.inactiveSection": "Inactive clients",
+  "physio.clients.inactiveEmpty": "No inactive clients in this section.",
   "physio.clients.completion": "Completion",
   "physio.clients.viewDetails": "View details",
 

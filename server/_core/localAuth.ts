@@ -104,7 +104,7 @@ class LocalAuthService {
     }
   }
 
-  async register(input: { name: string; email: string; password: string; role?: string }) {
+  async register(input: { name: string; email: string; phone?: string; password: string; role?: string }) {
     const email = this.normalizeEmail(input.email);
     const openId = email;
     const existingUser = (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(openId));
@@ -117,6 +117,7 @@ class LocalAuthService {
       openId,
       name: input.name.trim(),
       email,
+      phoneNumber: input.phone?.trim() || null,
       passwordHash,
       loginMethod: "local",
       role: (input.role as any) || "client",
@@ -141,6 +142,11 @@ class LocalAuthService {
     const user = (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(email));
     if (!user || !user.passwordHash) {
       throw ForbiddenError("Invalid email or password.");
+    }
+
+    // Prevent login for inactive/suspended accounts
+    if (user.status !== "active") {
+      throw ForbiddenError("Account is inactive. Contact your administrator.");
     }
 
     if (!this.verifyPassword(input.password, user.passwordHash)) {
@@ -173,6 +179,11 @@ class LocalAuthService {
 
     if (!user) {
       throw ForbiddenError("User not found");
+    }
+
+    // Block requests for inactive/suspended accounts
+    if (user.status !== "active") {
+      throw ForbiddenError("Account is inactive.");
     }
 
     await db.upsertUser({

@@ -26,8 +26,8 @@ export default function Register() {
 
   return (
     <RegisterPage
-      onRegister={async (name, email, password) => {
-        await createUserMutation.mutateAsync({ name, email, password, role: "client", status: "active" });
+      onRegister={async (name, email, phoneNumber, password) => {
+        await createUserMutation.mutateAsync({ name, email, phoneNumber, password, role: "client", status: "active" });
         await utils.admin.listUsers.invalidate();
         navigate("/admin/users");
       }}

@@ -112,6 +112,15 @@ export default function PhysioDashboard() {
 
 function ClientsTab() {
   const clients = trpc.physio.listMyClients.useQuery();
+  const activeClients = useMemo(
+    () => (clients.data ?? []).filter((client) => client.status === "active"),
+    [clients.data],
+  );
+  const inactiveClients = useMemo(
+    () => (clients.data ?? []).filter((client) => client.status !== "active"),
+    [clients.data],
+  );
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -119,11 +128,54 @@ function ClientsTab() {
         {!clients.isLoading && (clients.data?.length ?? 0) === 0 && (
           <div className="text-muted-foreground"><FormattedMessage id="physio.clients.empty" /></div>
         )}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {clients.data?.map((c) => <ClientCard key={c.id} client={c} />)}
-        </div>
+        {!clients.isLoading && (clients.data?.length ?? 0) > 0 && (
+          <div className="space-y-6">
+            <ClientGroup
+              titleId="physio.clients.activeSection"
+              emptyId="physio.clients.activeEmpty"
+              clients={activeClients}
+            />
+            <ClientGroup
+              titleId="physio.clients.inactiveSection"
+              emptyId="physio.clients.inactiveEmpty"
+              clients={inactiveClients}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function ClientGroup({
+  titleId,
+  emptyId,
+  clients,
+}: {
+  titleId: string;
+  emptyId: string;
+  clients: Array<{ id: number; name: string | null; email: string | null; status: string }>;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          <FormattedMessage id={titleId} />
+        </h3>
+        <span className="text-xs text-muted-foreground">{clients.length}</span>
+      </div>
+      {clients.length === 0 ? (
+        <div className="text-sm text-muted-foreground">
+          <FormattedMessage id={emptyId} />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {clients.map((client) => (
+            <ClientCard key={client.id} client={client} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -132,12 +184,13 @@ function ClientCard({ client }: { client: { id: number; name: string | null; ema
   const rate = stats.data?.total
     ? Math.round((stats.data.completed / stats.data.total) * 100)
     : 0;
+  const badgeVariant = client.status === "active" ? "default" : "destructive";
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{client.name ?? client.email ?? `#${client.id}`}</CardTitle>
-          <Badge variant={client.status === "active" ? "default" : "secondary"}>
+          <Badge variant={badgeVariant}>
             <FormattedMessage id={`status.${client.status}`} />
           </Badge>
         </div>
