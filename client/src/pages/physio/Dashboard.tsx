@@ -254,7 +254,7 @@ function ExercisesTab() {
                 <div className="font-medium">{e.title}</div>
                 <div className="text-sm text-muted-foreground line-clamp-2">{e.instructionsEn}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {e.defaultReps} reps · {e.defaultSets ?? 1} sets default · <a href={e.videoUrl} target="_blank" rel="noreferrer" className="underline">video</a>
+                  Default: {e.defaultSets ?? 1} sets · {e.defaultReps} reps · <a href={e.videoUrl} target="_blank" rel="noreferrer" className="underline">video</a>
                 </div>
               </div>
               <div className="shrink-0 space-x-2">
@@ -355,6 +355,16 @@ function ExerciseDialog({
             <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/embed/..." />
           </div>
           <div>
+            <Label><FormattedMessage id="physio.assign.sets" /></Label>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={defaultSets}
+              onChange={(e) => setDefaultSets(Number(e.target.value))}
+            />
+          </div>
+          <div>
             <Label><FormattedMessage id="physio.exercise.defaultReps" /></Label>
             <Input
               type="number"
@@ -362,16 +372,6 @@ function ExerciseDialog({
               max={500}
               value={defaultReps}
               onChange={(e) => setDefaultReps(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <Label>Default sets</Label>
-            <Input
-              type="number"
-              min={1}
-              max={100}
-              value={defaultSets}
-              onChange={(e) => setDefaultSets(Number(e.target.value))}
             />
           </div>
         </div>
@@ -404,18 +404,28 @@ function AssignmentsTab() {
   }, []);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(fortnight);
-  const [reps, setReps] = useState(10);
-  const [sets, setSets] = useState(1);
+  const [reps, setReps] = useState<string | number>(10);
+  const [sets, setSets] = useState<string | number>(1);
+  const [exercisePreview, setExercisePreview] = useState<null | { title: string; defaultReps?: number; defaultSets?: number }>(null);
 
   // When an exercise is selected, default reps to the exercise's defaultReps
   useEffect(() => {
     if (!exerciseId) return;
     const ex = exercises.data?.find((e) => String(e.id) === exerciseId);
     if (ex) {
-      if (typeof ex.defaultReps === "number") setReps(ex.defaultReps);
-      if (typeof ex.defaultSets === "number") setSets(ex.defaultSets);
+      if (typeof ex.defaultReps === "number") setReps(String(ex.defaultReps));
+      if (typeof ex.defaultSets === "number") setSets(String(ex.defaultSets));
+      setExercisePreview({ title: ex.title, defaultReps: ex.defaultReps, defaultSets: ex.defaultSets });
     }
   }, [exerciseId, exercises.data]);
+
+  // If there's only one client or one exercise, preselect them to speed up assignment
+  useEffect(() => {
+    if (!clientId && clients.data?.length === 1) setClientId(String(clients.data[0].id));
+  }, [clients.data, clientId]);
+  useEffect(() => {
+    if (!exerciseId && exercises.data?.length === 1) setExerciseId(String(exercises.data[0].id));
+  }, [exercises.data, exerciseId]);
 
   const assign = trpc.physio.assignExercise.useMutation({
     onSuccess: async () => {
@@ -437,36 +447,52 @@ function AssignmentsTab() {
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader><DialogTitle><FormattedMessage id="physio.assign.title" /></DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <div>
-                  <Label><FormattedMessage id="physio.assign.client" /></Label>
-                  <Select value={clientId} onValueChange={setClientId}>
-                    <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                    <SelectContent>
-                      {clients.data?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name ?? c.email ?? `#${c.id}`}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label><FormattedMessage id="physio.assign.exercise" /></Label>
-                  <Select value={exerciseId} onValueChange={setExerciseId}>
-                    <SelectTrigger><SelectValue placeholder="Select exercise" /></SelectTrigger>
-                    <SelectContent>
-                      {exercises.data?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.title}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label><FormattedMessage id="physio.assign.reps" /></Label>
-                    <Input type="number" min={1} max={500} value={reps} onChange={(e) => setReps(Number(e.target.value))} />
+                    <Label><FormattedMessage id="physio.assign.client" /></Label>
+                    <Select value={clientId} onValueChange={(v) => setClientId(v)}>
+                      <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                      <SelectContent>
+                        {clients.data?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name ?? c.email ?? `#${c.id}`}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label><FormattedMessage id="physio.assign.sets" /></Label>
-                    <Input type="number" min={1} max={100} value={sets} onChange={(e) => setSets(Number(e.target.value))} />
+                    <Label><FormattedMessage id="physio.assign.exercise" /></Label>
+                    <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
+                      <SelectTrigger><SelectValue placeholder="Select exercise" /></SelectTrigger>
+                      <SelectContent>
+                        {exercises.data?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+                {exercisePreview && (
+                  <div className="rounded border p-3 bg-muted/50 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{exercisePreview.title}</div>
+                      <div className="text-sm text-muted-foreground">Default: {exercisePreview.defaultSets} sets · {exercisePreview.defaultReps} reps</div>
+                    </div>
+                    <div>
+                      <button
+                        className="text-sm text-muted-foreground px-2"
+                        aria-label="Clear selected exercise"
+                        onClick={() => {
+                          setExerciseId("");
+                          setExercisePreview(null);
+                          setReps("");
+                          setSets("");
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label><FormattedMessage id="physio.assign.startDate" /></Label>
                     <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -474,6 +500,35 @@ function AssignmentsTab() {
                   <div>
                     <Label><FormattedMessage id="physio.assign.endDate" /></Label>
                     <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label><FormattedMessage id="physio.assign.sets" /></Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={sets as unknown as string}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSets(v === "" ? "" : Number(v));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label><FormattedMessage id="physio.assign.reps" /></Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={reps as unknown as string}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setReps(v === "" ? "" : Number(v));
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -485,8 +540,8 @@ function AssignmentsTab() {
                     assign.mutate({
                       clientId: Number(clientId),
                       exerciseId: Number(exerciseId),
-                      reps,
-                      sets,
+                      reps: (reps === "" ? undefined : Number(reps)),
+                      sets: (sets === "" ? undefined : Number(sets)),
                       startDate,
                       endDate,
                     })
@@ -501,24 +556,26 @@ function AssignmentsTab() {
 
         <Table className="mt-4">
               <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Exercise</TableHead>
-                  <TableHead>Reps · Sets</TableHead>
-              <TableHead>Period</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead />
-            </TableRow>
+                  <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Exercise</TableHead>
+                      <TableHead>Sets</TableHead>
+                      <TableHead>Reps</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead />
+                    </TableRow>
           </TableHeader>
           <TableBody>
             {assignments.isLoading && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6"><FormattedMessage id="common.loading" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6"><FormattedMessage id="common.loading" /></TableCell></TableRow>
             )}
             {assignments.data?.map((row) => (
               <TableRow key={row.assignment.id}>
                 <TableCell>{row.client.name ?? row.client.email ?? `#${row.client.id}`}</TableCell>
                 <TableCell>{row.exercise.title}</TableCell>
-                <TableCell>{row.assignment.reps} · {row.assignment.sets}</TableCell>
+                <TableCell>{row.assignment.sets}</TableCell>
+                <TableCell>{row.assignment.reps}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{row.assignment.startDate} → {row.assignment.endDate}</TableCell>
                 <TableCell><Badge variant="outline">{row.assignment.status}</Badge></TableCell>
                 <TableCell className="text-right">

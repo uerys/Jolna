@@ -166,6 +166,24 @@ try {
     password: "Password1!",
   });
 
+  const clientId2 = await upsertDemoUser({
+    openId: "demo-client-2",
+    name: "Client Two",
+    email: "client2@recovry.local",
+    role: "client",
+    physiotherapistId: physioId,
+    password: "Password1!",
+  });
+
+  const clientId3 = await upsertDemoUser({
+    openId: "demo-client-3",
+    name: "Client Three",
+    email: "client3@recovry.local",
+    role: "client",
+    physiotherapistId: physioId,
+    password: "Password1!",
+  });
+
   console.log(`  users ok (admin=${adminId}, physio=${physioId}, client=${clientId})`);
 
   const ex1 = await upsertExercise({
@@ -210,7 +228,26 @@ try {
     endDate: plusDays(10),
   });
 
+  const asg3 = await ensureAssignment({
+    exerciseId: ex1,
+    physiotherapistId: physioId,
+    clientId: clientId2,
+    reps: 8,
+    startDate: plusDays(0),
+    endDate: plusDays(14),
+  });
+
+  const asg4 = await ensureAssignment({
+    exerciseId: ex2,
+    physiotherapistId: physioId,
+    clientId: clientId3,
+    reps: 10,
+    startDate: plusDays(1),
+    endDate: plusDays(15),
+  });
+
   console.log(`  assignments ok (a1=${asg1}, a2=${asg2})`);
+  console.log(`  extra assignments ok (a3=${asg3}, a4=${asg4})`);
 
   await ensureFeedback({
     assignmentId: asg1,
