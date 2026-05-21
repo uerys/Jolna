@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, UNAUTHED_ERR_MSG } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import { parse as parseCookieHeader } from "cookie";
 import crypto from "node:crypto";
@@ -181,9 +181,11 @@ class LocalAuthService {
       throw ForbiddenError("User not found");
     }
 
-    // Block requests for inactive/suspended accounts
+    // Block requests for inactive/suspended accounts. Returning the
+    // shared `UNAUTHED_ERR_MSG` causes the client to redirect to login
+    // and clear the session automatically.
     if (user.status !== "active") {
-      throw ForbiddenError("Account is inactive.");
+      throw ForbiddenError(UNAUTHED_ERR_MSG);
     }
 
     await db.upsertUser({
