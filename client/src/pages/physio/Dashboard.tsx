@@ -219,6 +219,7 @@ type Exercise = {
   instructionsKh: string;
   videoUrl: string;
   defaultReps: number;
+  defaultSets?: number;
 };
 
 function ExercisesTab() {
@@ -253,7 +254,7 @@ function ExercisesTab() {
                 <div className="font-medium">{e.title}</div>
                 <div className="text-sm text-muted-foreground line-clamp-2">{e.instructionsEn}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {e.defaultReps} reps default · <a href={e.videoUrl} target="_blank" rel="noreferrer" className="underline">video</a>
+                  {e.defaultReps} reps · {e.defaultSets ?? 1} sets default · <a href={e.videoUrl} target="_blank" rel="noreferrer" className="underline">video</a>
                 </div>
               </div>
               <div className="shrink-0 space-x-2">
@@ -298,6 +299,7 @@ function ExerciseDialog({
   const [kh, setKh] = useState(exercise?.instructionsKh ?? "");
   const [videoUrl, setVideoUrl] = useState(exercise?.videoUrl ?? "");
   const [defaultReps, setDefaultReps] = useState(exercise?.defaultReps ?? 10);
+  const [defaultSets, setDefaultSets] = useState<number>(exercise?.defaultSets ?? 1);
 
   const create = trpc.physio.createExercise.useMutation({
     onSuccess: async () => {
@@ -320,10 +322,10 @@ function ExerciseDialog({
     if (exercise) {
       update.mutate({
         id: exercise.id,
-        patch: { title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps },
+        patch: { title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps, defaultSets },
       });
     } else {
-      create.mutate({ title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps });
+      create.mutate({ title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps, defaultSets });
     }
   }
 
@@ -360,6 +362,16 @@ function ExerciseDialog({
               max={500}
               value={defaultReps}
               onChange={(e) => setDefaultReps(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <Label>Default sets</Label>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={defaultSets}
+              onChange={(e) => setDefaultSets(Number(e.target.value))}
             />
           </div>
         </div>

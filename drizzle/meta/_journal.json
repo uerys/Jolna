@@ -43,6 +43,13 @@
       "when": 1779269001000,
       "tag": "0005_phone_number",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1779382555873,
+      "tag": "0006_warm_redwing",
+      "breakpoints": true
     }
   ]
 }

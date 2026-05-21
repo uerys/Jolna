@@ -35,6 +35,7 @@ export const physioRouter = router({
         instructionsKh: z.string().min(1),
         videoUrl: z.string().url().max(1024),
         defaultReps: z.number().int().min(1).max(500),
+        defaultSets: z.number().int().min(1).max(100),
       }),
     )
     .mutation(({ ctx, input }) =>
@@ -51,6 +52,7 @@ export const physioRouter = router({
           instructionsKh: z.string().min(1).optional(),
           videoUrl: z.string().url().max(1024).optional(),
           defaultReps: z.number().int().min(1).max(500).optional(),
+          defaultSets: z.number().int().min(1).max(100).optional(),
         }),
       }),
     )

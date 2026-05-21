@@ -94,6 +94,7 @@ export const exercises = mysqlTable(
     instructionsKh: text("instructionsKh").notNull(),
     videoUrl: varchar("videoUrl", { length: 1024 }).notNull(),
     defaultReps: int("defaultReps").notNull().default(10),
+    defaultSets: int("defaultSets").notNull().default(1),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
