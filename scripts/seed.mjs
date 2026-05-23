@@ -4,6 +4,7 @@
 
 import mysql from "mysql2/promise";
 import crypto from "node:crypto";
+import "dotenv/config";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
