@@ -1,13 +1,14 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install latest pnpm to avoid corepack version mismatch / exit code 254 issues
-RUN npm install -g pnpm@latest
+# Install latest pnpm and required build tools for native dependencies
+RUN npm install -g pnpm@latest \
+    && apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
@@ -16,7 +17,7 @@ COPY . .
 RUN pnpm run build
 
 # Runner stage
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
