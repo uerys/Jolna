@@ -2,8 +2,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Enable corepack for pnpm
-RUN corepack enable pnpm
+# Install latest pnpm to avoid corepack version mismatch / exit code 254 issues
+RUN npm install -g pnpm@latest
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
@@ -19,7 +19,9 @@ RUN pnpm run build
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-RUN corepack enable pnpm
+
+# Install latest pnpm here as well
+RUN npm install -g pnpm@latest
 
 # Install only production dependencies
 COPY package.json pnpm-lock.yaml ./
