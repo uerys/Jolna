@@ -2,20 +2,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install required build tools for native dependencies
-RUN apk add --no-cache python3 make g++ git
+# Install required build tools (for native deps) and latest pnpm
+RUN apk add --no-cache python3 make g++ git \
+    && npm install -g pnpm@latest
 
-WORKDIR /app
-
-# Copy EVERYTHING first to guarantee no files are missing
+# Copy EVERYTHING first to guarantee patches and config files are present
 COPY . .
 
-# Install dependencies using npm
+# Install dependencies using pnpm
+# Using --no-frozen-lockfile avoids cross-platform lockfile mismatch issues
 ENV CI=true
-RUN npm install
+RUN pnpm install --no-frozen-lockfile
 
 # Build the application (client to dist/public, server to dist/index.js)
-RUN npm run build
+RUN pnpm run build
 
 
 # Runner stage
