@@ -6,20 +6,18 @@ WORKDIR /app
 RUN npm install -g pnpm@latest \
     && apt-get update && apt-get install -y python3 make g++ git && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-COPY package.json pnpm-lock.yaml ./
-# Copy patches directory to ensure pnpm install succeeds with patched dependencies
-COPY patches ./patches
+WORKDIR /app
 
-# Add an argument to break Docker cache if needed
-ARG CACHE_BUST=1
-RUN pnpm install --no-frozen-lockfile
-
-# Copy the rest of the application
+# Copy EVERYTHING first to guarantee no files are missing
 COPY . .
+
+# Install dependencies (with verbose logging so Portainer shows the exact failure reason)
+ENV CI=true
+RUN pnpm install --no-frozen-lockfile --verbose
 
 # Build the application (client to dist/public, server to dist/index.js)
 RUN pnpm run build
+
 
 # Runner stage
 FROM node:20-slim AS runner
