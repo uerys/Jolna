@@ -1,26 +1,25 @@
-FROM node:20-slim AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install latest pnpm and required build tools for native dependencies
-RUN npm install -g pnpm@latest \
-    && apt-get update && apt-get install -y python3 make g++ git && rm -rf /var/lib/apt/lists/*
+# Install required build tools for native dependencies
+RUN apk add --no-cache python3 make g++ git
 
 WORKDIR /app
 
 # Copy EVERYTHING first to guarantee no files are missing
 COPY . .
 
-# Install dependencies (with verbose logging so Portainer shows the exact failure reason)
+# Install dependencies using npm
 ENV CI=true
-RUN pnpm install --no-frozen-lockfile --verbose
+RUN npm install
 
 # Build the application (client to dist/public, server to dist/index.js)
-RUN pnpm run build
+RUN npm run build
 
 
 # Runner stage
-FROM node:20-slim AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
