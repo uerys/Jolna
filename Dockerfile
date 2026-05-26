@@ -8,6 +8,8 @@ RUN npm install -g pnpm@latest \
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
+# Copy patches directory to ensure pnpm install succeeds with patched dependencies
+COPY patches ./patches
 RUN pnpm install --no-frozen-lockfile
 
 # Copy the rest of the application
