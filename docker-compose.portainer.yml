@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: recovry_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_DATABASE: appdb
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      # External port for the database. Comment this out if you don't need to connect
+      # directly to the DB from outside the Docker network.
+      - "3306:3306"
+
+  app:
+    build: 
+      context: .
+      # If your Vite app requires VITE_ variables at build time, 
+      # they can be passed in as args here or defined in a .env file
+    container_name: recovry_app
+    restart: unless-stopped
+    ports:
+      # External port for the application frontend and backend.
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Matches the credentials defined in the db service
+      - DATABASE_URL=mysql://root:${DB_PASSWORD:-password}@db:3306/appdb
+      
+      # Additional environment variables your app requires (defined in server/_core/env.ts):
+      - JWT_SECRET=${JWT_SECRET:-changeme}
+      - VITE_APP_ID=${VITE_APP_ID:-}
+      - OAUTH_SERVER_URL=${OAUTH_SERVER_URL:-}
+      - OWNER_OPEN_ID=${OWNER_OPEN_ID:-}
+      - BUILT_IN_FORGE_API_URL=${BUILT_IN_FORGE_API_URL:-}
+    depends_on:
+      - db
+
+volumes:
+  db_data:
