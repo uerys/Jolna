@@ -30,6 +30,10 @@ COPY --from=builder /app/dist ./dist
 # Drizzle files are typically needed if running database migrations
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts 
+# Copy scripts directory so we can run seed jobs
+COPY --from=builder /app/scripts ./scripts 
+# Copy scripts directory so we can run seed jobs
+COPY --from=builder /app/scripts ./scripts
 
 ENV NODE_ENV=production
 ENV PORT=3000
