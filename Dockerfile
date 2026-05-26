@@ -4,12 +4,15 @@ WORKDIR /app
 
 # Install latest pnpm and required build tools for native dependencies
 RUN npm install -g pnpm@latest \
-    && apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+    && apt-get update && apt-get install -y python3 make g++ git && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
 # Copy patches directory to ensure pnpm install succeeds with patched dependencies
 COPY patches ./patches
+
+# Add an argument to break Docker cache if needed
+ARG CACHE_BUST=1
 RUN pnpm install --no-frozen-lockfile
 
 # Copy the rest of the application
