@@ -20,14 +20,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install latest pnpm here as well
-RUN npm install -g pnpm@latest
-
-# Install only production dependencies
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
-
-# Copy the built artifacts from the builder
+# Copy the built artifacts and node_modules from the builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 # Drizzle files are typically needed if running database migrations
 COPY --from=builder /app/drizzle ./drizzle
