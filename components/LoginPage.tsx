@@ -40,7 +40,7 @@ export default function LoginPage({ onLogin }: Readonly<LoginPageProps>) {
     <main className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-gray-900 shadow-sm">
         <h2 className="mb-8 text-center text-3xl font-semibold">
-          Welcome Backs
+          Welcome Back
         </h2>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
