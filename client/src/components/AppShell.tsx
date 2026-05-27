@@ -45,7 +45,7 @@ export default function AppShell({ children, sidebar }: Props) {
   const utils = trpc.useUtils();
   const targets = trpc.dev.listImpersonationTargets.useQuery(undefined, {
     // Only meaningful for admins — but the server silently returns [] otherwise.
-    enabled: !!user,
+    enabled: user?.role === "admin",
   });
   
   // Filter out current user from targets

@@ -8,6 +8,7 @@ import {
   deleteExercise,
   getClientCompletionStats,
   getExerciseById,
+  getUserById,
   listAssignmentsForPhysio,
   listExercises,
   listFeedbackByClient,
@@ -79,6 +80,16 @@ export const physioRouter = router({
   listMyClients: physioProcedure.query(async ({ ctx }) =>
     listUsers({ role: "client", physiotherapistId: ctx.user.id }),
   ),
+
+  getClient: physioProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const client = await getUserById(input.id);
+      if (!client || (client.role !== "client" && client.role !== "user") || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found or not assigned to you" });
+      }
+      return client;
+    }),
 
   listMyAssignments: physioProcedure.query(({ ctx }) =>
     listAssignmentsForPhysio(ctx.user.id),
