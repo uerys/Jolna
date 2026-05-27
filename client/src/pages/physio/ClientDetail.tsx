@@ -64,7 +64,7 @@ export default function PhysioClientDetail() {
   const clientId = Number(params.id);
   const { user, loading } = useAuth();
 
-  const client = trpc.physio.getClient.useQuery(
+  const client = trpc.admin.getUser.useQuery(
     { id: clientId },
     { enabled: !!clientId },
   );
