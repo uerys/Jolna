@@ -86,26 +86,26 @@ Main router groups currently available:
 
 There is also a health check route used by the app runtime.
 
-## Docker Compose (Backend + DB)
+## Docker Compose (Local Dev)
 
 The repository includes a `docker-compose.yml` stack with:
 
-- `backend`: Node.js production container on port `3000`
+- `app`: Node.js development container on port `3000`
 - `db`: MySQL 8.4 on port `3306`
 
-For local Docker:
+Start the full local stack with:
 
 ```bash
-docker compose up -d --build
+docker compose up --build
 ```
 
-For Portainer Stack deployment, set at least:
+The compose file uses local-dev defaults, so no extra env file is required for the common case. If you want different credentials, edit `docker-compose.yml` before starting the stack.
 
-- `JWT_SECRET` (required, long random value)
-- `MYSQL_ROOT_PASSWORD` (recommended override from default)
-- `MYSQL_DATABASE` (optional, defaults to `appdb`)
+If you only want the database container for host-based development, you can still use:
 
-Then deploy the stack from this repository and expose port `3000` for the app.
+```bash
+pnpm db:up
+```
 
 ## Demo Credentials
 
