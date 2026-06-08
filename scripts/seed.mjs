@@ -2,6 +2,7 @@
 // Seed demo data for Recovry.
 // Usage:  node scripts/seed.mjs
 
+import "dotenv/config";
 import mysql from "mysql2/promise";
 import crypto from "node:crypto";
 
@@ -53,7 +54,7 @@ async function upsertDemoUser({
       status,
       languagePreference,
       physiotherapistId,
-    ],
+    ]
   );
   const [row] = await q(`SELECT id FROM users WHERE openId = ?`, [openId]);
   return row.id;
@@ -69,21 +70,21 @@ async function upsertExercise({
 }) {
   const existing = await q(
     `SELECT id FROM exercises WHERE title = ? AND createdBy = ? LIMIT 1`,
-    [title, createdBy],
+    [title, createdBy]
   );
   if (existing.length) {
     await q(
       `UPDATE exercises
          SET instructionsEn = ?, instructionsKh = ?, videoUrl = ?, defaultReps = ?
          WHERE id = ?`,
-      [instructionsEn, instructionsKh, videoUrl, defaultReps, existing[0].id],
+      [instructionsEn, instructionsKh, videoUrl, defaultReps, existing[0].id]
     );
     return existing[0].id;
   }
   const result = await q(
     `INSERT INTO exercises (createdBy, title, instructionsEn, instructionsKh, videoUrl, defaultReps)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [createdBy, title, instructionsEn, instructionsKh, videoUrl, defaultReps],
+    [createdBy, title, instructionsEn, instructionsKh, videoUrl, defaultReps]
   );
   return result.insertId;
 }
@@ -100,31 +101,38 @@ async function ensureAssignment({
     `SELECT id FROM assignments
        WHERE exerciseId = ? AND clientId = ? AND startDate = ?
        LIMIT 1`,
-    [exerciseId, clientId, startDate],
+    [exerciseId, clientId, startDate]
   );
   if (existing.length) return existing[0].id;
   const result = await q(
     `INSERT INTO assignments
        (exerciseId, physiotherapistId, clientId, reps, startDate, endDate, status)
      VALUES (?, ?, ?, ?, ?, ?, 'active')`,
-    [exerciseId, physiotherapistId, clientId, reps, startDate, endDate],
+    [exerciseId, physiotherapistId, clientId, reps, startDate, endDate]
   );
   return result.insertId;
 }
 
-async function ensureFeedback({ assignmentId, clientId, painScore, completed, notes, daysAgo }) {
+async function ensureFeedback({
+  assignmentId,
+  clientId,
+  painScore,
+  completed,
+  notes,
+  daysAgo,
+}) {
   const existing = await q(
     `SELECT id FROM feedback_logs
        WHERE assignmentId = ? AND clientId = ?
          AND DATE(submittedAt) = DATE(DATE_SUB(NOW(), INTERVAL ? DAY))
        LIMIT 1`,
-    [assignmentId, clientId, daysAgo],
+    [assignmentId, clientId, daysAgo]
   );
   if (existing.length) return existing[0].id;
   await q(
     `INSERT INTO feedback_logs (assignmentId, clientId, painScore, completed, notes, submittedAt)
      VALUES (?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? DAY))`,
-    [assignmentId, clientId, painScore, completed ? 1 : 0, notes, daysAgo],
+    [assignmentId, clientId, painScore, completed ? 1 : 0, notes, daysAgo]
   );
 }
 
@@ -184,7 +192,9 @@ try {
     password: "Password1!",
   });
 
-  console.log(`  users ok (admin=${adminId}, physio=${physioId}, client=${clientId})`);
+  console.log(
+    `  users ok (admin=${adminId}, physio=${physioId}, client=${clientId})`
+  );
 
   const ex1 = await upsertExercise({
     createdBy: physioId,

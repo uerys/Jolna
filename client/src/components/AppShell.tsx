@@ -41,23 +41,30 @@ export default function AppShell({ children, sidebar }: Props) {
   const [, navigate] = useLocation();
   const intl = useIntl();
 
-  const impersonating = (user as { __impersonating?: boolean } | null)?.__impersonating;
+  const impersonating = (user as { __impersonating?: boolean } | null)
+    ?.__impersonating;
   const utils = trpc.useUtils();
   const targets = trpc.dev.listImpersonationTargets.useQuery(undefined, {
-    // Only meaningful for admins — but the server silently returns [] otherwise.
-    enabled: !!user,
+    // Only admins can access this endpoint; avoid noisy forbidden errors for clients.
+    enabled: user?.role === "admin",
   });
-  
+
   // Filter out current user from targets
-  const otherUsers = (targets.data ?? []).filter((t) => t.id !== user?.id);
-  const userInitials = (user?.name ?? user?.email ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "U";
-  
+  const otherUsers = (targets.data ?? []).filter(t => t.id !== user?.id);
+  const userInitials =
+    (user?.name ?? user?.email ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase() ?? "")
+      .join("") || "U";
+
   const impersonate = trpc.dev.impersonate.useMutation({
     onSuccess: async () => {
       await utils.auth.me.invalidate();
       navigate("/");
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Impersonation failed:", error.message);
     },
   });
@@ -66,7 +73,7 @@ export default function AppShell({ children, sidebar }: Props) {
       await utils.auth.me.invalidate();
       navigate("/");
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Failed to stop impersonation:", error.message);
     },
   });
@@ -106,7 +113,7 @@ export default function AppShell({ children, sidebar }: Props) {
               {otherUsers.length > 0 && (
                 <Select
                   value={impersonating ? String(user?.id ?? "") : "__switch"}
-                  onValueChange={(v) => {
+                  onValueChange={v => {
                     if (v === "__stop") {
                       stopImpersonation.mutate();
                       return;
@@ -132,7 +139,7 @@ export default function AppShell({ children, sidebar }: Props) {
                         <hr className="my-1" />
                       </>
                     )}
-                    {otherUsers.map((t) => (
+                    {otherUsers.map(t => (
                       <SelectItem key={t.id} value={String(t.id)}>
                         {t.name ?? t.email ?? `#${t.id}`} —{" "}
                         {intl.formatMessage({ id: roleToKey(t.role) })}
@@ -142,13 +149,26 @@ export default function AppShell({ children, sidebar }: Props) {
                 </Select>
               )}
 
-              <Link href="/profile" className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/70">
+              <Link
+                href="/profile"
+                className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/70"
+              >
                 <Avatar className="h-9 w-9 border shrink-0">
-                  <AvatarImage src={(user as { avatarUrl?: string | null } | null)?.avatarUrl ?? undefined} alt={user?.name ?? user?.email ?? "Profile"} />
-                  <AvatarFallback className="text-xs font-medium">{userInitials}</AvatarFallback>
+                  <AvatarImage
+                    src={
+                      (user as { avatarUrl?: string | null } | null)
+                        ?.avatarUrl ?? undefined
+                    }
+                    alt={user?.name ?? user?.email ?? "Profile"}
+                  />
+                  <AvatarFallback className="text-xs font-medium">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col text-left leading-tight">
-                  <span className="text-sm font-medium">{user?.name ?? user?.email ?? "—"}</span>
+                  <span className="text-sm font-medium">
+                    {user?.name ?? user?.email ?? "—"}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     <FormattedMessage id={roleToKey(user?.role)} />
                   </span>

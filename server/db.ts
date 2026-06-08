@@ -49,7 +49,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "phoneNumber", "avatarUrl", "passwordHash", "loginMethod"] as const;
+    const textFields = [
+      "name",
+      "email",
+      "phoneNumber",
+      "avatarUrl",
+      "passwordHash",
+      "loginMethod",
+    ] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -158,7 +165,7 @@ export async function updateUserFields(
       | "languagePreference"
       | "physiotherapistId"
     >
-  >,
+  >
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -175,7 +182,10 @@ export async function deleteUser(id: number) {
 export async function setLanguagePreference(id: number, lang: Language) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(users).set({ languagePreference: lang }).where(eq(users.id, id));
+  await db
+    .update(users)
+    .set({ languagePreference: lang })
+    .where(eq(users.id, id));
 }
 
 /* ------------------------------------------------------------------ */
@@ -187,14 +197,20 @@ export async function listExercises(createdBy?: number) {
   if (!db) return [];
   const q = db.select().from(exercises);
   return createdBy
-    ? await q.where(eq(exercises.createdBy, createdBy)).orderBy(desc(exercises.updatedAt))
+    ? await q
+        .where(eq(exercises.createdBy, createdBy))
+        .orderBy(desc(exercises.updatedAt))
     : await q.orderBy(desc(exercises.updatedAt));
 }
 
 export async function getExerciseById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const r = await db.select().from(exercises).where(eq(exercises.id, id)).limit(1);
+  const r = await db
+    .select()
+    .from(exercises)
+    .where(eq(exercises.id, id))
+    .limit(1);
   return r[0];
 }
 
@@ -207,7 +223,7 @@ export async function createExercise(data: InsertExercise) {
 
 export async function updateExercise(
   id: number,
-  patch: Partial<InsertExercise>,
+  patch: Partial<InsertExercise>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -239,7 +255,7 @@ export async function createAssignment(data: InsertAssignment) {
 
 export async function listAssignmentsForClient(
   clientId: number,
-  opts?: { activeOn?: string; status?: AssignmentStatus },
+  opts?: { activeOn?: string; status?: AssignmentStatus }
 ) {
   const db = await getDb();
   if (!db) return [];
@@ -251,8 +267,17 @@ export async function listAssignmentsForClient(
   }
   return db
     .select({
-      assignment: assignments,
-      exercise: exercises,
+      assignment: {
+        id: assignments.id,
+        reps: assignments.reps,
+      },
+      exercise: {
+        id: exercises.id,
+        title: exercises.title,
+        instructionsEn: exercises.instructionsEn,
+        instructionsKh: exercises.instructionsKh,
+        videoUrl: exercises.videoUrl,
+      },
     })
     .from(assignments)
     .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
@@ -274,7 +299,7 @@ export async function listAssignmentsForPhysio(physiotherapistId: number) {
 
 export async function updateAssignmentStatus(
   id: number,
-  status: AssignmentStatus,
+  status: AssignmentStatus
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -305,7 +330,7 @@ export async function createFeedback(data: InsertFeedbackLog) {
 
 export async function listFeedbackByClient(
   clientId: number,
-  opts?: { from?: Date; to?: Date },
+  opts?: { from?: Date; to?: Date }
 ) {
   const db = await getDb();
   if (!db) return [];

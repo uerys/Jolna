@@ -1,17 +1,12 @@
 FROM node:20-alpine AS base
 
 WORKDIR /app
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN corepack enable
 
 FROM base AS deps
 
-COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
+COPY package.json package-lock.json ./
 
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 FROM base AS dev
 
@@ -22,4 +17,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["pnpm", "dev"]
+CMD ["npm", "run", "dev"]
