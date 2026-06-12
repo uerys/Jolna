@@ -337,6 +337,7 @@ export default function PhysioClientDetail() {
   const [historyDateFrom, setHistoryDateFrom] = useState<string>("");
   const [historyDateTo, setHistoryDateTo] = useState<string>("");
   const [highPainOnly, setHighPainOnly] = useState<boolean>(false);
+  const [showMissedDays, setShowMissedDays] = useState<boolean>(false);
   const [noteSearchQuery, setNoteSearchQuery] = useState<string>("");
 
   // Exercise Assignment Filter States
@@ -516,41 +517,109 @@ export default function PhysioClientDetail() {
   }, [clientAssignments.data]);
 
   const historyRecords = useMemo(() => {
-    let list = feedbackEnriched.data ?? [];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const assignmentsList = clientAssignments.data ?? [];
+    const logsList = feedbackEnriched.data ?? [];
+
+    const missedLogs: any[] = [];
+    if (showMissedDays) {
+      // Loop through every assignment
+      assignmentsList.forEach((a) => {
+        const start = new Date(a.assignment.startDate + "T00:00:00");
+        const end = new Date(a.assignment.endDate + "T00:00:00");
+        const today = new Date(todayStr + "T00:00:00");
+
+        const current = new Date(start);
+        while (current <= end) {
+          // Only show missed rows for dates that have already passed (current < today)
+          if (current >= today) {
+            break;
+          }
+
+          const currentDateStr = current.toISOString().slice(0, 10);
+          
+          // Check if a log exists for this assignmentId on this date
+          const logExists = logsList.some((l) => {
+            const logDateStr = new Date(l.feedback.submittedAt).toISOString().slice(0, 10);
+            return l.feedback.assignmentId === a.assignment.id && logDateStr === currentDateStr;
+          });
+
+          if (!logExists) {
+            missedLogs.push({
+              feedback: {
+                id: `missed-${a.assignment.id}-${currentDateStr}`,
+                painScore: null,
+                notes: "No log submitted",
+                submittedAt: currentDateStr,
+                createdAt: new Date(current),
+                completed: false,
+                isMissed: true,
+              },
+              exercise: {
+                id: a.exercise.id,
+                title: a.exercise.title,
+              },
+              assignment: {
+                id: a.assignment.id,
+                startDate: a.assignment.startDate,
+                endDate: a.assignment.endDate,
+              },
+            });
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      });
+    }
+
+    let combined = [
+      ...(feedbackEnriched.data ?? []).map((f) => ({
+        feedback: {
+          ...f.feedback,
+          isMissed: false,
+        },
+        exercise: f.exercise,
+        assignment: f.assignment,
+      })),
+      ...missedLogs,
+    ];
 
     if (viewMode === "historical") {
       if (filterYear !== "all") {
-        list = list.filter((f) => {
-          const year = new Date(f.feedback.submittedAt).getFullYear().toString();
+        combined = combined.filter((r) => {
+          const year = new Date(r.feedback.submittedAt).getFullYear().toString();
           return year === filterYear;
         });
       }
 
       if (historyExerciseId !== "all") {
-        list = list.filter((f) => String(f.exercise.id) === historyExerciseId);
+        combined = combined.filter((r) => String(r.exercise.id) === historyExerciseId);
       }
 
       if (historyDateFrom) {
         const fromTime = new Date(historyDateFrom + "T00:00:00").getTime();
-        list = list.filter((f) => new Date(f.feedback.submittedAt).getTime() >= fromTime);
+        combined = combined.filter((r) => new Date(r.feedback.submittedAt).getTime() >= fromTime);
       }
       if (historyDateTo) {
         const toTime = new Date(historyDateTo + "T23:59:59").getTime();
-        list = list.filter((f) => new Date(f.feedback.submittedAt).getTime() <= toTime);
+        combined = combined.filter((r) => new Date(r.feedback.submittedAt).getTime() <= toTime);
       }
     }
 
     if (noteSearchQuery.trim()) {
       const query = noteSearchQuery.toLowerCase();
-      list = list.filter((f) => f.exercise.title.toLowerCase().includes(query));
+      combined = combined.filter((r) => r.exercise.title.toLowerCase().includes(query));
     }
 
     if (highPainOnly) {
-      list = list.filter((f) => f.feedback.painScore >= 7);
+      // Missed rows should still appear alongside the high pain rows
+      combined = combined.filter((r) => r.feedback.isMissed || (r.feedback.painScore !== null && r.feedback.painScore >= 7));
     }
 
-    return list;
-  }, [feedbackEnriched.data, historyExerciseId, historyDateFrom, historyDateTo, noteSearchQuery, highPainOnly, viewMode, filterYear]);
+    // Sort all rows by date descending
+    combined.sort((a, b) => new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime());
+
+    return combined;
+  }, [feedbackEnriched.data, clientAssignments.data, historyExerciseId, historyDateFrom, historyDateTo, noteSearchQuery, highPainOnly, showMissedDays, viewMode, filterYear]);
 
   const chartData = useMemo(() => {
     let list = feedbackEnriched.data ?? [];
@@ -572,13 +641,33 @@ export default function PhysioClientDetail() {
   }, [feedbackEnriched.data, viewMode]);
 
   const activeStats = useMemo(() => {
-    const activeAssIds = new Set((clientAssignments.data ?? [])
-      .filter(a => a.assignment.status === "active")
-      .map(a => a.assignment.id));
-    const activeFeedback = (feedbackEnriched.data ?? []).filter(f => activeAssIds.has(f.assignment.id));
-    const total = activeFeedback.length;
-    const completed = activeFeedback.filter(f => f.feedback.completed).length;
-    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    
+    // A session is considered active only if its start_date is on or before today
+    const activeSessions = (clientAssignments.data ?? []).filter((a) => {
+      return a.assignment.status === "active" && a.assignment.startDate <= todayStr;
+    });
+
+    const total = activeSessions.length;
+    if (total === 0) {
+      return { total: 0, completed: 0, rate: null };
+    }
+
+    // A session is considered completed if there is at least one feedback log inside its window (inclusive)
+    const completed = activeSessions.filter((a) => {
+      const start = new Date(a.assignment.startDate + "T00:00:00");
+      const end = new Date(a.assignment.endDate + "T00:00:00");
+      return (feedbackEnriched.data ?? []).some((f) => {
+        const logDate = new Date(f.feedback.submittedAt);
+        return (
+          f.feedback.assignmentId === a.assignment.id &&
+          logDate >= start &&
+          logDate <= end
+        );
+      });
+    }).length;
+
+    const rate = Math.round((completed / total) * 100);
     return { total, completed, rate };
   }, [clientAssignments.data, feedbackEnriched.data]);
 
@@ -773,17 +862,21 @@ export default function PhysioClientDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-white border border-slate-200 shadow-lg rounded-lg">
-                  <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Patient Care</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-slate-100" />
-                  <DropdownMenuItem onClick={() => setIsAssignOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    <Plus className="size-4 text-indigo-600" />
-                    <span>Assign New Exercise</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    <Calendar className="size-4 text-indigo-600" />
-                    <span>Schedule Next Visit</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-100" />
+                  {viewMode === "active" && (
+                    <>
+                      <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Patient Care</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-slate-100" />
+                      <DropdownMenuItem onClick={() => setIsAssignOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <Plus className="size-4 text-indigo-600" />
+                        <span>Assign New Exercise</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <Calendar className="size-4 text-indigo-600" />
+                        <span>Schedule Next Visit</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-slate-100" />
+                    </>
+                  )}
                   <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Contact Info</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-slate-100" />
                   <DropdownMenuItem onClick={handleCopyContact} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
@@ -826,6 +919,18 @@ export default function PhysioClientDetail() {
             </CardHeader>
             <CardContent>
               {(() => {
+                if (viewMode === "active" && activeStats.rate === null) {
+                  return (
+                    <>
+                      <div className="text-sm font-extrabold text-slate-500 mb-4 h-[30px] flex items-center">
+                        No active sessions
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1">
+                        <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: "0%" }} />
+                      </div>
+                    </>
+                  );
+                }
                 const rateValue = viewMode === "historical" ? completionRate : activeStats.rate;
                 return (
                   <>
@@ -853,14 +958,21 @@ export default function PhysioClientDetail() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-extrabold text-slate-900 mb-2">
-                {viewMode === "historical"
-                  ? clientAssignments.data?.length ?? 0
-                  : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active").length}
+                {(() => {
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  return viewMode === "historical"
+                    ? clientAssignments.data?.length ?? 0
+                    : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                })()}
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 {viewMode === "historical"
                   ? "Including completed & discontinued plans"
-                  : `${(clientAssignments.data ?? []).length} total protocols assigned`}
+                  : (() => {
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                      return `${activeCount} active protocol${activeCount !== 1 ? "s" : ""}`;
+                    })()}
               </p>
             </CardContent>
           </Card>
@@ -1146,45 +1258,53 @@ export default function PhysioClientDetail() {
         <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-base font-bold text-slate-900">Exercise Protocol Assignments</CardTitle>
+              <CardTitle className="text-base font-bold text-slate-900">
+                {viewMode === "historical" ? "Completed Exercise" : "Exercise Protocol Assignments"}
+              </CardTitle>
               <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-none font-bold text-xs py-0.5 px-2">
-                {assignmentRecords.length} assigned
+                {assignmentRecords.length} {viewMode === "historical" ? "completed" : "assigned"}
               </Badge>
             </div>
-            <Button size="sm" onClick={() => setIsAssignOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 focus-visible:ring-indigo-600 rounded-lg shrink-0">
-              <Plus className="size-4" />
-              <span>Assign Exercise</span>
-            </Button>
+            {viewMode === "active" && (
+              <Button size="sm" onClick={() => setIsAssignOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 focus-visible:ring-indigo-600 rounded-lg shrink-0">
+                <Plus className="size-4" />
+                <span>Assign Exercise</span>
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
             {/* Sleek, Horizontal Filter Bar for Exercise Assignments */}
             <div className="bg-slate-50 border border-slate-200/80 p-2 rounded-lg flex flex-col md:flex-row items-center gap-2 text-xs">
               {/* Search Exercise Plans */}
-              <div className="relative flex-1 w-full min-w-[150px]">
-                <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search Exercise Plans..."
-                  className="h-8 pl-8 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg w-full font-normal"
-                  value={assignSearchQuery}
-                  onChange={(e) => setAssignSearchQuery(e.target.value)}
-                />
-              </div>
+              {viewMode === "active" && (
+                <div className="relative flex-1 w-full min-w-[150px]">
+                  <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search Exercise Plans..."
+                    className="h-8 pl-8 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg w-full font-normal"
+                    value={assignSearchQuery}
+                    onChange={(e) => setAssignSearchQuery(e.target.value)}
+                  />
+                </div>
+              )}
 
               {/* Status Select */}
-              <div className="w-full md:w-32 shrink-0">
-                <Select value={assignStatus} onValueChange={setAssignStatus}>
-                  <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Archived</SelectItem>
-                    <SelectItem value="cancelled">Paused</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {viewMode === "active" && (
+                <div className="w-full md:w-32 shrink-0">
+                  <Select value={assignStatus} onValueChange={setAssignStatus}>
+                    <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Archived</SelectItem>
+                      <SelectItem value="cancelled">Paused</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Category Select */}
               <div className="w-full md:w-32 shrink-0">
@@ -1223,15 +1343,17 @@ export default function PhysioClientDetail() {
               </div>
 
               {/* Needs Attention Toggle */}
-              <div className="flex items-center gap-2 border-l border-slate-200 pl-2 shrink-0 w-full md:w-auto justify-between md:justify-start h-8">
-                <span className="text-slate-500 font-medium whitespace-nowrap text-[11px]">Needs Attention</span>
-                <Switch
-                  checked={needsAttentionOnly}
-                  onCheckedChange={setNeedsAttentionOnly}
-                  className="focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
-                  aria-label="Toggle Needs Attention filter"
-                />
-              </div>
+              {viewMode === "active" && (
+                <div className="flex items-center gap-2 border-l border-slate-200 pl-2 shrink-0 w-full md:w-auto justify-between md:justify-start h-8">
+                  <span className="text-slate-500 font-medium whitespace-nowrap text-[11px]">Needs Attention</span>
+                  <Switch
+                    checked={needsAttentionOnly}
+                    onCheckedChange={setNeedsAttentionOnly}
+                    className="focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
+                    aria-label="Toggle Needs Attention filter"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Active Filter Pills (Soft Blue Backgrounds for Active States) */}
@@ -1311,7 +1433,7 @@ export default function PhysioClientDetail() {
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Protocol Window</TableHead>
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Sets × Reps</TableHead>
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                      {/* Actions column hidden in historical record view */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1346,17 +1468,7 @@ export default function PhysioClientDetail() {
                               {statusLabel}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteAssignment(a.assignment.id)}
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 rounded-md focus-visible:ring-rose-500"
-                              aria-label={`Delete assignment ${a.exercise.title}`}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </TableCell>
+                      {/* Actions cell hidden in historical record view */}
                         </TableRow>
                       );
                     })}
@@ -1524,21 +1636,24 @@ export default function PhysioClientDetail() {
               <>
                 {/* Compact, horizontal filter bar */}
                 <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+
                   {/* Search Bar for notes */}
-                  <div className={`relative w-full ${viewMode === "historical" ? "md:w-1/4" : "md:w-1/2"}`}>
-                    <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search exercise plans..."
-                      className="h-8 pl-8 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg w-full"
-                      value={noteSearchQuery}
-                      onChange={(e) => setNoteSearchQuery(e.target.value)}
-                    />
-                  </div>
+                  {viewMode === "active" && (
+                    <div className="relative w-full md:w-1/2">
+                      <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search exercise plans..."
+                        className="h-8 pl-8 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg w-full font-normal"
+                        value={noteSearchQuery}
+                        onChange={(e) => setNoteSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  )}
 
                   {/* Dropdown for Exercise Template */}
                   {viewMode === "historical" && (
-                    <div className="w-full md:w-1/4">
+                    <div className="w-full md:w-1/3">
                       <Select value={historyExerciseId} onValueChange={setHistoryExerciseId}>
                         <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-lg">
                           <SelectValue placeholder="All Exercises" />
@@ -1576,15 +1691,28 @@ export default function PhysioClientDetail() {
                     </div>
                   )}
 
-                  {/* High Pain Alert Toggle */}
-                  <div className={`flex items-center justify-between gap-3 shrink-0 w-full md:w-auto h-8 ${viewMode === "historical" ? "border-l border-slate-200 pl-3" : ""}`}>
-                    <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap">High Pain (≥7)</span>
-                    <Switch
-                      checked={highPainOnly}
-                      onCheckedChange={setHighPainOnly}
-                      className="focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
-                      aria-label="Toggle High Pain Alert filter"
-                    />
+                  <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto">
+                    {/* High Pain Alert Toggle */}
+                    <div className={`flex items-center justify-between gap-3 shrink-0 h-8 ${viewMode === "historical" ? "border-l border-slate-200 pl-3" : ""}`}>
+                      <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap">High Pain (≥7)</span>
+                      <Switch
+                        checked={highPainOnly}
+                        onCheckedChange={setHighPainOnly}
+                        className="focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
+                        aria-label="Toggle High Pain Alert filter"
+                      />
+                    </div>
+
+                    {/* Show Missed Days Toggle */}
+                    <div className="flex items-center justify-between gap-3 shrink-0 h-8 border-l border-slate-200 pl-3">
+                      <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap">Show missed days</span>
+                      <Switch
+                        checked={showMissedDays}
+                        onCheckedChange={setShowMissedDays}
+                        className="focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
+                        aria-label="Toggle Show Missed Days filter"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1607,6 +1735,25 @@ export default function PhysioClientDetail() {
                       </TableHeader>
                       <TableBody>
                         {historyRecords.map((f) => {
+                          if (f.feedback.isMissed) {
+                            return (
+                              <TableRow key={f.feedback.id} className="border-b border-slate-100 bg-rose-50/5 hover:bg-rose-50/10 transition-colors">
+                                <TableCell className="font-semibold text-slate-800 text-sm">{f.exercise.title}</TableCell>
+                                <TableCell className="text-slate-400 text-xs font-semibold font-mono">
+                                  {new Date(f.feedback.submittedAt + "T00:00:00").toLocaleDateString(undefined, { dateStyle: "short" })}
+                                </TableCell>
+                                <TableCell className="text-slate-400 font-semibold">—</TableCell>
+                                <TableCell>
+                                  <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50 border-rose-200 border font-bold text-xs w-fit">
+                                    Missed
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-slate-400 italic font-normal min-w-[300px]">
+                                  No log submitted
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
                           const painConfig = getPainScoreConfig(f.feedback.painScore);
                           const isHighPain = f.feedback.painScore >= 7;
                           const rowClass = isHighPain
