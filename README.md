@@ -20,7 +20,13 @@ This repository is set up for `npm` and `package-lock.json`. Use `npm` commands 
 The database is run via a Docker container, while the application runs on your host machine.
 
 ### 1. Start the Database
-Start the MySQL database container in the background:
+## Docker Compose
+
+The repository includes a `docker-compose.yml` configuration to host the database container:
+
+- `db`: MySQL 8.4 on port `3306`
+
+Start the database container using:
 ```bash
 npm run db:up
 ```
@@ -94,16 +100,6 @@ Main router groups currently available:
 
 There is also a health check route used by the app runtime.
 
-## Docker Compose
-
-The repository includes a `docker-compose.yml` configuration to host the database container:
-
-- `db`: MySQL 8.4 on port `3306`
-
-Start the database container using:
-```bash
-npm run db:up
-```
 ## Demo Credentials
 
 The seed script creates the following local accounts, all using the same password:
