@@ -21,12 +21,7 @@ import { relations } from "drizzle-orm";
  *   - "client"         ≡ Client (default for newly-signed-in visitors)
  *   - "user"           ≡ legacy / pre-role-assignment (treated as Client in the UI)
  */
-export const ROLES = [
-  "user",
-  "admin",
-  "client",
-  "physiotherapist",
-] as const;
+export const ROLES = ["user", "admin", "client", "physiotherapist"] as const;
 export type RecovryRole = (typeof ROLES)[number];
 
 export const ACCOUNT_STATUSES = ["active", "inactive"] as const;
@@ -41,6 +36,13 @@ export const ASSIGNMENT_STATUSES = [
   "cancelled",
 ] as const;
 export type AssignmentStatus = (typeof ASSIGNMENT_STATUSES)[number];
+
+export const NOTIFICATION_TYPES = [
+  "assignment_created",
+  "assignment_status_updated",
+  "feedback_submitted",
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 /**
  * Core user table.
@@ -71,10 +73,10 @@ export const users = mysqlTable(
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
     lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   },
-  (t) => ({
+  t => ({
     byRole: index("users_role_idx").on(t.role),
     byPhysio: index("users_physio_idx").on(t.physiotherapistId),
-  }),
+  })
 );
 
 export type User = typeof users.$inferSelect;
@@ -98,9 +100,9 @@ export const exercises = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  (t) => ({
+  t => ({
     byCreator: index("exercises_creator_idx").on(t.createdBy),
-  }),
+  })
 );
 
 export type Exercise = typeof exercises.$inferSelect;
@@ -126,11 +128,11 @@ export const assignments = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  (t) => ({
+  t => ({
     byClient: index("assignments_client_idx").on(t.clientId),
     byPhysio: index("assignments_physio_idx").on(t.physiotherapistId),
     byExercise: index("assignments_exercise_idx").on(t.exerciseId),
-  }),
+  })
 );
 
 export type Assignment = typeof assignments.$inferSelect;
@@ -151,14 +153,44 @@ export const feedbackLogs = mysqlTable(
     notes: text("notes"),
     submittedAt: timestamp("submittedAt").defaultNow().notNull(),
   },
-  (t) => ({
+  t => ({
     byAssignment: index("feedback_assignment_idx").on(t.assignmentId),
     byClient: index("feedback_client_idx").on(t.clientId),
-  }),
+  })
 );
 
 export type FeedbackLog = typeof feedbackLogs.$inferSelect;
 export type InsertFeedbackLog = typeof feedbackLogs.$inferInsert;
+
+/**
+ * In-app notification for a client or physiotherapist.
+ * title/content are stored as rendered strings so the UI can show them without
+ * re-running business logic on the client.
+ */
+export const notifications = mysqlTable(
+  "notifications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    recipientId: int("recipientId").notNull(),
+    actorId: int("actorId"),
+    type: mysqlEnum("type", NOTIFICATION_TYPES).notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    href: varchar("href", { length: 1024 }),
+    readAt: timestamp("readAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => ({
+    byRecipient: index("notifications_recipient_idx").on(t.recipientId),
+    byRecipientRead: index("notifications_recipient_read_idx").on(
+      t.recipientId,
+      t.readAt
+    ),
+  })
+);
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
 
 /* ------------------------------------------------------------------ */
 /* Relations                                                           */
@@ -172,8 +204,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   clients: many(users, { relationName: "client_to_physio" }),
   exercisesCreated: many(exercises),
-  assignmentsAsPhysio: many(assignments, { relationName: "physio_assignments" }),
-  assignmentsAsClient: many(assignments, { relationName: "client_assignments" }),
+  assignmentsAsPhysio: many(assignments, {
+    relationName: "physio_assignments",
+  }),
+  assignmentsAsClient: many(assignments, {
+    relationName: "client_assignments",
+  }),
   feedbackLogs: many(feedbackLogs),
 }));
 
@@ -211,5 +247,18 @@ export const feedbackLogsRelations = relations(feedbackLogs, ({ one }) => ({
   client: one(users, {
     fields: [feedbackLogs.clientId],
     references: [users.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  recipient: one(users, {
+    fields: [notifications.recipientId],
+    references: [users.id],
+    relationName: "notification_recipient",
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+    relationName: "notification_actor",
   }),
 }));

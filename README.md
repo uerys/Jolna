@@ -1,6 +1,6 @@
-# Recovry
+# JOLNA
 
-Recovry is a specialized physiotherapy rehab platform supporting three user tiers: admins, physiotherapists, and clients. Created as a Paragon University capstone project, the application is powered by a Node.js backend.
+JOLNA is a specialized physiotherapy rehab platform supporting three user tiers: admins, physiotherapists, and clients. Created as a Paragon University capstone project, the application is powered by a Node.js backend.
 
 ## What The App Does
 
@@ -17,52 +17,28 @@ This repository is set up for `npm` and `package-lock.json`. Use `npm` commands 
 
 ## Quick Start
 
-Choose one workflow and stick to it:
+The database is run via a Docker container, while the application runs on your host machine.
 
-- Docker Compose for the full app + database stack.
-- Host-based development if you want to run the app from your machine and only use Docker for MySQL.
-
-Do not run the Docker app container and `npm run dev` on the host at the same time. They both want port `3000`.
-
-### Recommended: Docker Compose
-
-1. Start the full stack.
-
-```bash
-docker compose up --build
-```
-
-2. Open the app in your browser.
-
-```text
-http://localhost:3000
-```
-
-3. Sign in with one of the demo accounts after the first seed run.
-
-### Host-based Development
-
-1. Start the database.
-
+### 1. Start the Database
+Start the MySQL database container in the background:
 ```bash
 npm run db:up
 ```
 
-2. Install dependencies.
-
+### 2. Install Dependencies
+Install the project dependencies:
 ```bash
 npm install
 ```
 
-3. Create a `.env` file in the project root.
-
+### 3. Create Environment Configuration
+Create a `.env` file in the project root:
 ```bash
 DATABASE_URL=mysql://root:password@localhost:3306/appdb
 JWT_SECRET=replace-with-a-long-random-secret
 ```
 
 Optional environment variables used by the current app can be left blank for local development:
-
 ```bash
 VITE_APP_ID=
 OAUTH_SERVER_URL=
@@ -71,26 +47,25 @@ BUILT_IN_FORGE_API_URL=
 BUILT_IN_FORGE_API_KEY=
 ```
 
-4. Apply the database schema.
-
+### 4. Apply Database Schema & Migrations
+Apply the database schema:
 ```bash
 npm run db:push
 ```
 
-5. Seed the demo records.
-
+### 5. Seed the Demo Records
+Seed the demo accounts and default exercises:
 ```bash
 node scripts/seed.mjs
 ```
 
-6. Start the app.
-
+### 6. Start the App
+Start the development server:
 ```bash
 npm run dev
 ```
 
-The app runs on the localhost URL printed in the terminal, usually `http://localhost:3000`. If port `3000` is already busy, stop the other app first.
-
+The app runs on the localhost URL printed in the terminal, usually `http://localhost:3000`.
 ## Main Routes
 
 The current client routes are:
@@ -119,28 +94,23 @@ Main router groups currently available:
 
 There is also a health check route used by the app runtime.
 
-## Docker Compose (Local Dev)
+## Docker Compose
 
-The repository includes a `docker-compose.yml` stack with:
+The repository includes a `docker-compose.yml` configuration to host the database container:
 
-- `app`: Node.js development container on port `3000`
 - `db`: MySQL 8.4 on port `3306`
 
-The compose file uses local-dev defaults, so no extra env file is required for the common case. If you want different credentials, edit `docker-compose.yml` before starting the stack.
-
-If you only want the database container for host-based development, you can still use:
-
+Start the database container using:
 ```bash
 npm run db:up
 ```
-
 ## Demo Credentials
 
 The seed script creates the following local accounts, all using the same password:
 
-- `admin@recovry.local`
-- `physio@recovry.local`
-- `client@recovry.local`
+- `admin@jolna.local`
+- `physio@jolna.local`
+- `client@jolna.local`
 
 Password: `Password1!`
 

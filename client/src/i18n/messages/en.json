@@ -1,5 +1,5 @@
 {
-  "app.name": "Recovry",
+  "app.name": "JOLNA",
   "app.tagline": "Guided home rehabilitation for clinics, physiotherapists, and clients.",
 
   "nav.signIn": "Sign in",
@@ -10,6 +10,11 @@
   "nav.viewingAs": "Viewing as {name} ({role})",
   "nav.stopImpersonation": "Stop viewing as",
 
+  "notifications.title": "Notifications",
+  "notifications.empty": "You're all caught up.",
+  "notifications.markAllRead": "Mark all as read",
+  "notifications.unreadCount": "{count, plural, one {# unread notification} other {# unread notifications}}",
+
   "role.admin": "Clinic Admin",
   "role.physiotherapist": "Physiotherapist",
   "role.client": "Client",
@@ -19,7 +24,7 @@
   "status.inactive": "Inactive",
 
   "home.heroTitle": "Rehabilitation, delivered daily.",
-  "home.heroSubtitle": "Recovry connects physiotherapists with their clients, turning every exercise plan into a daily routine they can actually follow — with bilingual support in English and Khmer.",
+  "home.heroSubtitle": "JOLNA connects physiotherapists with their clients, turning every exercise plan into a daily routine they can actually follow — with bilingual support in English and Khmer.",
   "home.ctaSignIn": "Sign in to continue",
   "home.ctaContinue": "Go to my dashboard",
 

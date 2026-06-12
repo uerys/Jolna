@@ -19,33 +19,5 @@ services:
       timeout: 5s
       retries: 20
       start_period: 20s
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      DATABASE_URL: mysql://root:password@db:3306/appdb
-      JWT_SECRET: dev-secret
-      VITE_APP_ID: ""
-      OAUTH_SERVER_URL: ""
-      OWNER_OPEN_ID: ""
-      BUILT_IN_FORGE_API_URL: ""
-      BUILT_IN_FORGE_API_KEY: ""
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - app-node-modules:/app/node_modules
-    stdin_open: true
-    tty: true
-
 volumes:
   mysql-data:
-  app-node-modules:

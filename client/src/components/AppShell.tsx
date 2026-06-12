@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -36,7 +37,7 @@ function roleToKey(role: string | undefined) {
   }
 }
 
-export default function AppShell({ children, sidebar }: Props) {
+export default function AppShell({ children, sidebar }: Readonly<Props>) {
   const { user, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const intl = useIntl();
@@ -93,6 +94,7 @@ export default function AppShell({ children, sidebar }: Props) {
           <div className="flex-1" />
 
           <LanguageToggle />
+          {isAuthenticated && <NotificationCenter enabled={isAuthenticated} />}
 
           {isAuthenticated ? (
             <>
@@ -123,7 +125,7 @@ export default function AppShell({ children, sidebar }: Props) {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-50">
                     <SelectValue>
                       {impersonating
                         ? `Viewing as ${user?.name ?? user?.email ?? "user"}`

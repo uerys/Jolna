@@ -57,6 +57,13 @@
       "when": 1780902126133,
       "tag": "0007_bright_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1780902127133,
+      "tag": "0008_notifications",
+      "breakpoints": true
     }
   ]
 }

@@ -25,6 +25,7 @@ function makeCtx(role: Role | null): TrpcContext {
 
   return {
     user,
+    originalUser: user,
     req: { headers: {}, protocol: "https" } as TrpcContext["req"],
     res: {
       clearCookie: () => void 0,

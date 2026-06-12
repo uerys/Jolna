@@ -1,12 +1,14 @@
-import { and, asc, desc, eq, gte, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   assignments,
   exercises,
   feedbackLogs,
+  notifications,
   InsertAssignment,
   InsertExercise,
   InsertFeedbackLog,
+  InsertNotification,
   InsertUser,
   users,
   type AccountStatus,
@@ -88,7 +90,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.languagePreference = user.languagePreference;
     }
 
-    if (!values.lastSignedIn) values.lastSignedIn = new Date();
+    values.lastSignedIn ??= new Date();
     if (Object.keys(updateSet).length === 0) {
       updateSet.lastSignedIn = new Date();
     }
@@ -214,6 +216,17 @@ export async function getExerciseById(id: number) {
   return r[0];
 }
 
+export async function getAssignmentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const r = await db
+    .select()
+    .from(assignments)
+    .where(eq(assignments.id, id))
+    .limit(1);
+  return r[0];
+}
+
 export async function createExercise(data: InsertExercise) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -262,8 +275,10 @@ export async function listAssignmentsForClient(
   const clauses = [eq(assignments.clientId, clientId)];
   if (opts?.status) clauses.push(eq(assignments.status, opts.status));
   if (opts?.activeOn) {
-    clauses.push(lte(assignments.startDate, opts.activeOn));
-    clauses.push(gte(assignments.endDate, opts.activeOn));
+    clauses.push(
+      lte(assignments.startDate, opts.activeOn),
+      gte(assignments.endDate, opts.activeOn)
+    );
   }
   return db
     .select({
@@ -370,4 +385,103 @@ export async function getClientCompletionStats(clientId: number) {
     total: Number(row.total ?? 0),
     completed: Number(row.completed ?? 0),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Notifications                                                       */
+/* ------------------------------------------------------------------ */
+
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  try {
+    const [{ insertId }] = await db.insert(notifications).values(data);
+    const row = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, Number(insertId)))
+      .limit(1);
+    return row[0];
+  } catch (error) {
+    console.warn("[Database] Failed to create notification:", error);
+    return undefined;
+  }
+}
+
+export async function listNotificationsForUser(
+  recipientId: number,
+  opts?: { limit?: number }
+) {
+  const db = await getDb();
+  if (!db) return [];
+  const limit = Math.max(1, Math.min(opts?.limit ?? 8, 50));
+  try {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.recipientId, recipientId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  } catch (error) {
+    console.warn("[Database] Failed to list notifications:", error);
+    return [];
+  }
+}
+
+export async function countUnreadNotifications(recipientId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const rows = await db
+      .select({
+        total: sql<number>`count(*)`,
+      })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          sql`${notifications.readAt} is null`
+        )
+      );
+    return Number(rows[0]?.total ?? 0);
+  } catch (error) {
+    console.warn("[Database] Failed to count unread notifications:", error);
+    return 0;
+  }
+}
+
+export async function markNotificationAsRead(id: number, recipientId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  try {
+    await db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.id, id),
+          eq(notifications.recipientId, recipientId)
+        )
+      );
+  } catch (error) {
+    console.warn("[Database] Failed to mark notification as read:", error);
+  }
+}
+
+export async function markAllNotificationsAsRead(recipientId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  try {
+    await db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          sql`${notifications.readAt} is null`
+        )
+      );
+  } catch (error) {
+    console.warn("[Database] Failed to mark all notifications as read:", error);
+  }
 }

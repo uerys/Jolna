@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { IMPERSONATE_COOKIE, publicProcedure, router } from "./_core/trpc";
@@ -7,10 +7,10 @@ import { getUserById } from "./db";
 import { adminRouter } from "./routers/admin";
 import { clientRouter } from "./routers/client";
 import { devRouter } from "./routers/dev";
+import { notificationsRouter } from "./routers/notifications";
 import { physioRouter } from "./routers/physio";
 import { settingsRouter } from "./routers/settings";
 import { parse as parseCookieHeader } from "cookie";
-import { ONE_YEAR_MS } from "@shared/const";
 import { z } from "zod";
 
 /**
@@ -41,11 +41,11 @@ export const appRouter = router({
       .input(
         z.object({
           name: z.string().min(1).max(120),
-          email: z.string().email().max(320),
+          email: z.string().email({ message: "Invalid email" }).max(320),
           password: z.string().min(8).max(128),
-        }),
+        })
       )
-      .mutation(async (opts) => {
+      .mutation(async opts => {
         const { user, sessionToken } = await sdk.register(opts.input);
         const cookieOptions = getSessionCookieOptions(opts.ctx.req);
         opts.ctx.res.cookie(COOKIE_NAME, sessionToken, {
@@ -57,11 +57,11 @@ export const appRouter = router({
     login: publicProcedure
       .input(
         z.object({
-          email: z.string().email().max(320),
+          email: z.string().email({ message: "Invalid email" }).max(320),
           password: z.string().min(1).max(128),
-        }),
+        })
       )
-      .mutation(async (opts) => {
+      .mutation(async opts => {
         const { user, sessionToken } = await sdk.login(opts.input);
         const cookieOptions = getSessionCookieOptions(opts.ctx.req);
         opts.ctx.res.cookie(COOKIE_NAME, sessionToken, {
@@ -70,7 +70,7 @@ export const appRouter = router({
         });
         return user;
       }),
-    me: publicProcedure.query(async (opts) => {
+    me: publicProcedure.query(async opts => {
       const effective = await resolveEffectiveMe(opts.ctx);
       if (!effective) return null;
       // Surface whether the user is currently being impersonated so the UI
@@ -80,9 +80,7 @@ export const appRouter = router({
         process.env.NODE_ENV !== "production" &&
         opts.ctx.user?.role === "admin" &&
         !!parseCookieHeader(rawCookie)[IMPERSONATE_COOKIE];
-      return { ...effective, __impersonating: impersonating } as typeof effective & {
-        __impersonating: boolean;
-      };
+      return { ...effective, __impersonating: impersonating };
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -94,6 +92,7 @@ export const appRouter = router({
   admin: adminRouter,
   physio: physioRouter,
   clientApp: clientRouter,
+  notifications: notificationsRouter,
   dev: devRouter,
   settings: settingsRouter,
 });
