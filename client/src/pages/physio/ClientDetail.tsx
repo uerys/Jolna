@@ -211,23 +211,23 @@ function DurationBar({ startDate, endDate }: DurationBarProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between text-xs font-semibold text-slate-500">
+      <div className="flex justify-between text-xs font-semibold text-[#667085]">
         <span className="flex items-center gap-1">
-          <Calendar className="size-3 text-slate-400" />
+          <Calendar className="size-3 text-[#98A2B3]" />
           {formatDateShort(startDate)}
         </span>
         <span className="flex items-center gap-1">
-          <Clock className="size-3 text-slate-400" />
+          <Clock className="size-3 text-[#98A2B3]" />
           {formatDateShort(endDate)}
         </span>
       </div>
-      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+      <div className="progress-track" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
         <div
-          className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-          style={{ width: `${progressPercent}%` }}
+          className="progress-fill"
+          style={{ width: `${progressPercent}%`, background: "#6366F1" }}
         />
       </div>
-      <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+      <div className="flex justify-between text-[11px] text-[#98A2B3] font-medium">
         <span>{progressPercent}% elapsed</span>
         <span>{daysRemaining} day{daysRemaining !== 1 ? "s" : ""} left</span>
       </div>
@@ -250,8 +250,8 @@ function ChartTick({
   return (
     <g transform={`translate(${x},${y + 10})`}>
       <foreignObject x={-36} y={0} width={72} height={36}>
-        <div className="flex h-full w-full flex-col items-center justify-center text-[10px] leading-tight text-slate-500">
-          <span className="font-medium text-slate-700">
+        <div className="flex h-full w-full flex-col items-center justify-center text-[10px] leading-tight text-[#667085]">
+          <span className="font-medium text-[#344054]">
             {date.toLocaleDateString([], { month: "short", day: "numeric" })}
           </span>
           <span>
@@ -769,15 +769,15 @@ export default function PhysioClientDetail() {
     return `${startD} – ${endD}`;
   }, [sortedData]);
   const pageBgClass = viewMode === "historical" 
-    ? "bg-slate-100 min-h-screen pb-12 transition-all duration-300" 
-    : "bg-slate-50 min-h-screen pb-12 transition-all duration-300";
+    ? "bg-[#F2F4F7] min-h-screen pb-12 transition-all duration-300" 
+    : "bg-[#F8FAFC] min-h-screen pb-12 transition-all duration-300";
 
   return (
     <div className={pageBgClass}>
       <AppShell>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Button asChild variant="ghost" size="sm" className="text-slate-600 hover:text-indigo-600 font-semibold focus-visible:ring-indigo-600">
-            <Link href="/physio" className="flex items-center gap-1">
+          <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 rounded-lg transition-all">
+            <Link href="/physio" className="flex items-center gap-1.5">
               <ArrowLeft className="size-4" />
               <span>Back to Dashboard</span>
             </Link>
@@ -818,7 +818,7 @@ export default function PhysioClientDetail() {
         )}
 
         {/* Detailed Client Header Card */}
-        <div className="bg-white shadow-sm border border-slate-200/80 rounded-xl p-6 mb-6">
+        <div className="bg-white shadow-sm border border-[#E4E7EC] rounded-xl p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border border-slate-200/80 shadow-sm flex items-center justify-center bg-indigo-50 text-indigo-700 rounded-full">
@@ -835,7 +835,7 @@ export default function PhysioClientDetail() {
               </Avatar>
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <h1 className="text-xl font-bold text-[#101828] tracking-tight">
                     {client.data?.name ?? client.data?.email ?? `Patient #${clientId}`}
                   </h1>
                   <Badge className={
@@ -846,45 +846,52 @@ export default function PhysioClientDetail() {
                     {client.data?.status === "active" ? "Undercare" : client.data?.status ? "Suspended" : "—"}
                   </Badge>
                 </div>
-                <p className="text-sm text-slate-500 font-semibold">
-                  ID: #{clientId} | Patient Record
+                <p className="text-xs text-[#98A2B3] font-medium">
+                  ID: #{clientId} · Patient Record
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-              {/* Quick Actions Dropdown Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 transition-all">
-                    <span>Quick Actions</span>
-                    <MoreVertical className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white border border-slate-200 shadow-lg rounded-lg">
-                  {viewMode === "active" && (
-                    <>
-                      <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Patient Care</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-slate-100" />
-                      <DropdownMenuItem onClick={() => setIsAssignOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                        <Plus className="size-4 text-indigo-600" />
-                        <span>Assign New Exercise</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                        <Calendar className="size-4 text-indigo-600" />
-                        <span>Schedule Next Visit</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-slate-100" />
-                    </>
-                  )}
-                  <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Contact Info</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-slate-100" />
-                  <DropdownMenuItem onClick={handleCopyContact} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    <ClipboardCopy className="size-4 text-indigo-600" />
-                    <span>Copy Contact Info</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {viewMode === "historical" ? (
+                /* Historical mode: direct Copy Contact Info button */
+                <Button
+                  onClick={handleCopyContact}
+                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 transition-all"
+                >
+                  <ClipboardCopy className="size-4" />
+                  <span>Copy Contact Info</span>
+                </Button>
+              ) : (
+                /* Active mode: full Quick Actions dropdown */
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 transition-all">
+                      <span>Quick Actions</span>
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white border border-[#E4E7EC] shadow-lg rounded-xl">
+                    <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Patient Care</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-[#F2F4F7]" />
+                    <DropdownMenuItem onClick={() => setIsAssignOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
+                      <Plus className="size-4 text-indigo-600" />
+                      <span>Assign New Exercise</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
+                      <Calendar className="size-4 text-indigo-600" />
+                      <span>Schedule Next Visit</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#F2F4F7]" />
+                    <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Contact Info</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-[#F2F4F7]" />
+                    <DropdownMenuItem onClick={handleCopyContact} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
+                      <ClipboardCopy className="size-4 text-indigo-600" />
+                      <span>Copy Contact Info</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
@@ -898,8 +905,8 @@ export default function PhysioClientDetail() {
                     <IconComponent className="size-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{field.label}</p>
-                    <p className="font-semibold text-slate-800 truncate">{field.value}</p>
+                    <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">{field.label}</p>
+                    <p className="font-semibold text-[#101828] truncate text-sm">{field.value}</p>
                   </div>
                 </div>
               );
@@ -911,9 +918,9 @@ export default function PhysioClientDetail() {
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {/* Card 1: Completion Rate / Adherence */}
-          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl">
+          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
                 {viewMode === "historical" ? "Total Lifetime Adherence" : "Active Completion Rate"}
               </CardTitle>
             </CardHeader>
@@ -922,11 +929,11 @@ export default function PhysioClientDetail() {
                 if (viewMode === "active" && activeStats.rate === null) {
                   return (
                     <>
-                      <div className="text-sm font-extrabold text-slate-500 mb-4 h-[30px] flex items-center">
+                      <div className="text-sm font-semibold text-[#667085] mb-4 h-[30px] flex items-center">
                         No active sessions
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1">
-                        <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: "0%" }} />
+                      <div className="progress-track mb-1">
+                        <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
                       </div>
                     </>
                   );
@@ -934,14 +941,14 @@ export default function PhysioClientDetail() {
                 const rateValue = viewMode === "historical" ? completionRate : activeStats.rate;
                 return (
                   <>
-                    <div className="text-3xl font-extrabold text-slate-900 mb-2">{rateValue}%</div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1">
-                      <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${rateValue}%` }} />
+                    <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{rateValue}%</div>
+                    <div className="progress-track mb-1">
+                      <div className="progress-fill" style={{ width: `${rateValue}%`, background: "#6366F1" }} />
                     </div>
                   </>
                 );
               })()}
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-[11px] text-[#667085] font-medium">
                 {viewMode === "historical"
                   ? `${stats.data?.completed ?? 0} of ${stats.data?.total ?? 0} lifetime sessions`
                   : `${activeStats.completed} of ${activeStats.total} active sessions`}
@@ -949,15 +956,15 @@ export default function PhysioClientDetail() {
             </CardContent>
           </Card>
 
-          {/* Card 2: Active Exercises / Assigned Protocols */}
-          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl">
+          {/* Card 2: Active Exercises / Assigned Exercises */}
+          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                {viewMode === "historical" ? "Total Assigned Protocols" : "Active Protocols"}
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold text-slate-900 mb-2">
+              <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
                 {(() => {
                   const todayStr = new Date().toISOString().slice(0, 10);
                   return viewMode === "historical"
@@ -965,22 +972,22 @@ export default function PhysioClientDetail() {
                     : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
                 })()}
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-[11px] text-[#667085] font-medium">
                 {viewMode === "historical"
-                  ? "Including completed & discontinued plans"
+                  ? "Including completed & discontinued exercises"
                   : (() => {
                       const todayStr = new Date().toISOString().slice(0, 10);
                       const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
-                      return `${activeCount} active protocol${activeCount !== 1 ? "s" : ""}`;
+                      return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
                     })()}
               </p>
             </CardContent>
           </Card>
 
           {/* Card 3: Latest Pain Level / Avg Pain Index */}
-          <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl">
+          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
                 {viewMode === "historical" ? "Average Pain Index" : "Latest Pain Level"}
               </CardTitle>
             </CardHeader>
@@ -992,13 +999,13 @@ export default function PhysioClientDetail() {
                   return (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-3xl font-extrabold text-slate-900">{painValue}/10</span>
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${config.bg} ${config.text} ${config.border}`}>
+                        <span className="text-3xl font-bold text-[#101828] tabular-nums">{painValue}/10</span>
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
                           <span>{config.label}</span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-500 font-medium">
+                      <p className="text-[11px] text-[#667085] font-medium">
                         {viewMode === "historical"
                           ? `Calculated across ${sortedData.length} lifetime logs`
                           : `Reported on ${new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString()}`}
@@ -1008,8 +1015,8 @@ export default function PhysioClientDetail() {
                 })()
               ) : (
                 <div>
-                  <div className="text-3xl font-extrabold text-slate-300 mb-2">—</div>
-                  <p className="text-[11px] text-slate-500 font-medium">No reports logged yet</p>
+                  <div className="text-3xl font-bold text-[#E4E7EC] mb-2">—</div>
+                  <p className="text-[11px] text-[#667085] font-medium">No reports logged yet</p>
                 </div>
               )}
             </CardContent>
@@ -1144,18 +1151,18 @@ export default function PhysioClientDetail() {
                   : 0;
 
                 return (
-                  <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-500">
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-1.5">
-                      <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-medium">Latest reading</span>
-                      <span className="text-slate-800 text-sm font-medium">{latestReadingVal}/10</span>
+                  <div className="flex flex-wrap gap-3 text-xs font-medium text-[#667085]">
+                    <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
+                      <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">Latest reading</span>
+                      <span className="text-[#101828] text-sm font-semibold tabular-nums">{latestReadingVal}/10</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-1.5">
-                      <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-medium">Peak value</span>
-                      <span className="text-slate-800 text-sm font-medium">{peakValueVal}/10</span>
+                    <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
+                      <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">Peak value</span>
+                      <span className="text-[#101828] text-sm font-semibold tabular-nums">{peakValueVal}/10</span>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-1.5">
-                      <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-medium">3-day average</span>
-                      <span className="text-slate-800 text-sm font-medium">{threeDayAvgVal}/10</span>
+                    <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
+                      <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">3-day average</span>
+                      <span className="text-[#101828] text-sm font-semibold tabular-nums">{threeDayAvgVal}/10</span>
                     </div>
                   </div>
                 );
@@ -1241,7 +1248,7 @@ export default function PhysioClientDetail() {
               {/* Horizontal Severity Bar aligned with Recharts grid */}
               <div className="space-y-1.5 pt-4 ml-[34px] mr-[24px] shrink-0">
                 <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
-                <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                <div className="flex justify-between text-[10px] font-medium text-[#98A2B3]">
                   <span>Mild</span>
                   <span>Moderate</span>
                   <span>Severe</span>
@@ -1258,10 +1265,10 @@ export default function PhysioClientDetail() {
         <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-base font-bold text-slate-900">
+              <CardTitle className="text-sm font-semibold text-[#101828]">
                 {viewMode === "historical" ? "Completed Exercise" : "Exercise Protocol Assignments"}
               </CardTitle>
-              <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-none font-bold text-xs py-0.5 px-2">
+              <Badge className="bg-[#F2F4F7] text-[#667085] hover:bg-[#F2F4F7] border-none font-semibold text-[10px] py-0.5 px-2">
                 {assignmentRecords.length} {viewMode === "historical" ? "completed" : "assigned"}
               </Badge>
             </div>
@@ -1359,40 +1366,40 @@ export default function PhysioClientDetail() {
             {/* Active Filter Pills (Soft Blue Backgrounds for Active States) */}
             {(assignStatus !== "all" || assignCategory !== "all" || assignInjuryType !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
               <div className="flex flex-wrap items-center gap-2 py-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Active Filters:</span>
+                <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active Filters:</span>
                 
                 {assignSearchQuery.trim() !== "" && (
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-                    <span>Search: "{assignSearchQuery}"</span>
-                    <button onClick={() => setAssignSearchQuery("")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Search Filter">×</button>
+                  <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+                    <span>Search: &ldquo;{assignSearchQuery}&rdquo;</span>
+                    <button onClick={() => setAssignSearchQuery("")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Search Filter">×</button>
                   </span>
                 )}
 
                 {assignStatus !== "all" && (
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                     <span>Status: {assignStatus === "completed" ? "Archived" : assignStatus === "cancelled" ? "Paused" : "Active"}</span>
-                    <button onClick={() => setAssignStatus("all")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Status Filter">×</button>
+                    <button onClick={() => setAssignStatus("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Status Filter">×</button>
                   </span>
                 )}
 
                 {assignCategory !== "all" && (
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                     <span>Category: {formatExerciseType(assignCategory)}</span>
-                    <button onClick={() => setAssignCategory("all")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Category Filter">×</button>
+                    <button onClick={() => setAssignCategory("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Category Filter">×</button>
                   </span>
                 )}
 
                 {assignInjuryType !== "all" && (
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                     <span>Injury Type: {formatInjuryType(assignInjuryType)}</span>
-                    <button onClick={() => setAssignInjuryType("all")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Injury Type Filter">×</button>
+                    <button onClick={() => setAssignInjuryType("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Injury Type Filter">×</button>
                   </span>
                 )}
 
                 {needsAttentionOnly && (
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                     <span>Needs Attention</span>
-                    <button onClick={() => setNeedsAttentionOnly(false)} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Attention Filter">×</button>
+                    <button onClick={() => setNeedsAttentionOnly(false)} className="hover:text-rose-900 font-bold leading-none ml-0.5" aria-label="Clear Attention Filter">×</button>
                   </span>
                 )}
 

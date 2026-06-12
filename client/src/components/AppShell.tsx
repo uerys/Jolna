@@ -81,11 +81,11 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b bg-card/60 backdrop-blur sticky top-0 z-30">
-        <div className="container flex items-center gap-3 py-3">
+      <header className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-30">
+        <div className="container flex items-center gap-3 py-2.5">
           <Link
             href="/"
-            className="flex items-center gap-2 font-semibold text-lg tracking-tight"
+            className="flex items-center gap-2 font-semibold text-[15px] tracking-tight text-foreground hover:opacity-80 transition-opacity"
           >
             <Activity className="size-5 text-primary" />
             <FormattedMessage id="app.name" />

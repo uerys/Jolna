@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle } from "lucide-react";
+import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle, Users } from "lucide-react";
 
 export default function PhysioDashboard() {
   const { user, loading } = useAuth();
@@ -259,217 +259,245 @@ function ClientsTab() {
   }
 
   return (
-    <div className="space-y-6 mt-4">
-      {/* 1. Triage Header Horizontal Summary Banner */}
+    <div className="space-y-4 mt-4">
+
+      {/* ── 1. Triage Alert Banner ──────────────────────────────── */}
       <button
         onClick={() => setTriageFilter(triageFilter === "urgent" ? "all" : "urgent")}
-        className={`text-left w-full p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+        className={`text-left w-full px-4 py-3 rounded-xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           triageFilter === "urgent"
-            ? "bg-rose-50 border-rose-400 shadow-md ring-2 ring-rose-500 ring-offset-2"
-            : "bg-white border-slate-200 hover:border-rose-300 hover:bg-rose-50/10 shadow-sm"
+            ? "bg-rose-50 border-rose-300 shadow-sm ring-2 ring-rose-400/40 ring-offset-1"
+            : "bg-white border-[#E4E7EC] hover:border-rose-200 hover:bg-rose-50/30 shadow-sm"
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-rose-50 text-rose-600 shrink-0">
-            <AlertCircle className="size-5" />
+          <div className={`p-2 rounded-lg shrink-0 ${
+            triageFilter === "urgent" ? "bg-rose-100" : "bg-rose-50"
+          }`}>
+            <AlertCircle className="size-4 text-rose-500" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-0.5 font-sans">Urgent Pain Triage</h3>
-            <p className="text-xs text-slate-500 font-medium font-sans">
-              Clients reporting severe pain (≥7) requiring immediate clinical intervention
+            <h3 className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-0.5">
+              Urgent Pain Triage
+            </h3>
+            <p className="text-xs text-[#667085] font-normal leading-relaxed">
+              Clients reporting severe pain (≥7/10) requiring immediate intervention
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4 self-end sm:self-auto">
-          <div className="text-3xl font-extrabold text-slate-900">{triageStats.urgent}</div>
-          <div className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider font-sans ${
-            triageStats.urgent > 0 ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-slate-100 text-slate-500"
+        <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+          <span className="text-2xl font-bold text-[#101828] tabular-nums">{triageStats.urgent}</span>
+          <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide ${
+            triageStats.urgent > 0
+              ? "bg-rose-100 text-rose-700 animate-pulse"
+              : "bg-[#F2F4F7] text-[#667085]"
           }`}>
-            {triageStats.urgent > 0 ? "Attention Required" : "No Alerts"}
-          </div>
+            {triageStats.urgent > 0 ? "Attention Required" : "All Clear"}
+          </span>
         </div>
       </button>
 
-      {/* 2. Dashboard Controls */}
-      <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-        {/* Search Input */}
-        <div className="relative w-full md:flex-1 min-w-[200px]">
-          <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
+      {/* ── 2. Search & Filter Controls ─────────────────────────── */}
+      <div className="bg-white border border-[#E4E7EC] rounded-xl px-3 py-2.5 flex flex-col md:flex-row items-center gap-2.5">
+        {/* Search */}
+        <div className="relative w-full md:flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-[#98A2B3] pointer-events-none" />
           <Input
             type="text"
-            placeholder="Search clients by name or email..."
-            className="h-8 pl-8 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg w-full font-normal"
+            placeholder="Search clients by name or email…"
+            className="h-8 pl-8 text-xs bg-[#F8FAFC] border-[#E4E7EC] focus-visible:ring-indigo-500 focus-visible:border-indigo-400 rounded-lg w-full font-normal text-[#101828] placeholder:text-[#98A2B3]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Status Filter Dropdown */}
-        <div className="w-full md:w-48 shrink-0 flex items-center gap-2 justify-end">
-          <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider shrink-0">Show:</span>
+        {/* Divider */}
+        <div className="hidden md:block w-px h-5 bg-[#E4E7EC] shrink-0" />
+
+        {/* Status filter */}
+        <div className="w-full md:w-auto shrink-0 flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest shrink-0">Show</span>
           <Select value={clientStatusFilter} onValueChange={(val: any) => setClientStatusFilter(val)}>
-            <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-lg w-full">
+            <SelectTrigger className="h-8 bg-[#F8FAFC] border-[#E4E7EC] text-[#344054] text-xs rounded-lg w-36 font-medium">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent className="bg-white border border-slate-200 text-xs shadow-md">
+            <SelectContent className="bg-white border border-[#E4E7EC] text-xs shadow-lg rounded-xl">
               <SelectItem value="active">Undercare</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All clients</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Active Filter Indicators */}
+      {/* ── 3. Active Filter Pills ──────────────────────────────── */}
       {(triageFilter !== "all" || searchQuery.trim() !== "" || clientStatusFilter !== "active") && (
-        <div className="flex flex-wrap items-center gap-2 py-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filters:</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active filters:</span>
           {clientStatusFilter !== "active" && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-              <span>Status: {clientStatusFilter === "all" ? "All" : "Suspended"}</span>
-              <button onClick={() => setClientStatusFilter("active")} className="hover:text-blue-900 font-bold font-mono">×</button>
+            <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+              Status: {clientStatusFilter === "all" ? "All" : "Suspended"}
+              <button onClick={() => setClientStatusFilter("active")} className="hover:text-indigo-900 font-bold leading-none ml-0.5">×</button>
             </span>
           )}
           {triageFilter !== "all" && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-              <span>Category: Urgent Pain</span>
-              <button onClick={() => setTriageFilter("all")} className="hover:text-blue-900 font-bold font-mono">×</button>
+            <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+              Urgent Pain
+              <button onClick={() => setTriageFilter("all")} className="hover:text-rose-900 font-bold leading-none ml-0.5">×</button>
             </span>
           )}
           {searchQuery.trim() !== "" && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-              <span>Query: "{searchQuery}"</span>
-              <button onClick={() => setSearchQuery("")} className="hover:text-blue-900 font-bold font-mono">×</button>
+            <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+              &ldquo;{searchQuery}&rdquo;
+              <button onClick={() => setSearchQuery("")} className="hover:text-indigo-900 font-bold leading-none ml-0.5">×</button>
             </span>
           )}
         </div>
       )}
 
-      {/* 3. Redesigned Client Cards (Horizontal list) */}
-      <div className="space-y-4">
+      {/* ── 4. Client Cards ─────────────────────────────────────── */}
+      <div className="space-y-2.5">
         {filteredClients.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 bg-white border border-slate-200 rounded-xl">
-            No patients match the filter criteria.
+          <div className="flex flex-col items-center justify-center py-16 bg-white border border-[#E4E7EC] rounded-xl">
+            <div className="p-3 rounded-full bg-[#F2F4F7] mb-3">
+              <Users className="size-5 text-[#98A2B3]" />
+            </div>
+            <p className="text-sm font-medium text-[#667085]">No clients match the current filters</p>
+            <p className="text-xs text-[#98A2B3] mt-0.5">Try adjusting your search or filter criteria</p>
           </div>
         ) : (
-          filteredClients.map((data) => {
+          filteredClients.map((data, idx) => {
             const isSuspended = data.client.status !== "active";
-            const painColorClass = isSuspended || data.latestPain === null
-              ? "text-slate-400 bg-slate-50 border-slate-100"
+
+            const painBg = isSuspended || data.latestPain === null
+              ? "bg-[#F2F4F7] text-[#98A2B3] border-[#E4E7EC]"
               : data.latestPain >= 7
-              ? "text-rose-600 bg-rose-50 border-rose-100"
+              ? "bg-rose-50 text-rose-600 border-rose-200"
               : data.latestPain >= 4
-              ? "text-amber-600 bg-amber-50 border-amber-100"
-              : "text-emerald-600 bg-emerald-50 border-emerald-100";
+              ? "bg-amber-50 text-amber-600 border-amber-200"
+              : "bg-emerald-50 text-emerald-600 border-emerald-200";
+
+            const progressColor = data.completionRate !== null && data.completionRate < 50
+              ? "#F59E0B"
+              : "#6366F1";
+
+            const cardAccent = data.category === "urgent"
+              ? "border-l-rose-500"
+              : data.category === "ontrack"
+              ? "border-l-emerald-500"
+              : "border-l-[#D0D5DD]";
 
             return (
               <div
                 key={data.client.id}
-                className={`bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-indigo-100 transition-all flex flex-col gap-4 relative overflow-hidden group border-l-4 ${
-                  data.category === "urgent"
-                    ? "border-l-rose-500 bg-rose-50/5"
-                    : data.category === "ontrack"
-                    ? "border-l-emerald-500"
-                    : "border-l-slate-300 bg-slate-50/10"
+                className={`client-card-enter bg-white border border-[#E4E7EC] border-l-[3px] ${cardAccent} rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 group cursor-pointer ${
+                  isSuspended ? "opacity-80" : ""
                 }`}
+                style={{ animationDelay: `${idx * 30}ms` }}
               >
-                {/* Horizontal Triage layout */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  {/* Left part: Client Info */}
-                  <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
-                    {/* 1. Client Details */}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-slate-900 text-base truncate block">
-                          {data.client.name ?? `Patient #${data.client.id}`}
+                <Link href={`/physio/clients/${data.client.id}`} className="block">
+                  <div className="px-5 py-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+
+                      {/* ── Col 1: Identity ── */}
+                      <div className="flex-1 min-w-0 md:max-w-[220px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-[#101828] text-[15px] leading-snug tracking-tight truncate">
+                            {data.client.name ?? `Patient #${data.client.id}`}
+                          </span>
+                          {isSuspended ? (
+                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#F2F4F7] text-[#667085] border border-[#E4E7EC]">
+                              Suspended
+                            </span>
+                          ) : (
+                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Undercare
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-[#667085] truncate block leading-relaxed">
+                          {data.client.email ?? "—"}
                         </span>
-                        {data.client.status !== "active" && (
-                          <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold text-[10px]">
-                            Suspended
-                          </Badge>
-                        )}
-                        {data.client.status === "active" && (
-                          <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50 border font-semibold text-[10px]">
-                            Undercare
-                          </Badge>
+                        {!isSuspended && (
+                          <span className="text-[10px] text-[#98A2B3] font-medium mt-0.5 block">
+                            {data.lastLogLabel}
+                          </span>
                         )}
                       </div>
-                      <span className="text-slate-400 text-xs truncate block font-medium">
-                        {data.client.email ?? "—"}
-                      </span>
-                      {data.client.status === "active" && (
-                        <span className="text-[10px] text-slate-400 font-semibold mt-1 block">
-                          {data.lastLogLabel}
-                        </span>
-                      )}
-                    </div>
 
-                    {/* 2. Pain Level (Critical Metric) */}
-                    <div className="flex items-center gap-2">
-                      <div className={`flex items-center justify-center rounded-xl px-3 py-1.5 border font-bold text-sm ${painColorClass}`}>
-                        {data.latestPain !== null && data.latestPain >= 7 && (
-                          <AlertCircle className="size-4 text-rose-500 mr-1.5" />
-                        )}
-                        <span>{data.latestPain !== null ? `${data.latestPain}/10` : "—/10"}</span>
+                      {/* ── Col 2: Pain Level ── */}
+                      <div className="flex items-center gap-2 md:w-24 md:justify-center">
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}>
+                          {data.latestPain !== null && data.latestPain >= 7 && (
+                            <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
+                          )}
+                          <span className="tabular-nums">
+                            {data.latestPain !== null ? `${data.latestPain}/10` : "—"}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block sm:hidden">Pain Level</span>
-                    </div>
 
-                    {/* 3. Completion Rate */}
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                        Adherence
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-700 text-sm">
-                          {data.completionRate !== null ? `${data.completionRate}%` : "No active sessions"}
+                      {/* ── Col 3: Adherence ── */}
+                      <div className="md:w-36">
+                        <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1.5">
+                          Adherence
                         </span>
-                        {data.completionRate !== null && (
-                          <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className={`h-1.5 rounded-full ${
-                                data.completionRate < 50 ? "bg-amber-500" : "bg-indigo-600"
-                              }`}
-                              style={{ width: `${data.completionRate}%` }}
-                            />
+                        {data.completionRate !== null ? (
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-sm font-semibold text-[#101828] tabular-nums w-9 shrink-0">
+                              {data.completionRate}%
+                            </span>
+                            <div className="progress-track flex-1">
+                              <div
+                                className="progress-fill"
+                                style={{
+                                  width: `${data.completionRate}%`,
+                                  background: progressColor,
+                                }}
+                              />
+                            </div>
                           </div>
+                        ) : (
+                          <span className="text-xs text-[#98A2B3] font-medium">No active sessions</span>
                         )}
                       </div>
+
+                      {/* ── Col 4: Active Exercises ── */}
+                      <div className="md:w-32">
+                        <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1">
+                          Active Exercises
+                        </span>
+                        <span className="text-sm font-semibold text-[#344054]">
+                          {data.activeCount}
+                          <span className="font-normal text-[#667085] ml-1">
+                            {data.activeCount !== 1 ? "exercises" : "exercise"}
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* ── CTA ── */}
+                      <div className="flex items-center justify-end shrink-0 md:ml-auto">
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                          View details
+                          <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                        </span>
+                      </div>
+
                     </div>
 
-                    {/* 4. Active Protocols */}
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">
-                        Active Protocols
-                      </span>
-                      <span className="font-extrabold text-slate-800 text-sm">
-                        {data.activeCount} active protocol{data.activeCount !== 1 ? "s" : ""}
-                      </span>
-                    </div>
+                    {/* ── Alert Row ── */}
+                    {!isSuspended && data.alertMsg && (
+                      <div className={`mt-3 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold border ${
+                        data.category === "urgent"
+                          ? "bg-rose-50 border-rose-200 text-rose-700"
+                          : "bg-amber-50 border-amber-200 text-amber-700"
+                      }`}>
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        <span>{data.alertMsg}</span>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Right part: View details */}
-                  <div className="flex justify-end items-center shrink-0">
-                    <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 font-bold hover:bg-slate-50 gap-1 rounded-lg">
-                      <Link href={`/physio/clients/${data.client.id}`}>
-                        <span>View details</span>
-                        <ChevronRight className="size-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Smart Alert Row */}
-                {data.client.status === "active" && data.alertMsg && (
-                  <div className={`mt-2 border rounded-lg p-2.5 flex items-center gap-2 text-xs font-semibold ${
-                    data.category === "urgent"
-                      ? "bg-rose-50/50 border-rose-200 text-rose-800"
-                      : "bg-amber-50/50 border-amber-200 text-amber-800"
-                  }`}>
-                    <AlertCircle className="size-4 text-rose-500" />
-                    <span>{data.alertMsg}</span>
-                  </div>
-                )}
+                </Link>
               </div>
             );
           })
