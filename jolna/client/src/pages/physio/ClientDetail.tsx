@@ -289,11 +289,14 @@ export default function PhysioClientDetail() {
               <div>
                 <p className="text-xs text-muted-foreground">Status</p>
                 <Badge
-                  variant={
-                    client.data?.status === "active" ? "default" : "secondary"
+                  variant="outline"
+                  className={
+                    client.data?.status === "active"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50/80 border font-semibold text-[10px]"
+                      : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100/80 border font-semibold text-[10px]"
                   }
                 >
-                  {client.data?.status ?? "—"}
+                  {client.data?.status === "active" ? "Undercare" : client.data?.status ? "Suspended" : "—"}
                 </Badge>
               </div>
             </div>
