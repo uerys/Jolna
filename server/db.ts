@@ -546,6 +546,25 @@ export async function listFeedbackForPhysio(physiotherapistId: number) {
     .orderBy(desc(feedbackLogs.submittedAt));
 }
 
+export async function updateFeedbackNotes(id: number, notes: string | null, physiotherapistId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership: feedback log must belong to an assignment handled by this physiotherapist
+  const [row] = await db
+    .select({ physioId: assignments.physiotherapistId })
+    .from(feedbackLogs)
+    .innerJoin(assignments, eq(assignments.id, feedbackLogs.assignmentId))
+    .where(eq(feedbackLogs.id, id))
+    .limit(1);
+
+  if (!row || row.physioId !== physiotherapistId) {
+    throw new Error("Unauthorized: You do not have permission to annotate this feedback.");
+  }
+
+  await db.update(feedbackLogs).set({ notes }).where(eq(feedbackLogs.id, id));
+}
+
 /**
  * Enhanced: get completion stats scoped to an assignment.
  */

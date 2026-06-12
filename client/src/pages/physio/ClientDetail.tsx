@@ -27,6 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -209,6 +218,74 @@ function DurationBar({ startDate, endDate }: DurationBarProps) {
   );
 }
 
+function ChartTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+}) {
+  if (typeof x !== "number" || typeof y !== "number" || !payload?.value)
+    return null;
+  const date = new Date(payload.value);
+  return (
+    <g transform={`translate(${x},${y + 10})`}>
+      <foreignObject x={-36} y={0} width={72} height={36}>
+        <div className="flex h-full w-full flex-col items-center justify-center text-[10px] leading-tight text-slate-500">
+          <span className="font-medium text-slate-700">
+            {date.toLocaleDateString([], { month: "short", day: "numeric" })}
+          </span>
+          <span>
+            {date
+              .toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .toLowerCase()}
+          </span>
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
+const CustomizedDot = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (cx === undefined || cy === undefined || !payload) return null;
+  const pain = payload.pain;
+  const color = pain >= 7 ? "#f43f5e" : pain >= 4 ? "#f59e0b" : "#10b981";
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill="#ffffff"
+      stroke={color}
+      strokeWidth={2}
+    />
+  );
+};
+
+const CustomizedActiveDot = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (cx === undefined || cy === undefined || !payload) return null;
+  const pain = payload.pain;
+  const color = pain >= 7 ? "#f43f5e" : pain >= 4 ? "#f59e0b" : "#10b981";
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={6}
+      fill={color}
+      stroke="#ffffff"
+      strokeWidth={2}
+    />
+  );
+}
+
 export default function PhysioClientDetail() {
   const { id } = useParams<{ id: string }>();
   const clientId = Number(id);
@@ -224,7 +301,6 @@ export default function PhysioClientDetail() {
   // Modal / Dialog States
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isVisitOpen, setIsVisitOpen] = useState(false);
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
 
   // New Exercise Form States
   const [newExerciseId, setNewExerciseId] = useState<string>("");
@@ -237,7 +313,6 @@ export default function PhysioClientDetail() {
 
   // Mock visits and progress notes states
   const [visitDate, setVisitDate] = useState("");
-  const [clinicalNote, setClinicalNote] = useState("");
 
   // Session History Filter States
   const [historyExerciseId, setHistoryExerciseId] = useState<string>("all");
@@ -249,7 +324,7 @@ export default function PhysioClientDetail() {
   // Exercise Assignment Filter States
   const [assignStatus, setAssignStatus] = useState<string>("all");
   const [assignCategory, setAssignCategory] = useState<string>("all");
-  const [assignBodyPart, setAssignBodyPart] = useState<string>("all");
+  const [assignInjuryType, setAssignInjuryType] = useState<string>("all");
   const [assignSearchQuery, setAssignSearchQuery] = useState<string>("");
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState<boolean>(false);
 
@@ -323,19 +398,40 @@ export default function PhysioClientDetail() {
       toast.error(err.message || "Failed to delete assignment");
     },
   });
+  const updateStatusMutation = trpc.physio.updateAssignmentStatus.useMutation({
+    onSuccess: async () => {
+      await utils.physio.listClientAssignments.invalidate();
+      await utils.physio.getClientStats.invalidate();
+      await utils.physio.listClientFeedbackEnriched.invalidate();
+      toast.success("Exercise marked as completed");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update status");
+    },
+  });
+
+  const handleCompleteAssignment = (id: number) => {
+    if (confirm("Are you sure you want to mark this exercise as completed?")) {
+      updateStatusMutation.mutate({ id, status: "completed" });
+    }
+  };
 
 
 
   const assignmentRecords = useMemo(() => {
     let list = clientAssignments.data ?? [];
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     if (viewMode === "active") {
-      list = list.filter((a) => a.assignment.status === "active");
-    } else if (viewMode === "historical" && filterYear !== "all") {
-      list = list.filter((a) => {
-        const year = new Date(a.assignment.startDate).getFullYear().toString();
-        return year === filterYear;
-      });
+      list = list.filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr);
+    } else if (viewMode === "historical") {
+      list = list.filter((a) => a.assignment.status === "completed" || a.assignment.status === "cancelled" || a.assignment.endDate < todayStr);
+      if (filterYear !== "all") {
+        list = list.filter((a) => {
+          const year = new Date(a.assignment.startDate).getFullYear().toString();
+          return year === filterYear;
+        });
+      }
     }
 
     if (assignSearchQuery.trim()) {
@@ -351,20 +447,8 @@ export default function PhysioClientDetail() {
       list = list.filter((a) => a.assignment.exerciseType === assignCategory);
     }
 
-    if (assignBodyPart !== "all") {
-      list = list.filter((a) => {
-        const type = a.assignment.injuryType || "";
-        if (assignBodyPart === "knee") return type.includes("knee");
-        if (assignBodyPart === "shoulder") return type.includes("shoulder");
-        if (assignBodyPart === "ankle") return type.includes("ankle");
-        if (assignBodyPart === "back") return type.includes("back");
-        if (assignBodyPart === "neck") return type.includes("neck");
-        if (assignBodyPart === "other") {
-          return !type.includes("knee") && !type.includes("shoulder") && 
-                 !type.includes("ankle") && !type.includes("back") && !type.includes("neck");
-        }
-        return true;
-      });
+    if (assignInjuryType !== "all") {
+      list = list.filter((a) => a.assignment.injuryType === assignInjuryType);
     }
 
     if (needsAttentionOnly) {
@@ -380,7 +464,7 @@ export default function PhysioClientDetail() {
     }
 
     return list;
-  }, [clientAssignments.data, feedbackEnriched.data, assignSearchQuery, assignStatus, assignCategory, assignBodyPart, needsAttentionOnly, viewMode, filterYear]);
+  }, [clientAssignments.data, feedbackEnriched.data, assignSearchQuery, assignStatus, assignCategory, assignInjuryType, needsAttentionOnly, viewMode, filterYear]);
 
   const uniqueExercises = useMemo(() => {
     const list = clientAssignments.data ?? [];
@@ -444,8 +528,10 @@ export default function PhysioClientDetail() {
       list = list.filter(f => new Date(f.feedback.submittedAt).getTime() >= fullYearAgo.getTime());
     }
     return list.map((f) => ({
+      id: f.feedback.id,
       submittedAt: f.feedback.submittedAt,
       pain: f.feedback.painScore,
+      notes: f.feedback.notes,
     }));
   }, [feedbackEnriched.data, viewMode]);
 
@@ -474,153 +560,6 @@ export default function PhysioClientDetail() {
     );
   }, [chartData]);
 
-  // Clinical SVG Chart renderer
-  const svgChart = useMemo(() => {
-    const firstReadingVal = sortedData[0]?.pain ?? 0;
-    const latestReadingVal = sortedData[sortedData.length - 1]?.pain ?? 0;
-    const isImprovedVal = latestReadingVal < firstReadingVal;
-    const latestDotColorVal = isImprovedVal ? "#10b981" : "#4f46e5";
-    const improvementTextVal = isImprovedVal && firstReadingVal > 0 
-      ? `↓ ${Math.round(((firstReadingVal - latestReadingVal) / firstReadingVal) * 100)}% improvement` 
-      : "";
-
-    if (sortedData.length === 0) {
-      return (
-        <div className="flex h-full flex-col items-center justify-center text-slate-400 py-12">
-          <TrendingUp className="size-8 stroke-1 mb-2 text-slate-300" />
-          <p className="text-sm font-medium">No pain data recorded for this selection.</p>
-        </div>
-      );
-    }
-
-    const width = 500;
-    const height = 180;
-    const padding = { left: 45, right: 15, top: 15, bottom: 25 };
-
-    const getX = (index: number) => {
-      if (sortedData.length <= 1) {
-        return padding.left + (width - padding.left - padding.right) / 2;
-      }
-      return padding.left + (index * (width - padding.left - padding.right)) / (sortedData.length - 1);
-    };
-
-    const getY = (pain: number) => {
-      const clampedPain = Math.max(0, Math.min(10, pain));
-      return padding.top + (10 - clampedPain) * (height - padding.top - padding.bottom) / 10;
-    };
-
-    const points = sortedData.map((d, i) => `${getX(i)},${getY(d.pain)}`);
-    const linePath = points.length > 0 ? `M ${points.join(" L ")}` : "";
-    const areaPath = points.length > 0
-      ? `${linePath} L ${getX(sortedData.length - 1)},${height - padding.bottom} L ${getX(0)},${height - padding.bottom} Z`
-      : "";
-
-    return (
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full text-slate-400" aria-label="Pain Trend Line Chart">
-        <defs>
-          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.00" />
-          </linearGradient>
-        </defs>
-
-        {/* Grid lines */}
-        {[0, 2, 4, 6, 8, 10].map((score) => {
-          const y = getY(score);
-          return (
-            <g key={score} className="opacity-40">
-              <line
-                x1={padding.left}
-                y1={y}
-                x2={width - padding.right}
-                y2={y}
-                stroke="#cbd5e1"
-                strokeWidth="0.75"
-                strokeDasharray="4 4"
-              />
-              <text
-                x={padding.left - 8}
-                y={y + 3}
-                textAnchor="end"
-                className="text-[9px] fill-slate-500 font-semibold"
-              >
-                {score}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Area under curve */}
-        {areaPath && <path d={areaPath} fill="url(#chartGradient)" />}
-
-        {/* Core Line */}
-        {linePath && (
-          <path
-            d={linePath}
-            fill="none"
-            stroke="#4f46e5"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
-
-        {/* Data points */}
-        {sortedData.map((d, i) => {
-          const x = getX(i);
-          const y = getY(d.pain);
-          const isLast = i === sortedData.length - 1;
-          const strokeColor = isLast ? latestDotColorVal : "#4f46e5";
-          return (
-            <g key={i} className="group/dot cursor-pointer">
-              <circle
-                cx={x}
-                cy={y}
-                r="4"
-                fill="#ffffff"
-                stroke={strokeColor}
-                strokeWidth="2"
-                className="transition-all hover:r-5 focus:outline-none"
-              />
-              {isLast && improvementTextVal && (
-                <text
-                  x={x + 10}
-                  y={y - 8}
-                  textAnchor="start"
-                  fill="#10b981"
-                  className="text-[9px] font-medium font-sans fill-emerald-600"
-                >
-                  {improvementTextVal}
-                </text>
-              )}
-              <title>{`Pain Score: ${d.pain}/10 on ${new Date(d.submittedAt).toLocaleDateString()}`}</title>
-            </g>
-          );
-        })}
-
-        {/* Bottom dates (X Axis) */}
-        {sortedData.length > 0 && [0, Math.floor(sortedData.length / 2), sortedData.length - 1].map((index) => {
-          if (index >= sortedData.length) return null;
-          const d = sortedData[index];
-          const x = getX(index);
-          const dateLabel = new Date(d.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-          return (
-            <text
-              key={index}
-              x={x}
-              y={height - 6}
-              textAnchor="middle"
-              className="text-[9px] fill-slate-500 font-medium"
-            >
-              {dateLabel}
-            </text>
-          );
-        })}
-      </svg>
-    );
-  }, [sortedData]);
-
-  // Auth Guard
   if (!loading && user?.role !== "physiotherapist" && user?.role !== "admin") {
     return (
       <AppShell>
@@ -677,20 +616,11 @@ export default function PhysioClientDetail() {
     setIsVisitOpen(false);
   };
 
-  const handleNoteSubmit = () => {
-    if (!clinicalNote.trim()) {
-      toast.error("Clinical note cannot be empty.");
-      return;
-    }
-    toast.success("Progress note successfully added to client history");
-    setClinicalNote("");
-    setIsNoteOpen(false);
-  };
 
   const handleResetFilters = () => {
     setAssignStatus("all");
     setAssignCategory("all");
-    setAssignBodyPart("all");
+    setAssignInjuryType("all");
     setAssignSearchQuery("");
     setNeedsAttentionOnly(false);
   };
@@ -813,10 +743,6 @@ export default function PhysioClientDetail() {
                   <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                     <Calendar className="size-4 text-indigo-600" />
                     <span>Schedule Next Visit</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsNoteOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    <FileText className="size-4 text-indigo-600" />
-                    <span>Log Clinical Note</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-100" />
                   <DropdownMenuLabel className="text-xs text-slate-400 font-bold px-3 py-1.5 uppercase tracking-wider">Contact Info</DropdownMenuLabel>
@@ -1057,9 +983,13 @@ export default function PhysioClientDetail() {
               (() => {
                 const latestReadingVal = sortedData[sortedData.length - 1].pain;
                 const peakValueVal = Math.max(...sortedData.map((d) => d.pain));
-                const last3Val = sortedData.slice(-3);
-                const threeDayAvgVal = last3Val.length > 0
-                  ? Math.round((last3Val.reduce((acc, d) => acc + d.pain, 0) / last3Val.length) * 10) / 10
+                const latestDate = sortedData.length > 0 ? new Date(sortedData[sortedData.length - 1].submittedAt) : null;
+                const threeDaysAgo = latestDate ? new Date(latestDate.getTime() - 3 * 24 * 60 * 60 * 1000) : null;
+                const last3DaysEntries = latestDate && threeDaysAgo
+                  ? sortedData.filter(d => new Date(d.submittedAt) >= threeDaysAgo)
+                  : [];
+                const threeDayAvgVal = last3DaysEntries.length > 0
+                  ? Math.round((last3DaysEntries.reduce((acc, d) => acc + d.pain, 0) / last3DaysEntries.length) * 10) / 10
                   : 0;
 
                 return (
@@ -1081,20 +1011,94 @@ export default function PhysioClientDetail() {
               })()
             )}
 
-            {/* SVG area chart container */}
-            <div className="h-64 sm:h-80 flex items-center justify-center">
-              {svgChart}
-            </div>
+            {/* Recharts area chart container */}
+            <div className="h-80 md:h-[24rem] lg:h-[28rem] w-full flex flex-col justify-between">
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={sortedData}
+                    margin={{ top: 16, right: 24, bottom: 8, left: 8 }}
+                  >
+                    <defs>
+                      <linearGradient id="painFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+                        <stop offset="30%" stopColor="#f43f5e" stopOpacity={0.25} />
+                        <stop offset="30.1%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="60%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="60.1%" stopColor="#10b981" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="painStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" />
+                        <stop offset="30%" stopColor="#f43f5e" />
+                        <stop offset="30.1%" stopColor="#f59e0b" />
+                        <stop offset="60%" stopColor="#f59e0b" />
+                        <stop offset="60.1%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#10b981" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="rgba(15,23,42,0.08)"
+                      strokeDasharray="4 4"
+                    />
+                    <XAxis
+                      dataKey="submittedAt"
+                      tick={<ChartTick />}
+                      interval={0}
+                      height={48}
+                      axisLine={{ stroke: "rgba(15,23,42,0.25)" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 10]}
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      width={26}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(255,255,255,0.98)",
+                        border: "1px solid rgba(15,23,42,0.12)",
+                        borderRadius: 16,
+                        color: "#0f172a",
+                      }}
+                      labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                      itemStyle={{ color: "#0f766e" }}
+                      labelFormatter={v =>
+                        new Date(String(v)).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      }
+                      formatter={v => [`${v}/10`, "Pain"]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="pain"
+                      stroke="url(#painStroke)"
+                      fill="url(#painFill)"
+                      strokeWidth={3}
+                      dot={<CustomizedDot />}
+                      activeDot={<CustomizedActiveDot />}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
 
-            {/* Horizontal Severity Bar */}
-            <div className="space-y-1.5 pt-2">
-              <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
-              <div className="flex justify-between text-[10px] font-medium text-slate-400">
-                <span>Mild</span>
-                <span>Moderate</span>
-                <span>Severe</span>
+              {/* Horizontal Severity Bar aligned with Recharts grid */}
+              <div className="space-y-1.5 pt-4 ml-[34px] mr-[24px] shrink-0">
+                <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
+                <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                  <span>Mild</span>
+                  <span>Moderate</span>
+                  <span>Severe</span>
+                </div>
               </div>
             </div>
+
+
           </CardContent>
         </Card>
 
@@ -1162,20 +1166,19 @@ export default function PhysioClientDetail() {
                 </Select>
               </div>
 
-              {/* Body Part Select */}
-              <div className="w-full md:w-32 shrink-0">
-                <Select value={assignBodyPart} onValueChange={setAssignBodyPart}>
+              {/* Injury Type Select */}
+              <div className="w-full md:w-36 shrink-0">
+                <Select value={assignInjuryType} onValueChange={setAssignInjuryType}>
                   <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
-                    <SelectValue placeholder="Body Part" />
+                    <SelectValue placeholder="Injury Type" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                    <SelectItem value="all">All Parts</SelectItem>
-                    <SelectItem value="knee">Knee</SelectItem>
-                    <SelectItem value="shoulder">Shoulder</SelectItem>
-                    <SelectItem value="ankle">Ankle</SelectItem>
-                    <SelectItem value="back">Back</SelectItem>
-                    <SelectItem value="neck">Neck</SelectItem>
-                    <SelectItem value="other">Other/General</SelectItem>
+                    <SelectItem value="all">All Injury Types</SelectItem>
+                    {INJURY_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {formatInjuryType(t)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1193,7 +1196,7 @@ export default function PhysioClientDetail() {
             </div>
 
             {/* Active Filter Pills (Soft Blue Backgrounds for Active States) */}
-            {(assignStatus !== "all" || assignCategory !== "all" || assignBodyPart !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
+            {(assignStatus !== "all" || assignCategory !== "all" || assignInjuryType !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
               <div className="flex flex-wrap items-center gap-2 py-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Active Filters:</span>
                 
@@ -1218,10 +1221,10 @@ export default function PhysioClientDetail() {
                   </span>
                 )}
 
-                {assignBodyPart !== "all" && (
+                {assignInjuryType !== "all" && (
                   <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-                    <span>Body Part: {assignBodyPart.charAt(0).toUpperCase() + assignBodyPart.slice(1)}</span>
-                    <button onClick={() => setAssignBodyPart("all")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Body Part Filter">×</button>
+                    <span>Injury Type: {formatInjuryType(assignInjuryType)}</span>
+                    <button onClick={() => setAssignInjuryType("all")} className="hover:text-blue-900 font-bold font-mono" aria-label="Clear Injury Type Filter">×</button>
                   </span>
                 )}
 
@@ -1274,16 +1277,19 @@ export default function PhysioClientDetail() {
                   </TableHeader>
                   <TableBody>
                     {assignmentRecords.map((a) => {
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const isFinished = a.assignment.status === "completed" || a.assignment.endDate < todayStr;
+                      const isCancelled = a.assignment.status === "cancelled";
                       const statusBadgeClass = 
-                        a.assignment.status === "active"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200 border hover:bg-emerald-50"
-                          : a.assignment.status === "completed"
+                        isFinished
                           ? "bg-indigo-50 text-indigo-800 border-indigo-200 border hover:bg-indigo-50"
-                          : "bg-slate-50 text-slate-600 border-slate-200 border hover:bg-slate-50";
+                          : isCancelled
+                          ? "bg-slate-50 text-slate-600 border-slate-200 border hover:bg-slate-50"
+                          : "bg-emerald-50 text-emerald-800 border-emerald-200 border hover:bg-emerald-50";
                       const statusLabel = 
-                        a.assignment.status === "completed" 
+                        isFinished 
                           ? "completed" 
-                          : a.assignment.status === "cancelled" 
+                          : isCancelled 
                           ? "discontinued" 
                           : "active";
 
@@ -1365,8 +1371,12 @@ export default function PhysioClientDetail() {
                     );
                   }
 
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const isFinished = a.assignment.status === "completed" || a.assignment.endDate < todayStr;
+                  const isCancelled = a.assignment.status === "cancelled";
+
                   let accentClass = "border-l-4 border-l-slate-300";
-                  if (a.assignment.status === "active") {
+                  if (a.assignment.status === "active" && !isFinished) {
                     accentClass = "border-l-4 border-l-emerald-500";
                   }
                   if (cardNeedsAttention) {
@@ -1385,14 +1395,23 @@ export default function PhysioClientDetail() {
                           <div className="flex gap-1.5 shrink-0 items-center">
                             {daysLeftBadge}
                             <Badge className={
-                              a.assignment.status === "active"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50 border font-medium text-[10px]"
-                                : a.assignment.status === "completed"
+                              isFinished
                                 ? "bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-50 border font-medium text-[10px]"
-                                : "bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-50 border font-medium text-[10px]"
+                                : isCancelled
+                                ? "bg-slate-800 text-slate-800 border-slate-200 hover:bg-slate-50 border font-medium text-[10px]"
+                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50 border font-medium text-[10px]"
                             }>
-                              {a.assignment.status === "completed" ? "archived" : a.assignment.status === "cancelled" ? "paused" : a.assignment.status}
+                              {isFinished ? "completed" : isCancelled ? "paused" : "active"}
                             </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCompleteAssignment(a.assignment.id)}
+                              className="h-6 w-6 p-0 text-slate-400 hover:text-emerald-600 rounded-md focus-visible:ring-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              aria-label={`Complete assignment ${a.exercise.title}`}
+                            >
+                              <Check className="size-3.5" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1731,32 +1750,6 @@ export default function PhysioClientDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog: Log Clinical Note */}
-        <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}>
-          <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
-            <DialogHeader>
-              <DialogTitle className="text-slate-950 font-bold text-lg">Log Clinical Progress Note</DialogTitle>
-              <DialogDescription className="text-slate-500 text-xs">
-                Write clinical observations or details regarding patient recovery progress.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="my-4 space-y-2">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical Observations</Label>
-              <Textarea
-                placeholder="Enter patient diagnosis notes, range of motion improvements, or session assessments..."
-                className="h-28 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
-                value={clinicalNote}
-                onChange={(e) => setClinicalNote(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setIsNoteOpen(false)} className="border-slate-200">Cancel</Button>
-              <Button onClick={handleNoteSubmit} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">Record Note</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </AppShell>
     </div>
   );

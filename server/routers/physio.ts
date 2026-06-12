@@ -23,6 +23,7 @@ import {
   listUsers,
   updateAssignmentStatus,
   updateExercise,
+  updateFeedbackNotes,
 } from "../db";
 import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES } from "../../drizzle/schema";
 
@@ -370,4 +371,23 @@ export const physioRouter = router({
   listAllMyFeedback: physioProcedure.query(({ ctx }) =>
     listFeedbackForPhysio(ctx.user.id)
   ),
+
+  updateFeedbackNotes: physioProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        notes: z.string().max(2000).nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await updateFeedbackNotes(input.id, input.notes, ctx.user.id);
+        return { success: true };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: error.message || "Failed to update feedback notes",
+        });
+      }
+    }),
 });

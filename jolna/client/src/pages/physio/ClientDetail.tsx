@@ -4,6 +4,20 @@ import { Link, useParams } from "wouter";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -26,10 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import {
   AreaChart,
   Area,
@@ -116,8 +126,8 @@ function ChartTick({
     return null;
   const date = new Date(payload.value);
   return (
-    <g transform={`translate(${x},${y + 12})`}>
-      <foreignObject x={-28} y={0} width={56} height={34}>
+    <g transform={`translate(${x},${y + 10})`}>
+      <foreignObject x={-36} y={0} width={72} height={36}>
         <div className="flex h-full w-full flex-col items-center justify-center text-[10px] leading-tight text-slate-500">
           <span className="font-medium text-slate-700">
             {date.toLocaleDateString([], { month: "numeric", day: "numeric" })}
@@ -144,14 +154,8 @@ function FeedbackCard({ f }: { f: any }) {
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-tight">{f.exercise.title}</p>
         <Badge
-          variant={
-            f.feedback.painScore >= 7
-              ? "destructive"
-              : f.feedback.painScore >= 4
-                ? "secondary"
-                : "default"
-          }
-          className="shrink-0"
+          variant="outline"
+          className={cn("shrink-0", getPainScoreStyle(f.feedback.painScore))}
         >
           {f.feedback.painScore}/10
         </Badge>
@@ -178,6 +182,7 @@ export default function PhysioClientDetail() {
   const clientId = Number(id);
   const { user, loading } = useAuth();
 
+  const utils = trpc.useUtils();
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -210,11 +215,14 @@ export default function PhysioClientDetail() {
   const chartData = useMemo(
     () =>
       [...feedback].reverse().map(f => ({
+        id: f.feedback.id,
         submittedAt: f.feedback.submittedAt,
         pain: f.feedback.painScore,
+        notes: f.feedback.notes,
       })),
     [feedback]
   );
+
 
   const completionRate = stats.data?.total
     ? Math.round((stats.data.completed / stats.data.total) * 100)
@@ -243,7 +251,6 @@ export default function PhysioClientDetail() {
           Back
         </Link>
       </Button>
-
       {/* Client info */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
@@ -293,8 +300,7 @@ export default function PhysioClientDetail() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Filters — above charts */}
+      Filters — above charts
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
@@ -344,7 +350,6 @@ export default function PhysioClientDetail() {
           </div>
         </CardContent>
       </Card>
-
       {/* Pain trend — full width, tall on desktop */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
@@ -352,79 +357,100 @@ export default function PhysioClientDetail() {
             <FormattedMessage id="physio.monitor.painTrend" />
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-80 sm:h-96 lg:h-[28rem] rounded-2xl bg-white text-slate-900 shadow-inner">
+        <CardContent className="h-80 sm:h-96 lg:h-[34rem] rounded-2xl bg-white text-slate-900 shadow-inner flex flex-col justify-between p-6">
           {chartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-slate-500">
               <FormattedMessage id="physio.monitor.noData" />
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={chartData}
-                margin={{ top: 16, right: 24, bottom: 42, left: 8 }}
-              >
-                <defs>
-                  <linearGradient id="painFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} />
-                    <stop
-                      offset="100%"
-                      stopColor="#14b8a6"
-                      stopOpacity={0.04}
+            <>
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={chartData}
+                    margin={{ top: 16, right: 24, bottom: 8, left: 8 }}
+                  >
+                    <defs>
+                      <linearGradient id="painFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+                        <stop offset="30%" stopColor="#f43f5e" stopOpacity={0.25} />
+                        <stop offset="30.1%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="60%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="60.1%" stopColor="#10b981" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="painStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" />
+                        <stop offset="30%" stopColor="#f43f5e" />
+                        <stop offset="30.1%" stopColor="#f59e0b" />
+                        <stop offset="60%" stopColor="#f59e0b" />
+                        <stop offset="60.1%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#10b981" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="rgba(15,23,42,0.08)"
+                      strokeDasharray="4 4"
                     />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  vertical={false}
-                  stroke="rgba(15,23,42,0.08)"
-                  strokeDasharray="4 4"
-                />
-                <XAxis
-                  dataKey="submittedAt"
-                  tick={<ChartTick />}
-                  interval={0}
-                  height={38}
-                  axisLine={{ stroke: "rgba(15,23,42,0.25)" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, 10]}
-                  fontSize={11}
-                  axisLine={false}
-                  tickLine={false}
-                  width={26}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(255,255,255,0.98)",
-                    border: "1px solid rgba(15,23,42,0.12)",
-                    borderRadius: 16,
-                    color: "#0f172a",
-                  }}
-                  labelStyle={{ color: "#0f172a", fontWeight: 600 }}
-                  itemStyle={{ color: "#0f766e" }}
-                  labelFormatter={v =>
-                    new Date(String(v)).toLocaleString([], {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })
-                  }
-                  formatter={v => [`${v}/10`, "Pain"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="pain"
-                  stroke="#14b8a6"
-                  fill="url(#painFill)"
-                  strokeWidth={3}
-                  dot={{ r: 3, strokeWidth: 2, fill: "#14b8a6" }}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                    <XAxis
+                      dataKey="submittedAt"
+                      tick={<ChartTick />}
+                      interval={0}
+                      height={48}
+                      axisLine={{ stroke: "rgba(15,23,42,0.25)" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 10]}
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      width={26}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(255,255,255,0.98)",
+                        border: "1px solid rgba(15,23,42,0.12)",
+                        borderRadius: 16,
+                        color: "#0f172a",
+                      }}
+                      labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                      itemStyle={{ color: "#0f766e" }}
+                      labelFormatter={v =>
+                        new Date(String(v)).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      }
+                      formatter={v => [`${v}/10`, "Pain"]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="pain"
+                      stroke="url(#painStroke)"
+                      fill="url(#painFill)"
+                      strokeWidth={3}
+                      dot={{ r: 3, strokeWidth: 2, fill: "#14b8a6" }}
+                      activeDot={{ r: 5, strokeWidth: 0 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Horizontal Severity Bar aligned with Recharts grid */}
+              <div className="space-y-1.5 pt-4 ml-[34px] mr-[24px] shrink-0">
+                <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
+                <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                  <span>Mild</span>
+                  <span>Moderate</span>
+                  <span>Severe</span>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
-
       {/* Completion rate — full width, horizontal layout */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
@@ -453,7 +479,6 @@ export default function PhysioClientDetail() {
           </div>
         </CardContent>
       </Card>
-
       {/* Assignment details */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
@@ -527,7 +552,7 @@ export default function PhysioClientDetail() {
           )}
         </CardContent>
       </Card>
-
+      {/* Session history */}
       {/* Session history */}
       <Card>
         <CardHeader className="pb-3">
@@ -577,13 +602,10 @@ export default function PhysioClientDetail() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={
-                                f.feedback.painScore >= 7
-                                  ? "destructive"
-                                  : f.feedback.painScore >= 4
-                                    ? "secondary"
-                                    : "default"
-                              }
+                              variant="outline"
+                              className={getPainScoreStyle(
+                                f.feedback.painScore
+                              )}
                             >
                               {f.feedback.painScore}/10
                             </Badge>
