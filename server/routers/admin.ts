@@ -9,9 +9,11 @@ import {
 } from "../db";
 import {
   ACCOUNT_STATUSES,
+  INJURY_TYPES,
   LANGUAGES,
   ROLES,
 } from "../../drizzle/schema";
+import { createAuditLog } from "../db";
 import { sdk } from "../_core/localAuth";
 
 const RoleEnum = z.enum(ROLES);
@@ -52,15 +54,24 @@ export const adminRouter = router({
           status: StatusEnum.optional(),
           languagePreference: LanguageEnum.optional(),
           physiotherapistId: z.number().int().positive().nullable().optional(),
+          injuryType: z.enum(INJURY_TYPES).nullable().optional(),
+          nextClinicVisit: z.string().nullable().optional(),
         }),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Prevent an admin from changing their own role (must use another admin account)
       if (ctx.originalUser && ctx.originalUser.id === input.id && input.patch.role && input.patch.role !== ctx.originalUser.role) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own role" });
       }
-      return updateUserFields(input.id, input.patch);
+      const result = await updateUserFields(input.id, input.patch);
+      await createAuditLog({
+        actorId: ctx.originalUser?.id ?? ctx.user.id,
+        action: "user_updated",
+        targetType: "user",
+        targetId: input.id,
+        description: `Updated user #${input.id}: ${Object.keys(input.patch).join(", ")}`,
+      });
+      return result;
     }),
 
   approveUser: adminProcedure

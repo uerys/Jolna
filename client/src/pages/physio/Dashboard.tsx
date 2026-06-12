@@ -406,7 +406,9 @@ function AssignmentsTab() {
   const [endDate, setEndDate] = useState(fortnight);
   const [reps, setReps] = useState<string | number>(10);
   const [sets, setSets] = useState<string | number>(1);
-  const [exercisePreview, setExercisePreview] = useState<null | { title: string; defaultReps?: number; defaultSets?: number }>(null);
+  const [injuryType, setInjuryType] = useState<string>("");
+  const [exerciseType, setExerciseType] = useState<string>("");
+  const [exercisePreview, setExercisePreview] = useState<null | { title: string; defaultReps?: number; defaultSets?: number; exerciseType?: string }>(null);
 
   // When an exercise is selected, default reps to the exercise's defaultReps
   useEffect(() => {
@@ -415,7 +417,8 @@ function AssignmentsTab() {
     if (ex) {
       if (typeof ex.defaultReps === "number") setReps(String(ex.defaultReps));
       if (typeof ex.defaultSets === "number") setSets(String(ex.defaultSets));
-      setExercisePreview({ title: ex.title, defaultReps: ex.defaultReps, defaultSets: ex.defaultSets });
+      if ((ex as any).exerciseType) setExerciseType((ex as any).exerciseType);
+      setExercisePreview({ title: ex.title, defaultReps: ex.defaultReps, defaultSets: ex.defaultSets, exerciseType: (ex as any).exerciseType });
     }
   }, [exerciseId, exercises.data]);
 
@@ -505,6 +508,44 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
+                    <Label>Injury Type</Label>
+                    <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
+                      <SelectTrigger><SelectValue placeholder="Select injury type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="muscle_strain">Muscle Strain</SelectItem>
+                        <SelectItem value="ligament_sprain">Ligament Sprain</SelectItem>
+                        <SelectItem value="fracture_recovery">Fracture Recovery</SelectItem>
+                        <SelectItem value="post_surgery">Post Surgery</SelectItem>
+                        <SelectItem value="joint_pain">Joint Pain</SelectItem>
+                        <SelectItem value="back_pain">Back Pain</SelectItem>
+                        <SelectItem value="neck_pain">Neck Pain</SelectItem>
+                        <SelectItem value="shoulder_injury">Shoulder Injury</SelectItem>
+                        <SelectItem value="knee_injury">Knee Injury</SelectItem>
+                        <SelectItem value="ankle_injury">Ankle Injury</SelectItem>
+                        <SelectItem value="tendonitis">Tendonitis</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Exercise Type</Label>
+                    <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
+                      <SelectTrigger><SelectValue placeholder="Select exercise type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="strength">Strength</SelectItem>
+                        <SelectItem value="flexibility">Flexibility</SelectItem>
+                        <SelectItem value="balance">Balance</SelectItem>
+                        <SelectItem value="endurance">Endurance</SelectItem>
+                        <SelectItem value="mobility">Mobility</SelectItem>
+                        <SelectItem value="stretching">Stretching</SelectItem>
+                        <SelectItem value="functional">Functional</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
                     <Label><FormattedMessage id="physio.assign.sets" /></Label>
                     <Input
                       type="number"
@@ -542,6 +583,8 @@ function AssignmentsTab() {
                       exerciseId: Number(exerciseId),
                       reps: (reps === "" ? undefined : Number(reps)),
                       sets: (sets === "" ? undefined : Number(sets)),
+                      injuryType: (injuryType || undefined) as any,
+                      exerciseType: (exerciseType || undefined) as any,
                       startDate,
                       endDate,
                     })

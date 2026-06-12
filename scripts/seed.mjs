@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Seed demo data for Recovry.
+// Seed demo data for JOLNA.
 // Usage:  node scripts/seed.mjs
 
 import "dotenv/config";
@@ -147,12 +147,12 @@ function plusDays(days) {
 }
 
 try {
-  console.log("Seeding Recovry demo data…");
+  console.log("Seeding JOLNA demo data…");
 
   const adminId = await upsertDemoUser({
     openId: "demo-admin",
     name: "Demo Clinic Admin",
-    email: "admin@recovry.local",
+    email: "admin@jolna.local",
     role: "admin",
     password: "Password1!",
   });
@@ -160,7 +160,7 @@ try {
   const physioId = await upsertDemoUser({
     openId: "demo-physio",
     name: "Demo Physiotherapist",
-    email: "physio@recovry.local",
+    email: "physio@jolna.local",
     role: "physiotherapist",
     password: "Password1!",
   });
@@ -168,7 +168,7 @@ try {
   const clientId = await upsertDemoUser({
     openId: "demo-client",
     name: "Demo Client",
-    email: "client@recovry.local",
+    email: "client@jolna.local",
     role: "client",
     physiotherapistId: physioId,
     password: "Password1!",
@@ -177,7 +177,7 @@ try {
   const clientId2 = await upsertDemoUser({
     openId: "demo-client-2",
     name: "Client Two",
-    email: "client2@recovry.local",
+    email: "client2@jolna.local",
     role: "client",
     physiotherapistId: physioId,
     password: "Password1!",
@@ -186,7 +186,7 @@ try {
   const clientId3 = await upsertDemoUser({
     openId: "demo-client-3",
     name: "Client Three",
-    email: "client3@recovry.local",
+    email: "client3@jolna.local",
     role: "client",
     physiotherapistId: physioId,
     password: "Password1!",

@@ -5,7 +5,7 @@ import superjson from "superjson";
 import type { TrpcContext } from "./context";
 import { getUserById } from "../db";
 
-export const IMPERSONATE_COOKIE = "recovry_impersonate";
+export const IMPERSONATE_COOKIE = "jolna_impersonate";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -19,7 +19,7 @@ export const publicProcedure = t.procedure;
  *
  * - In production: always returns the authenticated user.
  * - In development: if the authenticated user is a Clinic Admin and the request
- *   carries the `recovry_impersonate` cookie pointing to an existing user id,
+ *   carries the `jolna_impersonate` cookie pointing to an existing user id,
  *   the cookie's user is returned instead. This is purely a demo affordance;
  *   impersonation is silently ignored in production.
  */
@@ -130,7 +130,7 @@ export const clientProcedure = makeRoleProcedure(
   "Client access required.",
 );
 
-/** Any authenticated Recovry role. Uses the effective (impersonated) user. */
+/** Any authenticated JOLNA role. Uses the effective (impersonated) user. */
 export const anyRoleProcedure = makeRoleProcedure(
   ["admin", "physiotherapist", "client", "user"],
   UNAUTHED_ERR_MSG,

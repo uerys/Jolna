@@ -13,18 +13,16 @@ import {
 import { relations } from "drizzle-orm";
 
 /**
- * Recovry role enum — the three roles described in the FYP.
- * We keep the legacy "user" / "admin" literals as well so older data and
- * dev fixtures keep compiling. Inside Recovry we treat:
+ * JOLNA role enum — the three roles described in the FYP.
  *   - "admin"          ≡ Clinic Admin
  *   - "physiotherapist"≡ Physiotherapist
  *   - "client"         ≡ Client (default for newly-signed-in visitors)
  *   - "user"           ≡ legacy / pre-role-assignment (treated as Client in the UI)
  */
 export const ROLES = ["user", "admin", "client", "physiotherapist"] as const;
-export type RecovryRole = (typeof ROLES)[number];
+export type JolnaRole = (typeof ROLES)[number];
 
-export const ACCOUNT_STATUSES = ["active", "inactive"] as const;
+export const ACCOUNT_STATUSES = ["active", "inactive", "suspended"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 export const LANGUAGES = ["en", "kh"] as const;
@@ -45,12 +43,41 @@ export const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 /**
+ * Injury types commonly used in physiotherapy clinics.
+ */
+export const INJURY_TYPES = [
+  "muscle_strain",
+  "ligament_sprain",
+  "fracture_recovery",
+  "post_surgery",
+  "joint_pain",
+  "back_pain",
+  "neck_pain",
+  "shoulder_injury",
+  "knee_injury",
+  "ankle_injury",
+  "tendonitis",
+  "other",
+] as const;
+export type InjuryType = (typeof INJURY_TYPES)[number];
+
+/**
+ * Exercise categories used for classification.
+ */
+export const EXERCISE_TYPES = [
+  "strength",
+  "flexibility",
+  "balance",
+  "endurance",
+  "mobility",
+  "stretching",
+  "functional",
+  "other",
+] as const;
+export type ExerciseType = (typeof EXERCISE_TYPES)[number];
+
+/**
  * Core user table.
- * - openId: local auth identifier / legacy Manus identifier.
- * - role: one of ROLES.
- * - status: account lifecycle state managed by the Clinic Admin.
- * - languagePreference: persisted EN/KH preference (source of truth for i18n).
- * - physiotherapistId: optional FK to the physiotherapist assigned to a client.
  */
 export const users = mysqlTable(
   "users",
@@ -69,6 +96,8 @@ export const users = mysqlTable(
       .default("en")
       .notNull(),
     physiotherapistId: int("physiotherapistId"),
+    injuryType: mysqlEnum("injuryType", INJURY_TYPES),
+    nextClinicVisit: date("nextClinicVisit", { mode: "string" }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
     lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -84,7 +113,6 @@ export type InsertUser = typeof users.$inferInsert;
 
 /**
  * Exercise template — created by a physiotherapist.
- * Holds bilingual instructions and a demonstration video URL.
  */
 export const exercises = mysqlTable(
   "exercises",
@@ -95,6 +123,7 @@ export const exercises = mysqlTable(
     instructionsEn: text("instructionsEn").notNull(),
     instructionsKh: text("instructionsKh").notNull(),
     videoUrl: varchar("videoUrl", { length: 1024 }).notNull(),
+    exerciseType: mysqlEnum("exerciseType", EXERCISE_TYPES).default("other").notNull(),
     defaultReps: int("defaultReps").notNull().default(10),
     defaultSets: int("defaultSets").notNull().default(1),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -110,6 +139,7 @@ export type InsertExercise = typeof exercises.$inferInsert;
 
 /**
  * Assignment — links a client to an exercise for a specific date range.
+ * Includes injuryType and exerciseType for transparency.
  */
 export const assignments = mysqlTable(
   "assignments",
@@ -118,6 +148,8 @@ export const assignments = mysqlTable(
     exerciseId: int("exerciseId").notNull(),
     physiotherapistId: int("physiotherapistId").notNull(),
     clientId: int("clientId").notNull(),
+    injuryType: mysqlEnum("injuryType", INJURY_TYPES).default("other").notNull(),
+    exerciseType: mysqlEnum("exerciseType", EXERCISE_TYPES).default("other").notNull(),
     reps: int("reps").notNull(),
     sets: int("sets").notNull().default(1),
     startDate: date("startDate", { mode: "string" }).notNull(),
@@ -140,7 +172,6 @@ export type InsertAssignment = typeof assignments.$inferInsert;
 
 /**
  * Feedback log — daily entry submitted by a client for an assignment.
- * painScore is enforced 0–10 by the app layer (zod validation).
  */
 export const feedbackLogs = mysqlTable(
   "feedback_logs",
@@ -163,9 +194,7 @@ export type FeedbackLog = typeof feedbackLogs.$inferSelect;
 export type InsertFeedbackLog = typeof feedbackLogs.$inferInsert;
 
 /**
- * In-app notification for a client or physiotherapist.
- * title/content are stored as rendered strings so the UI can show them without
- * re-running business logic on the client.
+ * In-app notification.
  */
 export const notifications = mysqlTable(
   "notifications",
@@ -191,6 +220,29 @@ export const notifications = mysqlTable(
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Audit trail — records important system actions for transparency.
+ */
+export const auditLogs = mysqlTable(
+  "audit_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    actorId: int("actorId").notNull(),
+    action: varchar("action", { length: 128 }).notNull(),
+    targetType: varchar("targetType", { length: 64 }).notNull(),
+    targetId: int("targetId"),
+    description: text("description"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => ({
+    byActor: index("audit_actor_idx").on(t.actorId),
+    byTarget: index("audit_target_idx").on(t.targetType, t.targetId),
+  })
+);
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
 
 /* ------------------------------------------------------------------ */
 /* Relations                                                           */
@@ -260,5 +312,12 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     fields: [notifications.actorId],
     references: [users.id],
     relationName: "notification_actor",
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  actor: one(users, {
+    fields: [auditLogs.actorId],
+    references: [users.id],
   }),
 }));

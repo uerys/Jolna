@@ -5,10 +5,14 @@ import {
   createFeedback,
   createNotification,
   getAssignmentById,
+  getAssignmentCompletionStats,
   getExerciseById,
   getClientCompletionStats,
+  listAllAssignmentsForClient,
   listAssignmentsForClient,
+  listFeedbackByAssignment,
   listFeedbackByClient,
+  listFeedbackByClientEnriched,
   getUserById,
 } from "../db";
 
@@ -36,6 +40,39 @@ function formatFeedbackNotification(
 }
 
 export const clientRouter = router({
+  /**
+   * Rehabilitation summary for the client landing page.
+   * Returns client info, assigned physiotherapist, injury type, next clinic visit, active assignment count.
+   */
+  getRehabSummary: clientProcedure.query(async ({ ctx }) => {
+    const user = ctx.user;
+    let physioName: string | null = null;
+    let physioEmail: string | null = null;
+    if (user.physiotherapistId) {
+      const physio = await getUserById(user.physiotherapistId);
+      if (physio) {
+        physioName = physio.name;
+        physioEmail = physio.email;
+      }
+    }
+
+    // Count active assignments
+    const today = new Date().toISOString().slice(0, 10);
+    const activeAssignments = await listAssignmentsForClient(user.id, {
+      activeOn: today,
+      status: "active",
+    });
+
+    return {
+      clientName: user.name ?? user.email ?? "Client",
+      physiotherapistName: physioName,
+      physiotherapistEmail: physioEmail,
+      injuryType: user.injuryType ?? null,
+      nextClinicVisit: user.nextClinicVisit ?? null,
+      activeAssignmentCount: activeAssignments.length,
+    };
+  }),
+
   listTodayAssignments: clientProcedure.query(({ ctx }) => {
     const today = new Date().toISOString().slice(0, 10);
     return listAssignmentsForClient(ctx.user.id, {
@@ -49,6 +86,13 @@ export const clientRouter = router({
     .query(({ ctx, input }) =>
       listAssignmentsForClient(ctx.user.id, { activeOn: input?.activeOn })
     ),
+
+  /**
+   * List ALL assignments (no date filter) for self-monitoring.
+   */
+  listAllMyAssignments: clientProcedure.query(({ ctx }) =>
+    listAllAssignmentsForClient(ctx.user.id)
+  ),
 
   submitFeedback: clientProcedure
     .input(
@@ -98,11 +142,59 @@ export const clientRouter = router({
       return feedback;
     }),
 
+  /**
+   * Basic feedback list (backward compatible).
+   */
   listMyFeedback: clientProcedure.query(({ ctx }) =>
     listFeedbackByClient(ctx.user.id)
   ),
 
+  /**
+   * Enriched feedback with assignment details for self-monitoring session history.
+   */
+  listMyFeedbackEnriched: clientProcedure
+    .input(
+      z.object({
+        assignmentId: z.number().int().positive().optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      }).optional()
+    )
+    .query(({ ctx, input }) =>
+      listFeedbackByClientEnriched(ctx.user.id, {
+        assignmentId: input?.assignmentId,
+        from: input?.from ? new Date(input.from) : undefined,
+        to: input?.to ? new Date(input.to) : undefined,
+      })
+    ),
+
+  /**
+   * Get feedback for a specific assignment (client self-monitoring).
+   */
+  listAssignmentFeedback: clientProcedure
+    .input(z.object({ assignmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment || assignment.clientId !== ctx.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      return listFeedbackByAssignment(input.assignmentId);
+    }),
+
   myStats: clientProcedure.query(({ ctx }) =>
     getClientCompletionStats(ctx.user.id)
   ),
+
+  /**
+   * Get completion stats for a specific assignment.
+   */
+  assignmentStats: clientProcedure
+    .input(z.object({ assignmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment || assignment.clientId !== ctx.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      return getAssignmentCompletionStats(input.assignmentId);
+    }),
 });

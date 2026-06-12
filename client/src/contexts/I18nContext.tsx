@@ -11,7 +11,7 @@ const catalogs: Record<Language, Record<string, string>> = {
   kh: kh as Record<string, string>,
 };
 
-const LANG_STORAGE_KEY = "recovry.language";
+const LANG_STORAGE_KEY = "jolna.language";
 
 type I18nContextValue = {
   language: Language;

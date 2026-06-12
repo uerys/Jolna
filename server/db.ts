@@ -2,19 +2,21 @@ import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   assignments,
+  auditLogs,
   exercises,
   feedbackLogs,
   notifications,
+  users,
   InsertAssignment,
+  InsertAuditLog,
   InsertExercise,
   InsertFeedbackLog,
   InsertNotification,
   InsertUser,
-  users,
   type AccountStatus,
   type AssignmentStatus,
+  type JolnaRole,
   type Language,
-  type RecovryRole,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -135,7 +137,7 @@ export async function getUserById(id: number) {
 }
 
 export async function listUsers(filter?: {
-  role?: RecovryRole;
+  role?: JolnaRole;
   status?: AccountStatus;
   physiotherapistId?: number;
 }) {
@@ -166,6 +168,8 @@ export async function updateUserFields(
       | "status"
       | "languagePreference"
       | "physiotherapistId"
+      | "injuryType"
+      | "nextClinicVisit"
     >
   >
 ) {
@@ -266,6 +270,10 @@ export async function createAssignment(data: InsertAssignment) {
   return row[0];
 }
 
+/**
+ * Enhanced: returns full assignment + exercise + physiotherapist info for the client.
+ * This provides the transparency data needed for the client landing page.
+ */
 export async function listAssignmentsForClient(
   clientId: number,
   opts?: { activeOn?: string; status?: AssignmentStatus }
@@ -280,11 +288,21 @@ export async function listAssignmentsForClient(
       gte(assignments.endDate, opts.activeOn)
     );
   }
-  return db
+
+  // Alias for physiotherapist user
+  const rows = await db
     .select({
       assignment: {
         id: assignments.id,
         reps: assignments.reps,
+        sets: assignments.sets,
+        startDate: assignments.startDate,
+        endDate: assignments.endDate,
+        status: assignments.status,
+        injuryType: assignments.injuryType,
+        exerciseType: assignments.exerciseType,
+        physiotherapistId: assignments.physiotherapistId,
+        createdAt: assignments.createdAt,
       },
       exercise: {
         id: exercises.id,
@@ -292,12 +310,75 @@ export async function listAssignmentsForClient(
         instructionsEn: exercises.instructionsEn,
         instructionsKh: exercises.instructionsKh,
         videoUrl: exercises.videoUrl,
+        exerciseType: exercises.exerciseType,
       },
     })
     .from(assignments)
     .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
     .where(and(...clauses))
     .orderBy(desc(assignments.startDate));
+
+  // Enrich with physiotherapist names
+  const physioIds = [...new Set(rows.map(r => r.assignment.physiotherapistId))];
+  const physioMap = new Map<number, { name: string | null; email: string | null }>();
+  if (physioIds.length > 0) {
+    for (const pid of physioIds) {
+      const p = await getUserById(pid);
+      if (p) physioMap.set(pid, { name: p.name, email: p.email });
+    }
+  }
+
+  return rows.map(r => ({
+    ...r,
+    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? { name: null, email: null },
+  }));
+}
+
+/**
+ * List all assignments for a client (no date filter), for self-monitoring.
+ */
+export async function listAllAssignmentsForClient(clientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      assignment: {
+        id: assignments.id,
+        reps: assignments.reps,
+        sets: assignments.sets,
+        startDate: assignments.startDate,
+        endDate: assignments.endDate,
+        status: assignments.status,
+        injuryType: assignments.injuryType,
+        exerciseType: assignments.exerciseType,
+        physiotherapistId: assignments.physiotherapistId,
+        createdAt: assignments.createdAt,
+      },
+      exercise: {
+        id: exercises.id,
+        title: exercises.title,
+        instructionsEn: exercises.instructionsEn,
+        instructionsKh: exercises.instructionsKh,
+        videoUrl: exercises.videoUrl,
+        exerciseType: exercises.exerciseType,
+      },
+    })
+    .from(assignments)
+    .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
+    .where(eq(assignments.clientId, clientId))
+    .orderBy(desc(assignments.startDate));
+
+  const physioIds = [...new Set(rows.map(r => r.assignment.physiotherapistId))];
+  const physioMap = new Map<number, { name: string | null; email: string | null }>();
+  for (const pid of physioIds) {
+    const p = await getUserById(pid);
+    if (p) physioMap.set(pid, { name: p.name, email: p.email });
+  }
+
+  return rows.map(r => ({
+    ...r,
+    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? { name: null, email: null },
+  }));
 }
 
 export async function listAssignmentsForPhysio(physiotherapistId: number) {
@@ -309,6 +390,31 @@ export async function listAssignmentsForPhysio(physiotherapistId: number) {
     .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
     .innerJoin(users, eq(users.id, assignments.clientId))
     .where(eq(assignments.physiotherapistId, physiotherapistId))
+    .orderBy(desc(assignments.startDate));
+}
+
+/**
+ * List assignments for a specific client under a specific physiotherapist (ownership-safe).
+ */
+export async function listAssignmentsForClientByPhysio(
+  clientId: number,
+  physiotherapistId: number
+) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      assignment: assignments,
+      exercise: exercises,
+    })
+    .from(assignments)
+    .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
+    .where(
+      and(
+        eq(assignments.clientId, clientId),
+        eq(assignments.physiotherapistId, physiotherapistId)
+      )
+    )
     .orderBy(desc(assignments.startDate));
 }
 
@@ -359,15 +465,105 @@ export async function listFeedbackByClient(
     .orderBy(desc(feedbackLogs.submittedAt));
 }
 
+/**
+ * Assignment-based feedback: list feedback for a specific assignment.
+ */
+export async function listFeedbackByAssignment(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(feedbackLogs)
+    .where(eq(feedbackLogs.assignmentId, assignmentId))
+    .orderBy(desc(feedbackLogs.submittedAt));
+}
+
+/**
+ * Enhanced: list feedback for a client with assignment details (injury type, exercise type, exercise title).
+ * This is the assignment-based session history.
+ */
+export async function listFeedbackByClientEnriched(
+  clientId: number,
+  opts?: {
+    assignmentId?: number;
+    from?: Date;
+    to?: Date;
+  }
+) {
+  const db = await getDb();
+  if (!db) return [];
+  const clauses = [eq(feedbackLogs.clientId, clientId)];
+  if (opts?.assignmentId) clauses.push(eq(feedbackLogs.assignmentId, opts.assignmentId));
+  if (opts?.from) clauses.push(gte(feedbackLogs.submittedAt, opts.from));
+  if (opts?.to) clauses.push(lte(feedbackLogs.submittedAt, opts.to));
+
+  return db
+    .select({
+      feedback: feedbackLogs,
+      assignment: {
+        id: assignments.id,
+        injuryType: assignments.injuryType,
+        exerciseType: assignments.exerciseType,
+        status: assignments.status,
+        startDate: assignments.startDate,
+        endDate: assignments.endDate,
+        physiotherapistId: assignments.physiotherapistId,
+      },
+      exercise: {
+        id: exercises.id,
+        title: exercises.title,
+      },
+    })
+    .from(feedbackLogs)
+    .innerJoin(assignments, eq(assignments.id, feedbackLogs.assignmentId))
+    .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
+    .where(and(...clauses))
+    .orderBy(desc(feedbackLogs.submittedAt));
+}
+
 export async function listFeedbackForPhysio(physiotherapistId: number) {
   const db = await getDb();
   if (!db) return [];
   return db
-    .select({ feedback: feedbackLogs, client: users })
+    .select({
+      feedback: feedbackLogs,
+      client: users,
+      assignment: {
+        id: assignments.id,
+        injuryType: assignments.injuryType,
+        exerciseType: assignments.exerciseType,
+      },
+      exercise: {
+        id: exercises.id,
+        title: exercises.title,
+      },
+    })
     .from(feedbackLogs)
+    .innerJoin(assignments, eq(assignments.id, feedbackLogs.assignmentId))
+    .innerJoin(exercises, eq(exercises.id, assignments.exerciseId))
     .innerJoin(users, eq(users.id, feedbackLogs.clientId))
-    .where(eq(users.physiotherapistId, physiotherapistId))
+    .where(eq(assignments.physiotherapistId, physiotherapistId))
     .orderBy(desc(feedbackLogs.submittedAt));
+}
+
+/**
+ * Enhanced: get completion stats scoped to an assignment.
+ */
+export async function getAssignmentCompletionStats(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return { total: 0, completed: 0 };
+  const r = await db
+    .select({
+      total: sql<number>`count(*)`,
+      completed: sql<number>`sum(case when ${feedbackLogs.completed} = true then 1 else 0 end)`,
+    })
+    .from(feedbackLogs)
+    .where(eq(feedbackLogs.assignmentId, assignmentId));
+  const row = r[0] ?? { total: 0, completed: 0 };
+  return {
+    total: Number(row.total ?? 0),
+    completed: Number(row.completed ?? 0),
+  };
 }
 
 export async function getClientCompletionStats(clientId: number) {
@@ -484,4 +680,31 @@ export async function markAllNotificationsAsRead(recipientId: number) {
   } catch (error) {
     console.warn("[Database] Failed to mark all notifications as read:", error);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Audit Trail                                                         */
+/* ------------------------------------------------------------------ */
+
+export async function createAuditLog(data: InsertAuditLog) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(auditLogs).values(data);
+  } catch (error) {
+    console.warn("[Database] Failed to create audit log:", error);
+  }
+}
+
+export async function listAuditLogs(opts?: { limit?: number; actorId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const limit = Math.max(1, Math.min(opts?.limit ?? 50, 200));
+  const clauses = [];
+  if (opts?.actorId) clauses.push(eq(auditLogs.actorId, opts.actorId));
+  const q = db.select().from(auditLogs);
+  const rows = clauses.length
+    ? await q.where(and(...clauses)).orderBy(desc(auditLogs.createdAt)).limit(limit)
+    : await q.orderBy(desc(auditLogs.createdAt)).limit(limit);
+  return rows;
 }

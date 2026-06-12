@@ -12,6 +12,7 @@ import { physioRouter } from "./routers/physio";
 import { settingsRouter } from "./routers/settings";
 import { parse as parseCookieHeader } from "cookie";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 /**
  * Resolve effective user (respects dev-mode impersonation) for auth.me.
@@ -37,6 +38,11 @@ async function resolveEffectiveMe(ctx: {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
+    /**
+     * Public registration is disabled.
+     * Account creation is handled by the administrator via admin.createUser.
+     * This endpoint is kept as a stub to avoid breaking the client build.
+     */
     register: publicProcedure
       .input(
         z.object({
@@ -45,14 +51,11 @@ export const appRouter = router({
           password: z.string().min(8).max(128),
         })
       )
-      .mutation(async opts => {
-        const { user, sessionToken } = await sdk.register(opts.input);
-        const cookieOptions = getSessionCookieOptions(opts.ctx.req);
-        opts.ctx.res.cookie(COOKIE_NAME, sessionToken, {
-          ...cookieOptions,
-          maxAge: ONE_YEAR_MS,
+      .mutation(async () => {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Public registration is disabled. Please contact your clinic administrator to create an account.",
         });
-        return user;
       }),
     login: publicProcedure
       .input(

@@ -3,25 +3,32 @@ import { TRPCError } from "@trpc/server";
 import { physioProcedure, router } from "../_core/trpc";
 import {
   createAssignment,
+  createAuditLog,
   createExercise,
   createNotification,
   deleteAssignment,
   deleteExercise,
+  getAssignmentCompletionStats,
   getClientCompletionStats,
   getAssignmentById,
   getExerciseById,
   getUserById,
+  listAssignmentsForClientByPhysio,
   listAssignmentsForPhysio,
   listExercises,
+  listFeedbackByAssignment,
   listFeedbackByClient,
+  listFeedbackByClientEnriched,
   listFeedbackForPhysio,
   listUsers,
   updateAssignmentStatus,
   updateExercise,
 } from "../db";
-import { ASSIGNMENT_STATUSES } from "../../drizzle/schema";
+import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES } from "../../drizzle/schema";
 
 const AssignmentStatusEnum = z.enum(ASSIGNMENT_STATUSES);
+const InjuryTypeEnum = z.enum(INJURY_TYPES);
+const ExerciseTypeEnum = z.enum(EXERCISE_TYPES);
 const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
@@ -81,12 +88,13 @@ export const physioRouter = router({
         instructionsEn: z.string().min(1),
         instructionsKh: z.string().min(1),
         videoUrl: z.string().url().max(1024),
+        exerciseType: ExerciseTypeEnum.optional(),
         defaultReps: z.number().int().min(1).max(500),
         defaultSets: z.number().int().min(1).max(100),
       })
     )
     .mutation(({ ctx, input }) =>
-      createExercise({ ...input, createdBy: ctx.user.id })
+      createExercise({ ...input, exerciseType: input.exerciseType ?? "other", createdBy: ctx.user.id })
     ),
 
   updateExercise: physioProcedure
@@ -98,6 +106,7 @@ export const physioRouter = router({
           instructionsEn: z.string().min(1).optional(),
           instructionsKh: z.string().min(1).optional(),
           videoUrl: z.string().url().max(1024).optional(),
+          exerciseType: ExerciseTypeEnum.optional(),
           defaultReps: z.number().int().min(1).max(500).optional(),
           defaultSets: z.number().int().min(1).max(100).optional(),
         }),
@@ -127,6 +136,35 @@ export const physioRouter = router({
     listUsers({ role: "client", physiotherapistId: ctx.user.id })
   ),
 
+  /**
+   * Get detailed client info with ownership check.
+   * Physiotherapists can only view clients assigned to them.
+   */
+  getClientDetail: physioProcedure
+    .input(z.object({ clientId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client) throw new TRPCError({ code: "NOT_FOUND" });
+      // Ownership check: physio can only view their own clients
+      if (client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+      return client;
+    }),
+
+  /**
+   * List assignments for a specific client (ownership-safe).
+   */
+  listClientAssignments: physioProcedure
+    .input(z.object({ clientId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+      return listAssignmentsForClientByPhysio(input.clientId, ctx.user.id);
+    }),
+
   listMyAssignments: physioProcedure.query(({ ctx }) =>
     listAssignmentsForPhysio(ctx.user.id)
   ),
@@ -136,6 +174,8 @@ export const physioRouter = router({
       z.object({
         exerciseId: z.number().int().positive(),
         clientId: z.number().int().positive(),
+        injuryType: InjuryTypeEnum.optional(),
+        exerciseType: ExerciseTypeEnum.optional(),
         reps: z.number().int().min(1).max(500).optional(),
         sets: z.number().int().min(1).max(100).optional(),
         startDate: dateString,
@@ -155,10 +195,21 @@ export const physioRouter = router({
         exerciseId: input.exerciseId,
         clientId: input.clientId,
         physiotherapistId: ctx.user.id,
+        injuryType: input.injuryType ?? "other",
+        exerciseType: input.exerciseType ?? ex.exerciseType ?? "other",
         reps: repsToUse,
         sets: setsToUse,
         startDate: input.startDate,
         endDate: input.endDate,
+      });
+
+      // Audit log
+      await createAuditLog({
+        actorId: ctx.user.id,
+        action: "assignment_created",
+        targetType: "assignment",
+        targetId: assignment.id,
+        description: `Assigned ${ex.title} to client #${input.clientId}`,
       });
 
       const { title, content } = formatAssignmentNotification(
@@ -193,6 +244,15 @@ export const physioRouter = router({
       }
       await updateAssignmentStatus(input.id, input.status);
 
+      // Audit log
+      await createAuditLog({
+        actorId: ctx.user.id,
+        action: "assignment_status_updated",
+        targetType: "assignment",
+        targetId: input.id,
+        description: `Updated assignment #${input.id} status to ${input.status}`,
+      });
+
       const client = await getUserById(assignment.clientId);
       const exercise = await getExerciseById(assignment.exerciseId);
       if (client && exercise) {
@@ -216,19 +276,96 @@ export const physioRouter = router({
 
   deleteAssignment: physioProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.id);
+      if (!assignment) throw new TRPCError({ code: "NOT_FOUND" });
+      if (assignment.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
       await deleteAssignment(input.id);
+
+      // Audit log
+      await createAuditLog({
+        actorId: ctx.user.id,
+        action: "assignment_deleted",
+        targetType: "assignment",
+        targetId: input.id,
+        description: `Deleted assignment #${input.id}`,
+      });
+
       return { success: true };
     }),
 
   /* Monitoring */
   listClientFeedback: physioProcedure
     .input(z.object({ clientId: z.number().int().positive() }))
-    .query(({ input }) => listFeedbackByClient(input.clientId)),
+    .query(async ({ ctx, input }) => {
+      // Ownership check
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+      return listFeedbackByClient(input.clientId);
+    }),
+
+  /**
+   * Enriched feedback for a client: includes assignment details (injury type, exercise type, exercise title).
+   */
+  listClientFeedbackEnriched: physioProcedure
+    .input(
+      z.object({
+        clientId: z.number().int().positive(),
+        assignmentId: z.number().int().positive().optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+      return listFeedbackByClientEnriched(input.clientId, {
+        assignmentId: input.assignmentId,
+        from: input.from ? new Date(input.from) : undefined,
+        to: input.to ? new Date(input.to) : undefined,
+      });
+    }),
+
+  /**
+   * Get feedback for a specific assignment.
+   */
+  listAssignmentFeedback: physioProcedure
+    .input(z.object({ assignmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment) throw new TRPCError({ code: "NOT_FOUND" });
+      if (assignment.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return listFeedbackByAssignment(input.assignmentId);
+    }),
 
   getClientStats: physioProcedure
     .input(z.object({ clientId: z.number().int().positive() }))
-    .query(({ input }) => getClientCompletionStats(input.clientId)),
+    .query(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+      return getClientCompletionStats(input.clientId);
+    }),
+
+  getAssignmentStats: physioProcedure
+    .input(z.object({ assignmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment) throw new TRPCError({ code: "NOT_FOUND" });
+      if (assignment.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return getAssignmentCompletionStats(input.assignmentId);
+    }),
 
   listAllMyFeedback: physioProcedure.query(({ ctx }) =>
     listFeedbackForPhysio(ctx.user.id)

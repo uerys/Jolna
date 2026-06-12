@@ -245,8 +245,12 @@ export default function Profile() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <Badge className="border-transparent bg-emerald-600 text-white hover:bg-emerald-700">
-                  Active
+                <Badge className={`border-transparent text-white ${
+                  profile.data?.user.status === "active" ? "bg-emerald-600 hover:bg-emerald-700" :
+                  profile.data?.user.status === "suspended" ? "bg-red-600 hover:bg-red-700" :
+                  "bg-gray-500 hover:bg-gray-600"
+                }`}>
+                  {profile.data?.user.status ? profile.data.user.status.charAt(0).toUpperCase() + profile.data.user.status.slice(1) : "Active"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -285,7 +289,7 @@ export default function Profile() {
                             }}
                             className="text-xs text-blue-600 hover:underline mt-1"
                           >
-                            Open in Telegram
+                            Telegram Contact Link
                           </a>
                         </div>
                       ) : null}
@@ -302,7 +306,7 @@ export default function Profile() {
             <Card>
               <CardHeader>
                 <CardTitle>Contact Admin</CardTitle>
-                <CardDescription>If you need help, contact your clinic administrator via Telegram.</CardDescription>
+                <CardDescription>If you need help, contact your clinic administrator via Telegram Contact Link.</CardDescription>
               </CardHeader>
               <CardContent>
                 {admins.isLoading && <p className="text-sm text-muted-foreground">Loading admins…</p>}
@@ -325,7 +329,7 @@ export default function Profile() {
                             onClick={() => openTelegramWithFallback(a.phoneNumber)}
                             className="text-xs"
                           >
-                            Open in Telegram
+                            Telegram Contact Link
                           </Button>
                         ) : (
                           <span className="text-sm text-muted-foreground">No phone</span>
@@ -337,6 +341,15 @@ export default function Profile() {
               </CardContent>
             </Card>
           )}
+
+          {/* Data Transparency Notice */}
+          <Card className="border-muted">
+            <CardContent className="pt-4 pb-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <strong>Data Transparency:</strong> Your pain scores, completion status, and notes can be viewed by your assigned physiotherapist for rehabilitation monitoring. Your phone number may be visible to authorized clinic staff for contact purposes. Telegram is used only as an external contact link — messages are not stored inside JOLNA.
+              </p>
+            </CardContent>
+          </Card>
 
           {role === "physiotherapist" && (
             <Card>
@@ -371,7 +384,7 @@ export default function Profile() {
                                 }}
                                 className="text-xs text-blue-600 hover:underline mt-1"
                               >
-                                Open in Telegram
+                                Telegram Contact Link
                               </a>
                             </div>
                           ) : null}

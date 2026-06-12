@@ -52,7 +52,7 @@ describe("auth.logout", () => {
     expect(clearedCookies).toHaveLength(2);
     const sessionCookie = clearedCookies.find((c) => c.name === COOKIE_NAME);
     expect(sessionCookie).toBeDefined();
-    expect(clearedCookies.some((c) => c.name === "recovry_impersonate")).toBe(true);
+    expect(clearedCookies.some((c) => c.name === "jolna_impersonate")).toBe(true);
     expect(sessionCookie?.options).toMatchObject({
       maxAge: -1,
       secure: true,

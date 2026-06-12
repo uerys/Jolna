@@ -69,7 +69,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-6 py-10">
-      <h1 className="text-2xl font-semibold">Recovry Notes</h1>
+      <h1 className="text-2xl font-semibold">JOLNA Notes</h1>
 
       <form onSubmit={onSubmit} className="flex gap-2">
         <input

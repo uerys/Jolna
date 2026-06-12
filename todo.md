@@ -88,7 +88,7 @@
 
 - [x] Save checkpoint (v735eec7f)
 - [x] Write `/home/ubuntu/FYP_Chapter3_Diffs.md` with the exact edits needed in Chapter 3
-- [x] Push to branch `manus-implementation` on `Kuyhavtea/recovry` fork
+- [x] Push to branch `manus-implementation` on `Kuyhavtea/jolna` fork
 - [x] Deliver preview link and summary to the user
 
 ## 12. Dev Impersonation
