@@ -1,0 +1,1 @@
+ALTER TABLE `assignments` ADD `sets` int DEFAULT 1 NOT NULL;
