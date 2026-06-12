@@ -97,7 +97,7 @@ export const users = mysqlTable(
       .notNull(),
     physiotherapistId: int("physiotherapistId"),
     injuryType: mysqlEnum("injuryType", INJURY_TYPES),
-    nextClinicVisit: date("nextClinicVisit", { mode: "string" }),
+    nextClinicVisit: varchar("nextClinicVisit", { length: 255 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
     lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

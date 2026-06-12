@@ -24,6 +24,7 @@ import {
   updateAssignmentStatus,
   updateExercise,
   updateFeedbackNotes,
+  updateUserFields,
 } from "../db";
 import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES } from "../../drizzle/schema";
 
@@ -389,5 +390,25 @@ export const physioRouter = router({
           message: error.message || "Failed to update feedback notes",
         });
       }
+    }),
+
+  scheduleNextClinicVisit: physioProcedure
+    .input(
+      z.object({
+        clientId: z.number().int().positive(),
+        nextClinicVisit: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+
+      await updateUserFields(input.clientId, {
+        nextClinicVisit: input.nextClinicVisit,
+      });
+
+      return { success: true };
     }),
 });

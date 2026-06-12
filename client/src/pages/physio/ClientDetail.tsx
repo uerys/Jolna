@@ -176,6 +176,23 @@ function formatDateShort(dateStr: string): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
+function formatClinicVisit(visitStr: string | null | undefined): string {
+  if (!visitStr) return "Not scheduled";
+  try {
+    const d = new Date(visitStr);
+    if (isNaN(d.getTime())) {
+      const fallbackDate = new Date(visitStr + "T00:00:00");
+      if (isNaN(fallbackDate.getTime())) return visitStr;
+      return fallbackDate.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+    const datePart = d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const timePart = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+    return `${datePart} at ${timePart}`;
+  } catch {
+    return visitStr;
+  }
+}
+
 interface DurationBarProps {
   startDate: string;
   endDate: string;
@@ -313,6 +330,7 @@ export default function PhysioClientDetail() {
 
   // Mock visits and progress notes states
   const [visitDate, setVisitDate] = useState("");
+  const [visitTime, setVisitTime] = useState("09:00");
 
   // Session History Filter States
   const [historyExerciseId, setHistoryExerciseId] = useState<string>("all");
@@ -415,6 +433,24 @@ export default function PhysioClientDetail() {
       updateStatusMutation.mutate({ id, status: "completed" });
     }
   };
+
+  const scheduleVisitMutation = trpc.physio.scheduleNextClinicVisit.useMutation({
+    onSuccess: async () => {
+      await utils.physio.getClientDetail.invalidate({ clientId });
+      await utils.physio.listMyClients.invalidate();
+      
+      const formattedTime = new Date(`2000-01-01T${visitTime}`).toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      toast.success(`Clinic visit scheduled for ${new Date(visitDate).toLocaleDateString()} at ${formattedTime}`);
+      setIsVisitOpen(false);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to schedule clinic visit");
+    },
+  });
 
 
 
@@ -551,7 +587,7 @@ export default function PhysioClientDetail() {
       { icon: Mail, label: "Email Address", value: client.data?.email ?? "—" },
       { icon: Phone, label: "Phone Number", value: client.data?.phoneNumber ?? "—" },
       { icon: Activity, label: "Primary Diagnosis", value: formatInjuryType(client.data?.injuryType) },
-      { icon: CalendarDays, label: "Next Clinic Visit", value: client.data?.nextClinicVisit ? formatDateShort(client.data.nextClinicVisit) : "Not scheduled" }
+      { icon: CalendarDays, label: "Next Clinic Visit", value: formatClinicVisit(client.data?.nextClinicVisit) }
     ];
   }, [client.data]);
   const sortedData = useMemo(() => {
@@ -612,8 +648,11 @@ export default function PhysioClientDetail() {
       toast.error("Please select a date.");
       return;
     }
-    toast.success(`Clinic visit scheduled for ${new Date(visitDate).toLocaleDateString()}`);
-    setIsVisitOpen(false);
+    const visitDateTime = visitTime ? `${visitDate}T${visitTime}` : visitDate;
+    scheduleVisitMutation.mutate({
+      clientId,
+      nextClinicVisit: visitDateTime,
+    });
   };
 
 
@@ -1733,14 +1772,36 @@ export default function PhysioClientDetail() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="my-4">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Visit Date</Label>
-              <Input
-                type="date"
-                className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
-                value={visitDate}
-                onChange={(e) => setVisitDate(e.target.value)}
-              />
+            <div className="my-4 space-y-4">
+              <div>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
+                  Visit Date
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 size-4 text-slate-400" />
+                  <Input
+                    type="date"
+                    className="h-10 pl-10 bg-white border-slate-200 focus-visible:ring-indigo-600 text-slate-700 w-full rounded-lg text-sm"
+                    value={visitDate}
+                    onChange={(e) => setVisitDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
+                  Visit Time
+                </Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3 size-4 text-slate-400" />
+                  <Input
+                    type="time"
+                    className="h-10 pl-10 bg-white border-slate-200 focus-visible:ring-indigo-600 text-slate-700 w-full rounded-lg text-sm"
+                    value={visitTime}
+                    onChange={(e) => setVisitTime(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">

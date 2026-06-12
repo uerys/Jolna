@@ -1,0 +1,1 @@
+ALTER TABLE `users` MODIFY COLUMN `nextClinicVisit` varchar(255);
