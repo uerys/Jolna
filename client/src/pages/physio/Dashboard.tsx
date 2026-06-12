@@ -47,7 +47,6 @@ import {
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Plus, Stethoscope, Trash2 } from "lucide-react";
-import { MonitoringOverview } from "./MonitoringOverview";
 
 export default function PhysioDashboard() {
   const { user, loading } = useAuth();
@@ -96,13 +95,11 @@ export default function PhysioDashboard() {
           <TabsTrigger value="clients"><FormattedMessage id="physio.tab.clients" /></TabsTrigger>
           <TabsTrigger value="exercises"><FormattedMessage id="physio.tab.exercises" /></TabsTrigger>
           <TabsTrigger value="assignments"><FormattedMessage id="physio.tab.assignments" /></TabsTrigger>
-          <TabsTrigger value="monitoring"><FormattedMessage id="physio.tab.monitoring" /></TabsTrigger>
         </TabsList>
 
         <TabsContent value="clients"><ClientsTab /></TabsContent>
         <TabsContent value="exercises"><ExercisesTab /></TabsContent>
         <TabsContent value="assignments"><AssignmentsTab /></TabsContent>
-        <TabsContent value="monitoring"><MonitoringOverview /></TabsContent>
       </Tabs>
     </AppShell>
   );

@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Table,
@@ -41,17 +41,18 @@ import {
 } from "recharts";
 import {
   ArrowLeft,
-  User,
   Mail,
   Phone,
   Activity,
   CalendarDays,
-  Stethoscope,
+  User,
 } from "lucide-react";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatInjuryType(type: string | null | undefined): string {
   if (!type) return "—";
-  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function formatExerciseType(type: string | null | undefined): string {
@@ -60,17 +61,30 @@ function formatExerciseType(type: string | null | undefined): string {
 }
 
 function formatDateShort(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
 }
 
-function DurationBar({ startDate, endDate }: { startDate: string; endDate: string }) {
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function DurationBar({
+  startDate,
+  endDate,
+}: {
+  startDate: string;
+  endDate: string;
+}) {
   const today = new Date().toISOString().slice(0, 10);
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
   const now = new Date(today + "T00:00:00");
-  const totalDays = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  const elapsed = Math.max(0, Math.min(totalDays, (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const totalDays = Math.max(1, (end.getTime() - start.getTime()) / 864e5);
+  const elapsed = Math.max(
+    0,
+    Math.min(totalDays, (now.getTime() - start.getTime()) / 864e5)
+  );
   const progress = Math.round((elapsed / totalDays) * 100);
 
   return (
@@ -89,58 +103,122 @@ function DurationBar({ startDate, endDate }: { startDate: string; endDate: strin
   );
 }
 
-function ChartTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string } }) {
-  if (typeof x !== "number" || typeof y !== "number" || !payload?.value) return null;
+function ChartTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+}) {
+  if (typeof x !== "number" || typeof y !== "number" || !payload?.value)
+    return null;
   const date = new Date(payload.value);
-  const datePart = date.toLocaleDateString([], { month: "numeric", day: "numeric" });
-  const timePart = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
-
   return (
     <g transform={`translate(${x},${y + 12})`}>
       <foreignObject x={-28} y={0} width={56} height={34}>
         <div className="flex h-full w-full flex-col items-center justify-center text-[10px] leading-tight text-slate-500">
-          <span className="font-medium text-slate-700">{datePart}</span>
-          <span>{timePart}</span>
+          <span className="font-medium text-slate-700">
+            {date.toLocaleDateString([], { month: "numeric", day: "numeric" })}
+          </span>
+          <span>
+            {date
+              .toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .toLowerCase()}
+          </span>
         </div>
       </foreignObject>
     </g>
   );
 }
 
+function FeedbackCard({ f }: { f: any }) {
+  const notes = f.feedback.notes ?? "";
+  return (
+    <div className="border rounded-lg p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium leading-tight">{f.exercise.title}</p>
+        <Badge
+          variant={
+            f.feedback.painScore >= 7
+              ? "destructive"
+              : f.feedback.painScore >= 4
+                ? "secondary"
+                : "default"
+          }
+          className="shrink-0"
+        >
+          {f.feedback.painScore}/10
+        </Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {new Date(f.feedback.submittedAt).toLocaleString()}
+      </p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>Completed: {f.feedback.completed ? "✓" : "—"}</span>
+        {notes && (
+          <span className="truncate max-w-[180px]" title={notes}>
+            {notes.length > 40 ? notes.slice(0, 40) + "…" : notes}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function PhysioClientDetail() {
-  const params = useParams<{ id: string }>();
-  const clientId = Number(params.id);
+  const { id } = useParams<{ id: string }>();
+  const clientId = Number(id);
   const { user, loading } = useAuth();
 
-  // Filters
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
-  const [filterInjuryType, setFilterInjuryType] = useState<string>("all");
-  const [filterExerciseType, setFilterExerciseType] = useState<string>("all");
-  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
-  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  // Queries using ownership-safe endpoints
+  const enabled = !!clientId && !loading && user?.role === "physiotherapist";
+
   const client = trpc.physio.getClientDetail.useQuery(
     { clientId },
-    { enabled: !!clientId && !loading && user?.role === "physiotherapist" },
+    { enabled }
   );
   const clientAssignments = trpc.physio.listClientAssignments.useQuery(
     { clientId },
-    { enabled: !!clientId && !loading && user?.role === "physiotherapist" },
+    { enabled }
   );
   const feedbackEnriched = trpc.physio.listClientFeedbackEnriched.useQuery(
     {
       clientId,
-      assignmentId: selectedAssignment !== "all" ? Number(selectedAssignment) : undefined,
-      from: filterDateFrom || undefined,
-      to: filterDateTo || undefined,
+      assignmentId:
+        selectedAssignment !== "all" ? Number(selectedAssignment) : undefined,
+      from: dateFrom || undefined,
+      to: dateTo || undefined,
     },
-    { enabled: !!clientId && !loading && user?.role === "physiotherapist" },
+    { enabled }
   );
-  const stats = trpc.physio.getClientStats.useQuery(
-    { clientId },
-    { enabled: !!clientId && !loading && user?.role === "physiotherapist" },
+  const stats = trpc.physio.getClientStats.useQuery({ clientId }, { enabled });
+
+  const assignments = clientAssignments.data ?? [];
+  const feedback = feedbackEnriched.data ?? [];
+
+  const chartData = useMemo(
+    () =>
+      [...feedback].reverse().map(f => ({
+        submittedAt: f.feedback.submittedAt,
+        pain: f.feedback.painScore,
+      })),
+    [feedback]
   );
+
+  const completionRate = stats.data?.total
+    ? Math.round((stats.data.completed / stats.data.total) * 100)
+    : 0;
 
   if (!loading && user?.role !== "physiotherapist" && user?.role !== "admin") {
     return (
@@ -148,62 +226,14 @@ export default function PhysioClientDetail() {
         <Card>
           <CardHeader>
             <CardTitle>Not authorised</CardTitle>
-            <CardDescription>Only physiotherapists can view this page.</CardDescription>
+            <CardDescription>
+              Only physiotherapists can view this page.
+            </CardDescription>
           </CardHeader>
         </Card>
       </AppShell>
     );
   }
-
-  // Filter assignments by injury/exercise type
-  const filteredAssignments = useMemo(() => {
-    let result = clientAssignments.data ?? [];
-    if (filterInjuryType !== "all") {
-      result = result.filter(a => a.assignment.injuryType === filterInjuryType);
-    }
-    if (filterExerciseType !== "all") {
-      result = result.filter(a => a.assignment.exerciseType === filterExerciseType);
-    }
-    return result;
-  }, [clientAssignments.data, filterInjuryType, filterExerciseType]);
-
-  // Filter feedback by injury/exercise type
-  const filteredFeedback = useMemo(() => {
-    let result = feedbackEnriched.data ?? [];
-    if (filterInjuryType !== "all") {
-      result = result.filter(f => f.assignment.injuryType === filterInjuryType);
-    }
-    if (filterExerciseType !== "all") {
-      result = result.filter(f => f.assignment.exerciseType === filterExerciseType);
-    }
-    return result;
-  }, [feedbackEnriched.data, filterInjuryType, filterExerciseType]);
-
-  // Pain chart data from filtered feedback
-  const chartData = useMemo(() =>
-    [...(filteredFeedback ?? [])]
-      .reverse()
-      .map((f) => ({
-        submittedAt: f.feedback.submittedAt,
-        pain: f.feedback.painScore,
-      })),
-    [filteredFeedback]
-  );
-
-  const rate = stats.data?.total
-    ? Math.round((stats.data.completed / stats.data.total) * 100)
-    : 0;
-
-  // Unique injury types and exercise types for filter dropdowns
-  const injuryTypes = useMemo(() => {
-    const types = new Set((clientAssignments.data ?? []).map(a => a.assignment.injuryType));
-    return [...types];
-  }, [clientAssignments.data]);
-
-  const exerciseTypes = useMemo(() => {
-    const types = new Set((clientAssignments.data ?? []).map(a => a.assignment.exerciseType));
-    return [...types];
-  }, [clientAssignments.data]);
 
   return (
     <AppShell>
@@ -214,7 +244,7 @@ export default function PhysioClientDetail() {
         </Link>
       </Button>
 
-      {/* Client Info Card */}
+      {/* Client info */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">
@@ -223,41 +253,39 @@ export default function PhysioClientDetail() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <Mail className="size-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium">{client.data?.email ?? "—"}</p>
+            {[
+              { icon: Mail, label: "Email", value: client.data?.email },
+              { icon: Phone, label: "Phone", value: client.data?.phoneNumber },
+              {
+                icon: Activity,
+                label: "Injury type",
+                value: formatInjuryType(client.data?.injuryType),
+              },
+              {
+                icon: CalendarDays,
+                label: "Next clinic visit",
+                value: client.data?.nextClinicVisit
+                  ? formatDateShort(client.data.nextClinicVisit)
+                  : "Not scheduled",
+              },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-center gap-2">
+                <Icon className="size-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-sm font-medium">{value ?? "—"}</p>
+                </div>
               </div>
-            </div>
+            ))}
             <div className="flex items-center gap-2">
-              <Phone className="size-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="text-sm font-medium">{client.data?.phoneNumber ?? "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Activity className="size-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Injury Type</p>
-                <p className="text-sm font-medium">{formatInjuryType(client.data?.injuryType)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Next Clinic Visit</p>
-                <p className="text-sm font-medium">
-                  {client.data?.nextClinicVisit ? formatDateShort(client.data.nextClinicVisit) : "Not scheduled"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="size-4 text-muted-foreground" />
+              <User className="size-4 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Status</p>
-                <Badge variant={client.data?.status === "active" ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    client.data?.status === "active" ? "default" : "secondary"
+                  }
+                >
                   {client.data?.status ?? "—"}
                 </Badge>
               </div>
@@ -266,79 +294,29 @@ export default function PhysioClientDetail() {
         </CardContent>
       </Card>
 
-      {/* Progress Summary */}
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base"><FormattedMessage id="physio.monitor.painTrend" /></CardTitle>
-          </CardHeader>
-          <CardContent className="h-64 sm:h-80 rounded-2xl bg-white text-slate-900 shadow-inner">
-            {chartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                <FormattedMessage id="physio.monitor.noData" />
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 16, right: 16, bottom: 42, left: 8 }}>
-                  <defs>
-                    <linearGradient id="clientDetailPainFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.04} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke="rgba(15, 23, 42, 0.08)" strokeDasharray="4 4" />
-                  <XAxis dataKey="submittedAt" stroke="rgba(15, 23, 42, 0.6)" tick={<ChartTick />} interval={0} height={38} axisLine={{ stroke: "rgba(15, 23, 42, 0.25)" }} tickLine={false} />
-                  <YAxis domain={[0, 10]} stroke="rgba(15, 23, 42, 0.6)" fontSize={11} axisLine={false} tickLine={false} width={26} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "rgba(255,255,255,0.98)", border: "1px solid rgba(15,23,42,0.12)", borderRadius: 16, color: "#0f172a", boxShadow: "0 20px 60px rgba(15,23,42,0.12)" }}
-                    labelStyle={{ color: "#0f172a", fontWeight: 600 }}
-                    itemStyle={{ color: "#0f766e" }}
-                    labelFormatter={(value) => new Date(String(value)).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                    formatter={(value) => [`${value}/10`, "Pain"]}
-                  />
-                  <Area type="monotone" dataKey="pain" stroke="#14b8a6" fill="url(#clientDetailPainFill)" strokeWidth={3} dot={{ r: 3, strokeWidth: 2, fill: "#14b8a6" }} activeDot={{ r: 5, strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base"><FormattedMessage id="physio.monitor.completion" /></CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col justify-center h-64 sm:h-80">
-            <div className="space-y-4">
-              <div>
-                <div className="text-4xl font-bold text-primary">{rate}%</div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {stats.data?.completed ?? 0} / {stats.data?.total ?? 0} sessions completed
-                </p>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${rate}%` }} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
+      {/* Filters — above charts */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">Assignment</Label>
-              <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+              <Select
+                value={selectedAssignment}
+                onValueChange={setSelectedAssignment}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="All assignments" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All assignments</SelectItem>
-                  {(clientAssignments.data ?? []).map((a) => (
-                    <SelectItem key={a.assignment.id} value={String(a.assignment.id)}>
+                  {assignments.map(a => (
+                    <SelectItem
+                      key={a.assignment.id}
+                      value={String(a.assignment.id)}
+                    >
                       {a.exercise.title}
                     </SelectItem>
                   ))}
@@ -346,91 +324,203 @@ export default function PhysioClientDetail() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Injury Type</Label>
-              <Select value={filterInjuryType} onValueChange={setFilterInjuryType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {injuryTypes.map((t) => (
-                    <SelectItem key={t} value={t}>{formatInjuryType(t)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">From</Label>
+              <Input
+                type="date"
+                className="h-9"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+              />
             </div>
             <div>
-              <Label className="text-xs">Exercise Type</Label>
-              <Select value={filterExerciseType} onValueChange={setFilterExerciseType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {exerciseTypes.map((t) => (
-                    <SelectItem key={t} value={t}>{formatExerciseType(t)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">To</Label>
+              <Input
+                type="date"
+                className="h-9"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">From</Label>
-                <Input type="date" className="h-9" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pain trend — full width, tall on desktop */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            <FormattedMessage id="physio.monitor.painTrend" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="h-80 sm:h-96 lg:h-[28rem] rounded-2xl bg-white text-slate-900 shadow-inner">
+          {chartData.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              <FormattedMessage id="physio.monitor.noData" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData}
+                margin={{ top: 16, right: 24, bottom: 42, left: 8 }}
+              >
+                <defs>
+                  <linearGradient id="painFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} />
+                    <stop
+                      offset="100%"
+                      stopColor="#14b8a6"
+                      stopOpacity={0.04}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke="rgba(15,23,42,0.08)"
+                  strokeDasharray="4 4"
+                />
+                <XAxis
+                  dataKey="submittedAt"
+                  tick={<ChartTick />}
+                  interval={0}
+                  height={38}
+                  axisLine={{ stroke: "rgba(15,23,42,0.25)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 10]}
+                  fontSize={11}
+                  axisLine={false}
+                  tickLine={false}
+                  width={26}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(255,255,255,0.98)",
+                    border: "1px solid rgba(15,23,42,0.12)",
+                    borderRadius: 16,
+                    color: "#0f172a",
+                  }}
+                  labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                  itemStyle={{ color: "#0f766e" }}
+                  labelFormatter={v =>
+                    new Date(String(v)).toLocaleString([], {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  }
+                  formatter={v => [`${v}/10`, "Pain"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="pain"
+                  stroke="#14b8a6"
+                  fill="url(#painFill)"
+                  strokeWidth={3}
+                  dot={{ r: 3, strokeWidth: 2, fill: "#14b8a6" }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Completion rate — full width, horizontal layout */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            <FormattedMessage id="physio.monitor.completion" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6">
+            <div className="shrink-0">
+              <div className="text-4xl font-bold text-primary">
+                {completionRate}%
               </div>
-              <div>
-                <Label className="text-xs">To</Label>
-                <Input type="date" className="h-9" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats.data?.completed ?? 0} / {stats.data?.total ?? 0} sessions
+              </p>
+            </div>
+            <div className="flex-1">
+              <div className="w-full bg-muted rounded-full h-3">
+                <div
+                  className="bg-primary h-3 rounded-full transition-all"
+                  style={{ width: `${completionRate}%` }}
+                />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Assignment Details */}
+      {/* Assignment details */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Assignment Details</CardTitle>
+          <CardTitle className="text-base">Assignment details</CardTitle>
           <CardDescription>
-            {filteredAssignments.length} assignment{filteredAssignments.length !== 1 ? "s" : ""}
+            {assignments.length} assignment{assignments.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredAssignments.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No assignments found.</p>
+          {assignments.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No assignments found.
+            </p>
           ) : (
             <div className="space-y-4">
-              {filteredAssignments.map((a) => (
-                <div key={a.assignment.id} className="border rounded-lg p-4 space-y-3">
+              {assignments.map(a => (
+                <div
+                  key={a.assignment.id}
+                  className="border rounded-lg p-4 space-y-3"
+                >
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">{a.exercise.title}</h4>
-                    <Badge className={
-                      a.assignment.status === "active" ? "bg-emerald-100 text-emerald-800" :
-                      a.assignment.status === "completed" ? "bg-blue-100 text-blue-800" :
-                      "bg-gray-100 text-gray-800"
-                    }>
+                    <Badge
+                      className={
+                        a.assignment.status === "active"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : a.assignment.status === "completed"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                      }
+                    >
                       {a.assignment.status}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                    <div>
-                      <span className="text-xs text-muted-foreground">Injury Type</span>
-                      <p className="font-medium">{formatInjuryType(a.assignment.injuryType)}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground">Exercise Type</span>
-                      <p className="font-medium">{formatExerciseType(a.assignment.exerciseType)}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground">Sets & Reps</span>
-                      <p className="font-medium">{a.assignment.sets} × {a.assignment.reps}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground">Assigned</span>
-                      <p className="font-medium">{new Date(a.assignment.createdAt).toLocaleDateString()}</p>
-                    </div>
+                    {[
+                      {
+                        label: "Injury type",
+                        value: formatInjuryType(a.assignment.injuryType),
+                      },
+                      {
+                        label: "Exercise type",
+                        value: formatExerciseType(a.assignment.exerciseType),
+                      },
+                      {
+                        label: "Sets & reps",
+                        value: `${a.assignment.sets} × ${a.assignment.reps}`,
+                      },
+                      {
+                        label: "Assigned",
+                        value: new Date(
+                          a.assignment.createdAt
+                        ).toLocaleDateString(),
+                      },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <span className="text-xs text-muted-foreground">
+                          {label}
+                        </span>
+                        <p className="font-medium">{value}</p>
+                      </div>
+                    ))}
                   </div>
-                  <DurationBar startDate={a.assignment.startDate} endDate={a.assignment.endDate} />
+                  <DurationBar
+                    startDate={a.assignment.startDate}
+                    endDate={a.assignment.endDate}
+                  />
                 </div>
               ))}
             </div>
@@ -438,54 +528,81 @@ export default function PhysioClientDetail() {
         </CardContent>
       </Card>
 
-      {/* Session History */}
+      {/* Session history */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base"><FormattedMessage id="physio.monitor.history" /></CardTitle>
+          <CardTitle className="text-base">
+            <FormattedMessage id="physio.monitor.history" />
+          </CardTitle>
           <CardDescription>
-            Assignment-based session history ({filteredFeedback.length} records)
+            {feedback.length} record{feedback.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredFeedback.length === 0 ? (
+          {feedback.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <FormattedMessage id="physio.monitor.noData" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Assignment</TableHead>
-                    <TableHead>Injury Type</TableHead>
-                    <TableHead>Exercise Type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Pain Score</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFeedback.map((f) => (
-                    <TableRow key={f.feedback.id}>
-                      <TableCell className="text-sm font-medium">{f.exercise.title}</TableCell>
-                      <TableCell className="text-sm">{formatInjuryType(f.assignment.injuryType)}</TableCell>
-                      <TableCell className="text-sm">{formatExerciseType(f.assignment.exerciseType)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(f.feedback.submittedAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={f.feedback.painScore >= 7 ? "destructive" : f.feedback.painScore >= 4 ? "secondary" : "default"}>
-                          {f.feedback.painScore}/10
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{f.feedback.completed ? "✓" : "—"}</TableCell>
-                      <TableCell className="text-sm max-w-xs truncate">{f.feedback.notes ?? ""}</TableCell>
+            <>
+              {/* Mobile: stacked cards */}
+              <div className="sm:hidden space-y-3">
+                {feedback.map(f => (
+                  <FeedbackCard key={f.feedback.id} f={f} />
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Assignment</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Pain score</TableHead>
+                      <TableHead>Completed</TableHead>
+                      <TableHead>Notes</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {feedback.map(f => {
+                      const notes = f.feedback.notes ?? "";
+                      return (
+                        <TableRow key={f.feedback.id}>
+                          <TableCell className="text-sm font-medium">
+                            {f.exercise.title}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(f.feedback.submittedAt).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                f.feedback.painScore >= 7
+                                  ? "destructive"
+                                  : f.feedback.painScore >= 4
+                                    ? "secondary"
+                                    : "default"
+                              }
+                            >
+                              {f.feedback.painScore}/10
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {f.feedback.completed ? "✓" : "—"}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-xs" title={notes}>
+                            {notes.length > 40
+                              ? notes.slice(0, 40) + "…"
+                              : notes}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
