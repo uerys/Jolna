@@ -15,6 +15,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -771,181 +772,144 @@ function AssignmentsTab() {
             <DialogTrigger asChild>
               <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl bg-white border border-slate-200 shadow-2xl rounded-2xl p-6">
-              <DialogHeader className="pb-2 border-b border-slate-100">
-                <DialogTitle className="text-slate-950 font-bold text-lg">
-                  Assign Exercise Protocol
-                </DialogTitle>
+            <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
+              <DialogHeader>
+                <DialogTitle className="text-slate-950 font-bold text-lg">Assign Exercise Plan</DialogTitle>
+                <DialogDescription className="text-slate-500 text-xs mt-1">
+                  Create a customized exercise task assigned to this patient.
+                </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-6 pt-4">
-                {/* Step 1: Client & Exercise Setup */}
-                {/* Step 1: Client & Exercise Setup */}
-                <div className="space-y-3.5">
-                  <div className="flex items-center">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Patient</h4>
+              <div className="space-y-4 my-2 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Patient</Label>
+                    <Select value={clientId} onValueChange={(v) => setClientId(v)}>
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Select patient..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {clients.data?.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name ?? c.email ?? `#${c.id}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Patient</Label>
-                      <Select value={clientId} onValueChange={(v) => setClientId(v)}>
-                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
-                          <SelectValue placeholder="Select patient..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
-                          {clients.data?.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)}>
-                              {c.name ?? c.email ?? `#${c.id}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Template</Label>
-                      <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
-                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
-                          <SelectValue placeholder="Select exercise..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
-                          {exercises.data?.map((e) => (
-                            <SelectItem key={e.id} value={String(e.id)}>
-                              {e.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {exercisePreview && (
-                    <div className="rounded-xl border border-indigo-100 p-4 bg-indigo-50/20 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-extrabold text-slate-800 text-sm">{exercisePreview.title}</div>
-                        <div className="text-xs text-indigo-600 font-bold mt-0.5">
-                          Template Default: {exercisePreview.defaultSets} sets × {exercisePreview.defaultReps} reps
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs text-slate-400 hover:text-slate-600 h-8 px-2.5 rounded-lg"
-                        onClick={() => {
-                          setExerciseId("");
-                          setExercisePreview(null);
-                          setReps("");
-                          setSets("");
-                          setDailyFrequency(1);
-                        }}
-                      >
-                        Clear Selection
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Step 2: Clinical Classification */}
-                <div className="space-y-3.5 border-t border-slate-100 pt-5">
-                  <div className="flex items-center">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical Classification</h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Injury Type</Label>
-                      <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
-                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
-                          <SelectValue placeholder="Select injury class..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
-                          {(customInjTypes.data ?? []).map((type) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Type</Label>
-                      <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
-                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
-                          <SelectValue placeholder="Select exercise type..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
-                          {(customExTypes.data ?? []).map((type) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Select Exercise Template</Label>
+                    <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Choose exercise template" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {exercises.data?.map((e) => (
+                          <SelectItem key={e.id} value={String(e.id)}>
+                            {e.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                {/* Time Window & Dosage */}
-                <div className="space-y-4 border-t border-slate-100 pt-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Start Date</Label>
-                      <Input type="date" className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">End Date</Label>
-                      <Input type="date" className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                    </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Reps</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={500}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={reps as unknown as string}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setReps(v === "" ? "" : Number(v));
+                      }}
+                    />
                   </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Sets</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={sets as unknown as string}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSets(v === "" ? "" : Number(v));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-indigo-600 uppercase tracking-wider font-sans">PER DAY</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="h-10 mt-1 bg-white border-indigo-200 ring-1 ring-indigo-100 focus:ring-indigo-500 text-indigo-700 font-semibold"
+                      value={dailyFrequency as unknown as string}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setDailyFrequency(v === "" ? "" : Number(v));
+                      }}
+                    />
+                  </div>
+                </div>
 
-                  {/* Set and Repetition Dose Block */}
-                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-4">
-                    <Label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block font-sans">Set and Repetition</Label>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Reps</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={500}
-                          className="w-full h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
-                          value={reps as unknown as string}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setReps(v === "" ? "" : Number(v));
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Sets</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          className="w-full h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
-                          value={sets as unknown as string}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setSets(v === "" ? "" : Number(v));
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block font-sans">PER DAY</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={20}
-                          className="w-full h-10 text-center border-indigo-200 focus-visible:ring-indigo-600 rounded-lg bg-white text-indigo-700 font-semibold"
-                          value={dailyFrequency as unknown as string}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setDailyFrequency(v === "" ? "" : Number(v));
-                          }}
-                        />
-                      </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Start Date</Label>
+                    <Input 
+                      type="date" 
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700" 
+                      value={startDate} 
+                      onChange={(e) => setStartDate(e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">End Date</Label>
+                    <Input 
+                      type="date" 
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700" 
+                      value={endDate} 
+                      onChange={(e) => setEndDate(e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Injury Type</Label>
+                    <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Other" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {(customInjTypes.data ?? []).map((type) => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Type</Label>
+                    <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Other" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {(customExTypes.data ?? []).map((type) => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

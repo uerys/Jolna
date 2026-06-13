@@ -27,6 +27,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   AreaChart,
   Area,
   XAxis,
@@ -77,6 +85,7 @@ import {
   Trash2,
   Clock,
   Check,
+  ChevronsUpDown,
   TrendingUp,
   Search,
   AlertCircle,
@@ -84,6 +93,7 @@ import {
   Bone,
   Dumbbell,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 
 // Types matching the schema structures
@@ -164,9 +174,14 @@ function getPainScoreConfig(score: number | null | undefined) {
 function formatInjuryType(type: string | null | undefined): string {
   if (!type) return "—";
   return type
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .split(",")
+    .map(t => 
+      t.trim()
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+    )
+    .join(", ");
 }
 
 function formatExerciseType(type: string | null | undefined): string {
@@ -325,7 +340,8 @@ export default function PhysioClientDetail() {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isVisitOpen, setIsVisitOpen] = useState(false);
   const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState<string>("");
+  const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
+  const [comboOpen, setComboOpen] = useState(false);
 
 
   // New Exercise Form States
@@ -371,7 +387,9 @@ export default function PhysioClientDetail() {
 
   useEffect(() => {
     if (client.data?.injuryType) {
-      setSelectedDiagnosis(client.data.injuryType);
+      setSelectedDiagnoses(client.data.injuryType.split(",").map(t => t.trim()).filter(Boolean));
+    } else {
+      setSelectedDiagnoses([]);
     }
   }, [client.data, isDiagnosisOpen]);
 
@@ -466,13 +484,13 @@ export default function PhysioClientDetail() {
   });
 
   const handleDiagnosisSubmit = () => {
-    if (!selectedDiagnosis) {
-      toast.error("Please select a diagnosis.");
+    if (selectedDiagnoses.length === 0) {
+      toast.error("Please select at least one diagnosis.");
       return;
     }
     updateDiagnosisMutation.mutate({
       clientId,
-      injuryType: selectedDiagnosis,
+      injuryType: selectedDiagnoses.join(","),
     });
   };
 
@@ -982,7 +1000,7 @@ export default function PhysioClientDetail() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsDiagnosisOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
                       <Activity className="size-4 text-indigo-600" />
-                      <span>Update Diagnosis</span>
+                      <span>Add Diagnosis</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-[#F2F4F7]" />
                     <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Contact Info</DropdownMenuLabel>
@@ -2212,7 +2230,7 @@ export default function PhysioClientDetail() {
         <Dialog open={isDiagnosisOpen} onOpenChange={setIsDiagnosisOpen}>
           <DialogContent className="max-w-sm bg-white border border-slate-200 shadow-xl rounded-xl">
             <DialogHeader>
-              <DialogTitle className="text-slate-950 font-bold text-lg">Update Primary Diagnosis</DialogTitle>
+              <DialogTitle className="text-slate-950 font-bold text-lg">Add Diagnosis</DialogTitle>
               <DialogDescription className="text-slate-500 text-xs">
                 Select the primary diagnosis for this patient.
               </DialogDescription>
@@ -2223,19 +2241,78 @@ export default function PhysioClientDetail() {
                 <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
                   Diagnosis / Injury Class
                 </Label>
-                <Select value={selectedDiagnosis} onValueChange={setSelectedDiagnosis}>
-                  <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
-                    <SelectValue placeholder="Select diagnosis..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-slate-200 shadow-md">
-                    {INJURY_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>{formatInjuryType(t)}</SelectItem>
-                    ))}
-                    {(customInjTypes.data ?? []).map((type) => (
-                      <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center gap-1.5 p-1.5 min-h-[42px] border border-slate-200 rounded-lg bg-white focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-0 focus-within:border-transparent transition-all">
+                  {selectedDiagnoses.map((d) => (
+                    <Badge key={d} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center gap-1 px-2 py-0.5 rounded-md font-medium">
+                      {formatInjuryType(d)}
+                      <div 
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer hover:bg-indigo-200 rounded-full p-0.5 transition-colors ml-0.5"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedDiagnoses(prev => prev.filter(x => x !== d));
+                        }}
+                      >
+                        <X className="size-3 text-indigo-500 hover:text-indigo-900" />
+                      </div>
+                    </Badge>
+                  ))}
+                  <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        role="combobox"
+                        aria-expanded={comboOpen}
+                        className="flex-1 min-w-[140px] justify-between h-8 border-none bg-transparent shadow-none focus:ring-0 px-2 hover:bg-transparent text-slate-700 font-normal"
+                      >
+                        <span className="text-muted-foreground">{selectedDiagnoses.length === 0 ? "Select diagnosis..." : "Add another..."}</span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0 border border-slate-200 shadow-md rounded-md" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search diagnosis..." className="h-9 text-sm border-none focus:ring-0" />
+                        <CommandList>
+                          <CommandEmpty>No diagnosis found.</CommandEmpty>
+                          <CommandGroup>
+                            {INJURY_TYPES.filter(t => !selectedDiagnoses.includes(t)).map((t) => (
+                              <CommandItem
+                                key={t}
+                                value={t}
+                                onSelect={(currentValue) => {
+                                  if (!selectedDiagnoses.includes(currentValue)) {
+                                    setSelectedDiagnoses([...selectedDiagnoses, currentValue]);
+                                  }
+                                  setComboOpen(false);
+                                }}
+                                className="text-sm cursor-pointer hover:bg-slate-100"
+                              >
+                                {formatInjuryType(t)}
+                              </CommandItem>
+                            ))}
+                            {(customInjTypes.data ?? []).filter(type => !selectedDiagnoses.includes(type.name)).map((type) => (
+                              <CommandItem
+                                key={type.id}
+                                value={type.name}
+                                onSelect={(currentValue) => {
+                                  if (!selectedDiagnoses.includes(currentValue)) {
+                                    setSelectedDiagnoses([...selectedDiagnoses, currentValue]);
+                                  }
+                                  setComboOpen(false);
+                                }}
+                                className="text-sm cursor-pointer hover:bg-slate-100"
+                              >
+                                {formatInjuryType(type.name)}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
 
