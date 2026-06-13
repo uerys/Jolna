@@ -126,5 +126,4 @@ Running `node scripts/seed.mjs` is safe to repeat. It upserts the demo users, ex
 ## Troubleshooting
 
 - If the schema gets out of sync or the seed script complains about missing tables, run `docker compose down -v` to reset the database volume, then repeat the setup steps.
-- If you see a port conflict on `3000`, make sure only one app process is running: either the Docker app container or `npm run dev` on the host.
 - If you change the database schema, rerun `npm run db:push` before seeding.
