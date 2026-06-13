@@ -25,6 +25,12 @@ import {
   updateExercise,
   updateFeedbackNotes,
   updateUserFields,
+  listCustomExerciseTypes,
+  createCustomExerciseType,
+  listCustomInjuryTypes,
+  createCustomInjuryType,
+  deleteCustomExerciseType,
+  deleteCustomInjuryType,
 } from "../db";
 import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES } from "../../drizzle/schema";
 
@@ -203,6 +209,11 @@ export const physioRouter = router({
         sets: setsToUse,
         startDate: input.startDate,
         endDate: input.endDate,
+      });
+
+      // Automatically update the client's primary diagnosis (injuryType) on their profile
+      await updateUserFields(input.clientId, {
+        injuryType: input.injuryType ?? "other",
       });
 
       // Audit log
@@ -410,5 +421,90 @@ export const physioRouter = router({
       });
 
       return { success: true };
+    }),
+
+  listCustomExerciseTypes: physioProcedure.query(async () => {
+    return listCustomExerciseTypes();
+  }),
+
+  createCustomExerciseType: physioProcedure
+    .input(z.object({ name: z.string().min(1).max(255) }))
+    .mutation(async ({ input }) => {
+      try {
+        await createCustomExerciseType(input.name);
+        return { success: true };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message || "Failed to create custom exercise type",
+        });
+      }
+    }),
+
+  listCustomInjuryTypes: physioProcedure.query(async () => {
+    return listCustomInjuryTypes();
+  }),
+
+  createCustomInjuryType: physioProcedure
+    .input(z.object({ name: z.string().min(1).max(255) }))
+    .mutation(async ({ input }) => {
+      try {
+        await createCustomInjuryType(input.name);
+        return { success: true };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message || "Failed to create custom injury type",
+        });
+      }
+    }),
+
+  updateClientDiagnosis: physioProcedure
+    .input(
+      z.object({
+        clientId: z.number().int().positive(),
+        injuryType: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const client = await getUserById(input.clientId);
+      if (!client || client.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
+      }
+
+      await updateUserFields(input.clientId, {
+        injuryType: input.injuryType,
+      });
+
+      return { success: true };
+    }),
+
+
+  deleteCustomExerciseType: physioProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      try {
+        await deleteCustomExerciseType(input.id);
+        return { success: true };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message || "Failed to delete custom exercise type",
+        });
+      }
+    }),
+
+  deleteCustomInjuryType: physioProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      try {
+        await deleteCustomInjuryType(input.id);
+        return { success: true };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message || "Failed to delete custom injury type",
+        });
+      }
     }),
 });

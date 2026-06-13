@@ -96,7 +96,7 @@ export const users = mysqlTable(
       .default("en")
       .notNull(),
     physiotherapistId: int("physiotherapistId"),
-    injuryType: mysqlEnum("injuryType", INJURY_TYPES),
+    injuryType: varchar("injuryType", { length: 255 }).default("other"),
     nextClinicVisit: varchar("nextClinicVisit", { length: 255 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -123,7 +123,7 @@ export const exercises = mysqlTable(
     instructionsEn: text("instructionsEn").notNull(),
     instructionsKh: text("instructionsKh").notNull(),
     videoUrl: varchar("videoUrl", { length: 1024 }).notNull(),
-    exerciseType: mysqlEnum("exerciseType", EXERCISE_TYPES).default("other").notNull(),
+    exerciseType: varchar("exerciseType", { length: 255 }).default("other").notNull(),
     defaultReps: int("defaultReps").notNull().default(10),
     defaultSets: int("defaultSets").notNull().default(1),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -148,8 +148,8 @@ export const assignments = mysqlTable(
     exerciseId: int("exerciseId").notNull(),
     physiotherapistId: int("physiotherapistId").notNull(),
     clientId: int("clientId").notNull(),
-    injuryType: mysqlEnum("injuryType", INJURY_TYPES).default("other").notNull(),
-    exerciseType: mysqlEnum("exerciseType", EXERCISE_TYPES).default("other").notNull(),
+    injuryType: varchar("injuryType", { length: 255 }).default("other").notNull(),
+    exerciseType: varchar("exerciseType", { length: 255 }).default("other").notNull(),
     reps: int("reps").notNull(),
     sets: int("sets").notNull().default(1),
     startDate: date("startDate", { mode: "string" }).notNull(),
@@ -321,3 +321,15 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const customExerciseTypes = mysqlTable("custom_exercise_types", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const customInjuryTypes = mysqlTable("custom_injury_types", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

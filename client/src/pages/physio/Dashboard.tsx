@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { EXERCISE_TYPES, INJURY_TYPES } from "../../../../drizzle/schema";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle, Users } from "lucide-react";
 
@@ -78,8 +79,7 @@ export default function PhysioDashboard() {
 
   return (
     <AppShell>
-      <div className="flex items-center gap-3">
-        <Stethoscope className="size-6 text-primary" />
+      <div className="flex items-center">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
             <FormattedMessage id="physio.dashboard.title" />
@@ -91,15 +91,37 @@ export default function PhysioDashboard() {
       </div>
 
       <Tabs defaultValue="clients" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="clients"><FormattedMessage id="physio.tab.clients" /></TabsTrigger>
-          <TabsTrigger value="exercises"><FormattedMessage id="physio.tab.exercises" /></TabsTrigger>
-          <TabsTrigger value="assignments"><FormattedMessage id="physio.tab.assignments" /></TabsTrigger>
+        <TabsList className="bg-slate-100/80 p-1 border border-slate-200/50 rounded-xl mb-4 h-10 w-fit">
+          <TabsTrigger
+            value="clients"
+            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+          >
+            <FormattedMessage id="physio.tab.clients" />
+          </TabsTrigger>
+          <TabsTrigger
+            value="exercises"
+            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+          >
+            <FormattedMessage id="physio.tab.exercises" />
+          </TabsTrigger>
+          <TabsTrigger
+            value="assignments"
+            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+          >
+            <FormattedMessage id="physio.tab.assignments" />
+          </TabsTrigger>
+          <TabsTrigger
+            value="configuration"
+            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+          >
+            Configuration
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="clients"><ClientsTab /></TabsContent>
         <TabsContent value="exercises"><ExercisesTab /></TabsContent>
         <TabsContent value="assignments"><AssignmentsTab /></TabsContent>
+        <TabsContent value="configuration"><ConfigurationTab /></TabsContent>
       </Tabs>
     </AppShell>
   );
@@ -146,21 +168,18 @@ function ClientsTab() {
       const lastLogStr = sortedLogs[0] ? sortedLogs[0].feedback.submittedAt : null;
       const latestPain = sortedLogs[0] ? sortedLogs[0].feedback.painScore : null;
 
-      // Completion rate calculation (based on active completion rate logic)
-      const totalActive = activeSessions.length;
-      const completedSessions = activeSessions.filter((a) => {
+      // Progress rate calculation (elapsed duration progress between start date and end date)
+      const today = new Date(todayStr + "T00:00:00");
+      let totalProgressPercent = 0;
+      activeSessions.forEach((a) => {
         const start = new Date(a.assignment.startDate + "T00:00:00");
         const end = new Date(a.assignment.endDate + "T00:00:00");
-        return cLogs.some((f) => {
-          const logDate = new Date(f.feedback.submittedAt);
-          return (
-            f.feedback.assignmentId === a.assignment.id &&
-            logDate >= start &&
-            logDate <= end
-          );
-        });
-      }).length;
-      const completionRate = totalActive > 0 ? Math.round((completedSessions / totalActive) * 100) : null;
+        const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 864e5) + 1);
+        const elapsed = Math.max(0, Math.min(total, Math.round((today.getTime() - start.getTime()) / 864e5) + 1));
+        const percent = Math.round((elapsed / total) * 100);
+        totalProgressPercent += percent;
+      });
+      const progressRate = activeSessions.length > 0 ? Math.round(totalProgressPercent / activeSessions.length) : null;
 
       // Relative timestamp for last log (using new Date conversion to avoid NaN)
       let lastLogLabel = "No logs yet";
@@ -193,8 +212,8 @@ function ClientsTab() {
         client: c,
         lastLogLabel,
         latestPain,
-        completionRate,
-        activeCount: totalActive,
+        progressRate,
+        activeCount: activeSessions.length,
         alertMsg,
         category,
         isUrgent,
@@ -377,7 +396,7 @@ function ClientsTab() {
               ? "bg-amber-50 text-amber-600 border-amber-200"
               : "bg-emerald-50 text-emerald-600 border-emerald-200";
 
-            const progressColor = data.completionRate !== null && data.completionRate < 50
+            const progressColor = data.progressRate !== null && data.progressRate < 50
               ? "#F59E0B"
               : "#6366F1";
 
@@ -437,28 +456,28 @@ function ClientsTab() {
                         </div>
                       </div>
 
-                      {/* ── Col 3: Adherence ── */}
+                      {/* ── Col 3: Progress ── */}
                       <div className="md:w-36">
-                        <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1.5">
-                          Adherence
+                        <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1.5 font-sans">
+                          Progress
                         </span>
-                        {data.completionRate !== null ? (
+                        {data.progressRate !== null ? (
                           <div className="flex items-center gap-2.5">
                             <span className="text-sm font-semibold text-[#101828] tabular-nums w-9 shrink-0">
-                              {data.completionRate}%
+                              {data.progressRate}%
                             </span>
                             <div className="progress-track flex-1">
                               <div
                                 className="progress-fill"
                                 style={{
-                                  width: `${data.completionRate}%`,
+                                  width: `${data.progressRate}%`,
                                   background: progressColor,
                                 }}
                               />
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-[#98A2B3] font-medium">No active sessions</span>
+                          <span className="text-xs text-[#98A2B3] font-medium font-sans">No active sessions</span>
                         )}
                       </div>
 
@@ -537,7 +556,7 @@ function ExercisesTab() {
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.exercises" })}</h3>
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button size="sm" onClick={() => setCreating(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm">
             <Plus className="size-4 mr-1" />
             <FormattedMessage id="physio.exercise.new" />
           </Button>
@@ -676,7 +695,7 @@ function ExerciseDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}><FormattedMessage id="common.cancel" /></Button>
-          <Button onClick={submit}><FormattedMessage id="physio.exercise.save" /></Button>
+          <Button onClick={submit} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm"><FormattedMessage id="physio.exercise.save" /></Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -691,6 +710,8 @@ function AssignmentsTab() {
   const clients = trpc.physio.listMyClients.useQuery();
   const exercises = trpc.physio.listMyExercises.useQuery();
   const utils = trpc.useUtils();
+  const customExTypes = trpc.physio.listCustomExerciseTypes.useQuery();
+  const customInjTypes = trpc.physio.listCustomInjuryTypes.useQuery();
 
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState<string>("");
@@ -747,41 +768,68 @@ function AssignmentsTab() {
           <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.assignments" })}</h3>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
+              <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle><FormattedMessage id="physio.assign.title" /></DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.client" /></Label>
-                    <Select value={clientId} onValueChange={(v) => setClientId(v)}>
-                      <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                      <SelectContent>
-                        {clients.data?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name ?? c.email ?? `#${c.id}`}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+            <DialogContent className="max-w-2xl bg-white border border-slate-200 shadow-2xl rounded-2xl p-6">
+              <DialogHeader className="pb-2 border-b border-slate-100">
+                <DialogTitle className="text-slate-950 font-bold text-lg">
+                  Assign Exercise Protocol
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-6 pt-4">
+                {/* Step 1: Client & Exercise Setup */}
+                {/* Step 1: Client & Exercise Setup */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Patient</h4>
                   </div>
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.exercise" /></Label>
-                    <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
-                      <SelectTrigger><SelectValue placeholder="Select exercise" /></SelectTrigger>
-                      <SelectContent>
-                        {exercises.data?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.title}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {exercisePreview && (
-                  <div className="rounded border p-3 bg-muted/50 flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{exercisePreview.title}</div>
-                      <div className="text-sm text-muted-foreground">Default: {exercisePreview.defaultSets} sets · {exercisePreview.defaultReps} reps</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Patient</Label>
+                      <Select value={clientId} onValueChange={(v) => setClientId(v)}>
+                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
+                          <SelectValue placeholder="Select patient..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
+                          {clients.data?.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.name ?? c.email ?? `#${c.id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div>
-                      <button
-                        className="text-sm text-muted-foreground px-2"
-                        aria-label="Clear selected exercise"
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Template</Label>
+                      <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
+                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
+                          <SelectValue placeholder="Select exercise..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
+                          {exercises.data?.map((e) => (
+                            <SelectItem key={e.id} value={String(e.id)}>
+                              {e.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {exercisePreview && (
+                    <div className="rounded-xl border border-indigo-100 p-4 bg-indigo-50/20 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="font-extrabold text-slate-800 text-sm">{exercisePreview.title}</div>
+                        <div className="text-xs text-indigo-600 font-bold mt-0.5">
+                          Template Default: {exercisePreview.defaultSets} sets × {exercisePreview.defaultReps} reps
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs text-slate-400 hover:text-slate-600 h-8 px-2.5 rounded-lg"
                         onClick={() => {
                           setExerciseId("");
                           setExercisePreview(null);
@@ -789,93 +837,112 @@ function AssignmentsTab() {
                           setSets("");
                         }}
                       >
-                        ×
-                      </button>
+                        Clear Selection
+                      </Button>
                     </div>
+                  )}
+                </div>
+
+                {/* Step 2: Clinical Classification */}
+                <div className="space-y-3.5 border-t border-slate-100 pt-5">
+                  <div className="flex items-center">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical Classification</h4>
                   </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.startDate" /></Label>
-                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.endDate" /></Label>
-                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Injury Type</Label>
+                      <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
+                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
+                          <SelectValue placeholder="Select injury class..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
+                          {(customInjTypes.data ?? []).map((type) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Type</Label>
+                      <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
+                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm text-slate-800 font-normal">
+                          <SelectValue placeholder="Select exercise type..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-slate-200 text-sm shadow-md rounded-lg">
+                          {(customExTypes.data ?? []).map((type) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Injury Type</Label>
-                    <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
-                      <SelectTrigger><SelectValue placeholder="Select injury type" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="muscle_strain">Muscle Strain</SelectItem>
-                        <SelectItem value="ligament_sprain">Ligament Sprain</SelectItem>
-                        <SelectItem value="fracture_recovery">Fracture Recovery</SelectItem>
-                        <SelectItem value="post_surgery">Post Surgery</SelectItem>
-                        <SelectItem value="joint_pain">Joint Pain</SelectItem>
-                        <SelectItem value="back_pain">Back Pain</SelectItem>
-                        <SelectItem value="neck_pain">Neck Pain</SelectItem>
-                        <SelectItem value="shoulder_injury">Shoulder Injury</SelectItem>
-                        <SelectItem value="knee_injury">Knee Injury</SelectItem>
-                        <SelectItem value="ankle_injury">Ankle Injury</SelectItem>
-                        <SelectItem value="tendonitis">Tendonitis</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Time Window & Dosage */}
+                <div className="space-y-4 border-t border-slate-100 pt-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Start Date</Label>
+                      <Input type="date" className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">End Date</Label>
+                      <Input type="date" className="h-10 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-sm" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                    </div>
                   </div>
-                  <div>
-                    <Label>Exercise Type</Label>
-                    <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
-                      <SelectTrigger><SelectValue placeholder="Select exercise type" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="strength">Strength</SelectItem>
-                        <SelectItem value="flexibility">Flexibility</SelectItem>
-                        <SelectItem value="balance">Balance</SelectItem>
-                        <SelectItem value="endurance">Endurance</SelectItem>
-                        <SelectItem value="mobility">Mobility</SelectItem>
-                        <SelectItem value="stretching">Stretching</SelectItem>
-                        <SelectItem value="functional">Functional</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.sets" /></Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={sets as unknown as string}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setSets(v === "" ? "" : Number(v));
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label><FormattedMessage id="physio.assign.reps" /></Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={500}
-                      value={reps as unknown as string}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setReps(v === "" ? "" : Number(v));
-                      }}
-                    />
+
+                  {/* Set and Repetition Dose Block */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-4">
+                    <Label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block font-sans">Set and Repetition</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Sets</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          className="w-24 h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
+                          value={sets as unknown as string}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setSets(v === "" ? "" : Number(v));
+                          }}
+                        />
+                      </div>
+                      <span className="text-slate-300 font-light text-xl mt-4">×</span>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Reps</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={500}
+                          className="w-24 h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
+                          value={reps as unknown as string}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setReps(v === "" ? "" : Number(v));
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}><FormattedMessage id="common.cancel" /></Button>
+
+              <DialogFooter className="mt-6 border-t border-slate-100 pt-4 gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setOpen(false)} className="border-slate-200 text-xs font-semibold h-9 rounded-lg px-4">
+                  <FormattedMessage id="common.cancel" />
+                </Button>
                 <Button
                   disabled={!clientId || !exerciseId}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
                   onClick={() =>
                     assign.mutate({
                       clientId: Number(clientId),
@@ -897,16 +964,16 @@ function AssignmentsTab() {
         </div>
 
         <Table className="mt-4">
-              <TableHeader>
-                  <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Exercise</TableHead>
-                      <TableHead>Sets</TableHead>
-                      <TableHead>Reps</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead />
-                    </TableRow>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[20%]">Client</TableHead>
+              <TableHead className="w-[25%]">Exercise</TableHead>
+              <TableHead className="w-[8%] text-center">Sets</TableHead>
+              <TableHead className="w-[8%] text-center">Reps</TableHead>
+              <TableHead className="w-[25%]">Period</TableHead>
+              <TableHead className="w-[10%] text-center">Status</TableHead>
+              <TableHead className="w-[4%]" />
+            </TableRow>
           </TableHeader>
           <TableBody>
             {assignments.isLoading && (
@@ -914,13 +981,24 @@ function AssignmentsTab() {
             )}
             {assignments.data?.map((row) => (
               <TableRow key={row.assignment.id}>
-                <TableCell>{row.client.name ?? row.client.email ?? `#${row.client.id}`}</TableCell>
-                <TableCell>{row.exercise.title}</TableCell>
-                <TableCell>{row.assignment.sets}</TableCell>
-                <TableCell>{row.assignment.reps}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.assignment.startDate} → {row.assignment.endDate}</TableCell>
-                <TableCell><Badge variant="outline">{row.assignment.status}</Badge></TableCell>
-                <TableCell className="text-right">
+                <TableCell className="w-[20%] font-medium">{row.client.name ?? row.client.email ?? `#${row.client.id}`}</TableCell>
+                <TableCell className="w-[25%]">{row.exercise.title}</TableCell>
+                <TableCell className="w-[8%] text-center">{row.assignment.sets}</TableCell>
+                <TableCell className="w-[8%] text-center">{row.assignment.reps}</TableCell>
+                <TableCell className="w-[25%] text-sm text-slate-500 font-mono">{row.assignment.startDate} → {row.assignment.endDate}</TableCell>
+                <TableCell className="w-[10%] text-center">
+                  <Badge
+                    variant="outline"
+                    className={
+                      row.assignment.status === "active"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50/80 border font-semibold text-[10px] rounded-full"
+                        : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100 border font-semibold text-[10px] rounded-full"
+                    }
+                  >
+                    {row.assignment.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="w-[4%] text-right">
                   <Button size="sm" variant="ghost" onClick={() => {
                     if (confirm("Delete assignment?")) del.mutate({ id: row.assignment.id });
                   }}>
@@ -933,5 +1011,194 @@ function AssignmentsTab() {
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+function formatInjuryType(type: string | null | undefined): string {
+  if (!type) return "—";
+  return type
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatExerciseType(type: string | null | undefined): string {
+  if (!type) return "—";
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function ConfigurationTab() {
+  const utils = trpc.useUtils();
+  const [newExType, setNewExType] = useState("");
+  const [newInjType, setNewInjType] = useState("");
+
+  const exTypes = trpc.physio.listCustomExerciseTypes.useQuery();
+  const injTypes = trpc.physio.listCustomInjuryTypes.useQuery();
+
+  const createExMutation = trpc.physio.createCustomExerciseType.useMutation({
+    onSuccess: () => {
+      utils.physio.listCustomExerciseTypes.invalidate();
+      setNewExType("");
+      toast.success("Exercise type created successfully");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to create exercise type");
+    },
+  });
+
+  const createInjMutation = trpc.physio.createCustomInjuryType.useMutation({
+    onSuccess: () => {
+      utils.physio.listCustomInjuryTypes.invalidate();
+      setNewInjType("");
+      toast.success("Injury type created successfully");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to create injury type");
+    },
+  });
+
+  const deleteExMutation = trpc.physio.deleteCustomExerciseType.useMutation({
+    onSuccess: () => {
+      utils.physio.listCustomExerciseTypes.invalidate();
+      toast.success("Exercise type deleted successfully");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete exercise type");
+    },
+  });
+
+  const deleteInjMutation = trpc.physio.deleteCustomInjuryType.useMutation({
+    onSuccess: () => {
+      utils.physio.listCustomInjuryTypes.invalidate();
+      toast.success("Injury type deleted successfully");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete injury type");
+    },
+  });
+
+  const handleCreateExType = () => {
+    if (!newExType.trim()) return;
+    createExMutation.mutate({ name: newExType.trim() });
+  };
+
+  const handleCreateInjType = () => {
+    if (!newInjType.trim()) return;
+    createInjMutation.mutate({ name: newInjType.trim() });
+  };
+
+  const handleDeleteExType = (id: number) => {
+    if (confirm("Are you sure you want to delete this exercise type?")) {
+      deleteExMutation.mutate({ id });
+    }
+  };
+
+  const handleDeleteInjType = (id: number) => {
+    if (confirm("Are you sure you want to delete this injury type?")) {
+      deleteInjMutation.mutate({ id });
+    }
+  };
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+      {/* Exercise Types Card */}
+      <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none">
+        <CardHeader className="pb-3 border-b border-slate-100/80">
+          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">Exercise Types</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          {/* Input group */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. Strength, Stretching..."
+              className="h-9 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg flex-1"
+              value={newExType}
+              onChange={(e) => setNewExType(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateExType()}
+            />
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg h-9 text-xs"
+              disabled={createExMutation.isPending || !newExType.trim()}
+              onClick={handleCreateExType}
+            >
+              Add Type
+            </Button>
+          </div>
+
+          {/* List */}
+          <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+            {exTypes.isLoading ? (
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">Loading...</div>
+            ) : (exTypes.data ?? []).length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">No exercise types found.</div>
+            ) : (
+              (exTypes.data ?? []).map((type) => (
+                <div key={type.id} className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group">
+                  <span>{type.name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleDeleteExType(type.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Injury Types Card */}
+      <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none">
+        <CardHeader className="pb-3 border-b border-slate-100/80">
+          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">Injury Types</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          {/* Input group */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. Back Pain, Shoulder Injury..."
+              className="h-9 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg flex-1"
+              value={newInjType}
+              onChange={(e) => setNewInjType(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateInjType()}
+            />
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg h-9 text-xs"
+              disabled={createInjMutation.isPending || !newInjType.trim()}
+              onClick={handleCreateInjType}
+            >
+              Add Type
+            </Button>
+          </div>
+
+          {/* List */}
+          <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+            {injTypes.isLoading ? (
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">Loading...</div>
+            ) : (injTypes.data ?? []).length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">No injury types found.</div>
+            ) : (
+              (injTypes.data ?? []).map((type) => (
+                <div key={type.id} className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group">
+                  <span>{type.name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleDeleteInjType(type.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

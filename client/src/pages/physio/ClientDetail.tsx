@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link, useParams } from "wouter";
 import AppShell from "@/components/AppShell";
@@ -43,6 +43,9 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -69,7 +72,7 @@ import {
   MoreVertical,
   Plus,
   ClipboardCopy,
-  Calendar,
+  Calendar as CalendarIcon,
   FileText,
   Trash2,
   Clock,
@@ -213,7 +216,7 @@ function DurationBar({ startDate, endDate }: DurationBarProps) {
     <div className="space-y-2">
       <div className="flex justify-between text-xs font-semibold text-[#667085]">
         <span className="flex items-center gap-1">
-          <Calendar className="size-3 text-[#98A2B3]" />
+          <CalendarIcon className="size-3 text-[#98A2B3]" />
           {formatDateShort(startDate)}
         </span>
         <span className="flex items-center gap-1">
@@ -309,15 +312,21 @@ export default function PhysioClientDetail() {
   const { user, loading } = useAuth();
   const intl = useIntl();
   const utils = trpc.useUtils();
+  const customExTypes = trpc.physio.listCustomExerciseTypes.useQuery();
+  const customInjTypes = trpc.physio.listCustomInjuryTypes.useQuery();
 
   // Filters State
+  const [showFilters, setShowFilters] = useState<boolean>(false);
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
-  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
-  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>(undefined);
+  const [filterDateTo, setFilterDateTo] = useState<Date | undefined>(undefined);
 
   // Modal / Dialog States
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isVisitOpen, setIsVisitOpen] = useState(false);
+  const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState<string>("");
+
 
   // New Exercise Form States
   const [newExerciseId, setNewExerciseId] = useState<string>("");
@@ -359,17 +368,31 @@ export default function PhysioClientDetail() {
     { enabled: isQueryEnabled }
   );
 
+  useEffect(() => {
+    if (client.data?.injuryType) {
+      setSelectedDiagnosis(client.data.injuryType);
+    }
+  }, [client.data, isDiagnosisOpen]);
+
   const clientAssignments = trpc.physio.listClientAssignments.useQuery(
     { clientId },
     { enabled: isQueryEnabled }
   );
 
+  const fromQueryParam = useMemo(() => {
+    return filterDateFrom ? filterDateFrom.toISOString().slice(0, 10) : undefined;
+  }, [filterDateFrom]);
+
+  const toQueryParam = useMemo(() => {
+    return filterDateTo ? filterDateTo.toISOString().slice(0, 10) : undefined;
+  }, [filterDateTo]);
+
   const feedbackEnriched = trpc.physio.listClientFeedbackEnriched.useQuery(
     {
       clientId,
       assignmentId: selectedAssignment !== "all" ? Number(selectedAssignment) : undefined,
-      from: filterDateFrom || undefined,
-      to: filterDateTo || undefined,
+      from: fromQueryParam,
+      to: toQueryParam,
     },
     { enabled: isQueryEnabled }
   );
@@ -428,6 +451,28 @@ export default function PhysioClientDetail() {
       toast.error(err.message || "Failed to update status");
     },
   });
+  const updateDiagnosisMutation = trpc.physio.updateClientDiagnosis.useMutation({
+    onSuccess: async () => {
+      await utils.physio.getClientDetail.invalidate({ clientId });
+      await utils.physio.listMyClients.invalidate();
+      toast.success("Primary diagnosis updated successfully");
+      setIsDiagnosisOpen(false);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update diagnosis");
+    },
+  });
+
+  const handleDiagnosisSubmit = () => {
+    if (!selectedDiagnosis) {
+      toast.error("Please select a diagnosis.");
+      return;
+    }
+    updateDiagnosisMutation.mutate({
+      clientId,
+      injuryType: selectedDiagnosis,
+    });
+  };
 
   const handleCompleteAssignment = (id: number) => {
     if (confirm("Are you sure you want to mark this exercise as completed?")) {
@@ -642,33 +687,74 @@ export default function PhysioClientDetail() {
 
   const activeStats = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
+    const today = new Date(todayStr + "T00:00:00");
     
     // A session is considered active only if its start_date is on or before today
     const activeSessions = (clientAssignments.data ?? []).filter((a) => {
       return a.assignment.status === "active" && a.assignment.startDate <= todayStr;
     });
 
-    const total = activeSessions.length;
-    if (total === 0) {
+    let totalExpectedDays = 0;
+    let totalLoggedDays = 0;
+
+    activeSessions.forEach((a) => {
+      const start = new Date(a.assignment.startDate + "T00:00:00");
+      const end = new Date(a.assignment.endDate + "T00:00:00");
+      const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
+      
+      const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
+      totalExpectedDays += expectedDays;
+
+      // Count unique logged days for this assignment in the expected range
+      const logsForA = (feedbackEnriched.data ?? []).filter((f) => {
+        if (f.feedback.assignmentId !== a.assignment.id) return false;
+        const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
+        return logDate >= start && logDate <= upperBound;
+      });
+      
+      const uniqueLoggedDates = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10)));
+      totalLoggedDays += uniqueLoggedDates.size;
+    });
+
+    if (totalExpectedDays === 0) {
       return { total: 0, completed: 0, rate: null };
     }
 
-    // A session is considered completed if there is at least one feedback log inside its window (inclusive)
-    const completed = activeSessions.filter((a) => {
+    const rate = Math.round((totalLoggedDays / totalExpectedDays) * 100);
+    return { total: totalExpectedDays, completed: totalLoggedDays, rate };
+  }, [clientAssignments.data, feedbackEnriched.data]);
+
+  const lifetimeStats = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = new Date(todayStr + "T00:00:00");
+    const assignmentsList = clientAssignments.data ?? [];
+    const logsList = feedbackEnriched.data ?? [];
+
+    let totalExpectedDays = 0;
+    let totalLoggedDays = 0;
+
+    assignmentsList.forEach((a) => {
       const start = new Date(a.assignment.startDate + "T00:00:00");
       const end = new Date(a.assignment.endDate + "T00:00:00");
-      return (feedbackEnriched.data ?? []).some((f) => {
-        const logDate = new Date(f.feedback.submittedAt);
-        return (
-          f.feedback.assignmentId === a.assignment.id &&
-          logDate >= start &&
-          logDate <= end
-        );
-      });
-    }).length;
+      const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
 
-    const rate = Math.round((completed / total) * 100);
-    return { total, completed, rate };
+      if (start <= upperBound) {
+        const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
+        totalExpectedDays += expectedDays;
+
+        const logsForA = logsList.filter((f) => {
+          if (f.feedback.assignmentId !== a.assignment.id) return false;
+          const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
+          return logDate >= start && logDate <= upperBound;
+        });
+
+        const uniqueLoggedDates = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10)));
+        totalLoggedDays += uniqueLoggedDates.size;
+      }
+    });
+
+    const rate = totalExpectedDays > 0 ? Math.round((totalLoggedDays / totalExpectedDays) * 100) : 0;
+    return { total: totalExpectedDays, completed: totalLoggedDays, rate };
   }, [clientAssignments.data, feedbackEnriched.data]);
 
   const clientInfoFields = useMemo(() => {
@@ -752,9 +838,6 @@ export default function PhysioClientDetail() {
     setAssignSearchQuery("");
     setNeedsAttentionOnly(false);
   };
-  const completionRate = stats.data?.total
-    ? Math.round((stats.data.completed / stats.data.total) * 100)
-    : 0;
 
   const avgPain = useMemo(() => {
     if (sortedData.length === 0) return 0;
@@ -768,13 +851,8 @@ export default function PhysioClientDetail() {
     const endD = new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     return `${startD} – ${endD}`;
   }, [sortedData]);
-  const pageBgClass = viewMode === "historical" 
-    ? "bg-[#F2F4F7] min-h-screen pb-12 transition-all duration-300" 
-    : "bg-[#F8FAFC] min-h-screen pb-12 transition-all duration-300";
-
   return (
-    <div className={pageBgClass}>
-      <AppShell>
+    <AppShell>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 rounded-lg transition-all">
             <Link href="/physio" className="flex items-center gap-1.5">
@@ -818,7 +896,7 @@ export default function PhysioClientDetail() {
         )}
 
         {/* Detailed Client Header Card */}
-        <div className="bg-white shadow-sm border border-[#E4E7EC] rounded-xl p-6 mb-6">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border border-slate-200/80 shadow-sm flex items-center justify-center bg-indigo-50 text-indigo-700 rounded-full">
@@ -879,8 +957,12 @@ export default function PhysioClientDetail() {
                       <span>Assign New Exercise</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
-                      <Calendar className="size-4 text-indigo-600" />
+                      <CalendarIcon className="size-4 text-indigo-600" />
                       <span>Schedule Next Visit</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsDiagnosisOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
+                      <Activity className="size-4 text-indigo-600" />
+                      <span>Update Diagnosis</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-[#F2F4F7]" />
                     <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Contact Info</DropdownMenuLabel>
@@ -914,50 +996,47 @@ export default function PhysioClientDetail() {
           </div>
         </div>
 
-        {/* Stats Row */}
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {/* Card 1: Completion Rate / Adherence */}
-          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                {viewMode === "historical" ? "Total Lifetime Adherence" : "Active Completion Rate"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                if (viewMode === "active" && activeStats.rate === null) {
-                  return (
-                    <>
-                      <div className="text-sm font-semibold text-[#667085] mb-4 h-[30px] flex items-center">
-                        No active sessions
-                      </div>
-                      <div className="progress-track mb-1">
-                        <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
-                      </div>
-                    </>
-                  );
-                }
-                const rateValue = viewMode === "historical" ? completionRate : activeStats.rate;
-                return (
+        <div className={`grid grid-cols-1 gap-4 mb-6 ${viewMode === "historical" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+          {/* Card 1: Daily Adherence Percentage (Only shown in Active Treatments view!) */}
+          {viewMode === "active" && (
+            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                  Daily Adherence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeStats.rate === null ? (
                   <>
-                    <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{rateValue}%</div>
+                    <div className="text-sm font-semibold text-[#667085] mb-4 h-[30px] flex items-center">
+                      No active sessions
+                    </div>
                     <div className="progress-track mb-1">
-                      <div className="progress-fill" style={{ width: `${rateValue}%`, background: "#6366F1" }} />
+                      <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
                     </div>
                   </>
-                );
-              })()}
-              <p className="text-[11px] text-[#667085] font-medium">
-                {viewMode === "historical"
-                  ? `${stats.data?.completed ?? 0} of ${stats.data?.total ?? 0} lifetime sessions`
-                  : `${activeStats.completed} of ${activeStats.total} active sessions`}
-              </p>
-            </CardContent>
-          </Card>
-
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{activeStats.rate}%</div>
+                    <div className="progress-track mb-1">
+                      <div 
+                        className="progress-fill" 
+                        style={{ 
+                          width: `${activeStats.rate}%`, 
+                          background: activeStats.rate >= 80 ? "#10B981" : activeStats.rate >= 50 ? "#F59E0B" : "#F43F5E" 
+                        }} 
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#667085] font-medium mt-2">
+                      {activeStats.completed} of {activeStats.total} total days logged
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
           {/* Card 2: Active Exercises / Assigned Exercises */}
-          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
+          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
                 {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
@@ -985,7 +1064,7 @@ export default function PhysioClientDetail() {
           </Card>
 
           {/* Card 3: Latest Pain Level / Avg Pain Index */}
-          <Card className="bg-white border border-[#E4E7EC] shadow-sm rounded-xl">
+          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
                 {viewMode === "historical" ? "Average Pain Index" : "Latest Pain Level"}
@@ -1024,104 +1103,183 @@ export default function PhysioClientDetail() {
         </div>
 
         {/* Dashboard Filters Card (Top) */}
-        <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none mb-6">
-          <CardHeader className="pb-3 border-b border-slate-100/80 flex flex-row items-center justify-between">
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
+          <CardHeader className="pb-3 border-b border-slate-100/80 flex flex-row items-center justify-between cursor-pointer select-none" onClick={() => setShowFilters(!showFilters)}>
             <div className="flex items-center gap-2">
               <SlidersHorizontal className="size-4 text-slate-400" />
               <CardTitle className="text-sm font-medium text-slate-900">Dashboard filters</CardTitle>
+              {(() => {
+                const isFilterActive = viewMode === "active" 
+                  ? (selectedAssignment !== "all" || filterDateFrom !== undefined || filterDateTo !== undefined)
+                  : (filterYear !== "all");
+                return isFilterActive && (
+                  <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-none font-bold text-[10px] py-0.5 px-2">
+                    Active
+                  </Badge>
+                );
+              })()}
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-slate-500 hover:text-indigo-600 hover:bg-slate-50 font-semibold text-xs rounded-lg h-8 px-2.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFilters(!showFilters);
+              }}
+            >
+              {showFilters ? "Collapse" : "Expand"}
+            </Button>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            {viewMode === "historical" ? (
-              /* Historical Mode Filters */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="text-[11px] font-medium tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
-                    <Calendar className="size-3 text-slate-400" />
-                    <span>Filter by year</span>
-                  </Label>
-                  <Select value={filterYear} onValueChange={setFilterYear}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-xs font-normal">
-                      <SelectValue placeholder="All years" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                      <SelectItem value="all">All years</SelectItem>
-                      <SelectItem value="2026">2026</SelectItem>
-                      <SelectItem value="2025">2025</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div />
-              </div>
-            ) : (
-              /* Active Mode Filters */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="text-[11px] font-medium tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
-                    <ClipboardCopy className="size-3 text-slate-400" />
-                    <span>Assignment filter</span>
-                  </Label>
-                  <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                    <SelectTrigger className="h-9 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-xs font-normal">
-                      <SelectValue placeholder="All assignments" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                      <SelectItem value="all">All assignments</SelectItem>
-                      {(clientAssignments.data ?? []).map((a) => (
-                        <SelectItem key={a.assignment.id} value={String(a.assignment.id)}>
-                          {a.exercise.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-[11px] font-medium tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
-                    <Calendar className="size-3 text-slate-400" />
-                    <span>Date range</span>
-                  </Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      type="date"
-                      className="h-9 text-xs bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-slate-700 w-full font-normal"
-                      value={filterDateFrom}
-                      onChange={(e) => setFilterDateFrom(e.target.value)}
-                    />
-                    <span className="text-slate-400 font-normal shrink-0">to</span>
-                    <Input
-                      type="date"
-                      className="h-9 text-xs bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-slate-700 w-full font-normal"
-                      value={filterDateTo}
-                      onChange={(e) => setFilterDateTo(e.target.value)}
-                    />
+          {showFilters && (
+            <CardContent className="pt-6 space-y-6">
+              {viewMode === "historical" ? (
+                /* Historical Mode Filters */
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-[11px] font-medium tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
+                      <CalendarIcon className="size-3 text-slate-400" />
+                      <span>Filter by year</span>
+                    </Label>
+                    <Select value={filterYear} onValueChange={setFilterYear}>
+                      <SelectTrigger className="h-9 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-xs font-normal">
+                        <SelectValue placeholder="All years" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
+                        <SelectItem value="all">All years</SelectItem>
+                        <SelectItem value="2026">2026</SelectItem>
+                        <SelectItem value="2025">2025</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 self-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFilterYear("all");
+                        toast.success("Filters cleared");
+                      }}
+                      className="h-9 text-xs border-slate-200 rounded-lg font-medium px-4"
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        toast.success("Filters applied");
+                      }}
+                      className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium px-4"
+                    >
+                      Apply
+                    </Button>
                   </div>
                 </div>
-              </div>
-            )}
-            {/* Reset and Apply Buttons */}
-            <div className="flex justify-end items-center gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={handleResetFilters}
-                className="h-9 text-xs text-slate-500 hover:text-slate-900 rounded-lg font-normal"
-              >
-                Reset
-              </Button>
-              <Button
-                onClick={() => {
-                  toast.success("Filters applied successfully");
-                }}
-                className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium px-4"
-              >
-                Apply filters
-              </Button>
-            </div>
-          </CardContent>
+              ) : (
+                /* Active Mode Filters */
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  {/* 1. Assignment Filter */}
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
+                      <ClipboardCopy className="size-3 text-slate-400" />
+                      <span>Assignment filter</span>
+                    </Label>
+                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                      <SelectTrigger className="h-9 bg-white border-slate-200 focus:ring-indigo-600 rounded-lg text-xs font-normal">
+                        <SelectValue placeholder="All assignments" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
+                        <SelectItem value="all">All assignments</SelectItem>
+                        {(clientAssignments.data ?? []).map((a) => (
+                          <SelectItem key={a.assignment.id} value={String(a.assignment.id)}>
+                            {a.exercise.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 2. Date Range From (Calendar Popover) */}
+                  <div className="flex flex-col gap-1.5 w-full sm:w-36 shrink-0">
+                    <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
+                      <CalendarDays className="size-3 text-slate-400" />
+                      <span>From</span>
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-9 w-full bg-white border-slate-200 justify-start text-left font-semibold text-xs rounded-lg px-3 hover:bg-slate-50 text-slate-700"
+                        >
+                          {filterDateFrom ? format(filterDateFrom, "MMM dd") : <span className="text-slate-400 font-normal">Pick month/day</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-white border border-slate-200 shadow-md rounded-lg" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filterDateFrom}
+                          onSelect={setFilterDateFrom}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* 3. Date Range To (Calendar Popover) */}
+                  <div className="flex flex-col gap-1.5 w-full sm:w-36 shrink-0">
+                    <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
+                      <CalendarDays className="size-3 text-slate-400" />
+                      <span>To</span>
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-9 w-full bg-white border-slate-200 justify-start text-left font-semibold text-xs rounded-lg px-3 hover:bg-slate-50 text-slate-700"
+                        >
+                          {filterDateTo ? format(filterDateTo, "MMM dd") : <span className="text-slate-400 font-normal">Pick month/day</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-white border border-[#E4E7EC] shadow-md rounded-lg" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filterDateTo}
+                          onSelect={setFilterDateTo}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0 self-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedAssignment("all");
+                        setFilterDateFrom(undefined);
+                        setFilterDateTo(undefined);
+                        toast.success("Filters cleared");
+                      }}
+                      className="h-9 text-xs border-slate-200 rounded-lg font-medium px-4"
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        toast.success("Filters applied");
+                      }}
+                      className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium px-4"
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
 
         {/* Pain Trend Card (Below) */}
-        <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none mb-6">
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-medium text-slate-900 font-sans">Pain trend</CardTitle>
@@ -1262,7 +1420,7 @@ export default function PhysioClientDetail() {
 
         {/* Exercises Grid with visual progress bar */}
         {/* Exercises Grid with visual progress bar */}
-        <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl mb-6">
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CardTitle className="text-sm font-semibold text-[#101828]">
@@ -1600,17 +1758,50 @@ export default function PhysioClientDetail() {
                             return val && val !== "other" && val !== "—" && val !== "";
                           });
 
-                          if (cardFields.length === 0) return null;
+                          // Calculate daily adherence for this specific exercise
+                          const todayStr = new Date().toISOString().slice(0, 10);
+                          const today = new Date(todayStr + "T00:00:00");
+                          const start = new Date(a.assignment.startDate + "T00:00:00");
+                          const end = new Date(a.assignment.endDate + "T00:00:00");
+                          const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
+                          const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
+                          const logsForA = (feedbackEnriched.data ?? []).filter((f) => {
+                            if (f.feedback.assignmentId !== a.assignment.id) return false;
+                            const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
+                            return logDate >= start && logDate <= upperBound;
+                          });
+                          const loggedDays = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10))).size;
+                          const adherenceRate = Math.round((loggedDays / expectedDays) * 100);
 
                           return (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border-t border-slate-100 pt-2.5 pb-0.5 mb-2">
-                              {cardFields.map((field, idx) => (
-                                <div key={idx}>
-                                  <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{field.label}</span>
-                                  <p className="font-medium text-slate-800 text-sm mt-0.5">{field.value}</p>
+                            <>
+                              {cardFields.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border-t border-slate-100 pt-2.5 pb-0.5 mb-2">
+                                  {cardFields.map((field, idx) => (
+                                    <div key={idx}>
+                                      <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{field.label}</span>
+                                      <p className="font-medium text-slate-800 text-sm mt-0.5">{field.value}</p>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              )}
+
+                              {/* Exercise Adherence Info Section */}
+                              <div className="mt-3 border-t border-slate-100 pt-2.5">
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Exercise Adherence</span>
+                                  <span className="font-bold text-slate-700">{adherenceRate}% ({loggedDays} of {expectedDays} days logged)</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1 relative overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      adherenceRate >= 80 ? "bg-emerald-500" : adherenceRate >= 50 ? "bg-amber-500" : "bg-rose-500"
+                                    }`} 
+                                    style={{ width: `${adherenceRate}%` }} 
+                                  />
+                                </div>
+                              </div>
+                            </>
                           );
                         })()}
                       </div>
@@ -1625,7 +1816,7 @@ export default function PhysioClientDetail() {
         </Card>
 
         {/* Session History Table */}
-        <Card className="bg-white border border-slate-200/80 shadow-sm rounded-xl">
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100">
             <CardTitle className="text-base font-bold text-slate-900">
               <FormattedMessage id="physio.monitor.history" />
@@ -1888,6 +2079,9 @@ export default function PhysioClientDetail() {
                       {INJURY_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>{formatInjuryType(t)}</SelectItem>
                       ))}
+                      {(customInjTypes.data ?? []).map((type) => (
+                        <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1900,6 +2094,9 @@ export default function PhysioClientDetail() {
                     <SelectContent className="bg-white border border-slate-200 shadow-md">
                       {EXERCISE_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>{formatExerciseType(t)}</SelectItem>
+                      ))}
+                      {(customExTypes.data ?? []).map((type) => (
+                        <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1932,7 +2129,7 @@ export default function PhysioClientDetail() {
                   Visit Date
                 </Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-3 size-4 text-slate-400" />
+                  <CalendarIcon className="absolute left-3 top-3 size-4 text-slate-400" />
                   <Input
                     type="date"
                     className="h-10 pl-10 bg-white border-slate-200 focus-visible:ring-indigo-600 text-slate-700 w-full rounded-lg text-sm"
@@ -1965,7 +2162,45 @@ export default function PhysioClientDetail() {
           </DialogContent>
         </Dialog>
 
-      </AppShell>
-    </div>
+        {/* Dialog: Update Diagnosis */}
+        <Dialog open={isDiagnosisOpen} onOpenChange={setIsDiagnosisOpen}>
+          <DialogContent className="max-w-sm bg-white border border-slate-200 shadow-xl rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="text-slate-950 font-bold text-lg">Update Primary Diagnosis</DialogTitle>
+              <DialogDescription className="text-slate-500 text-xs">
+                Select the primary diagnosis for this patient.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="my-4 space-y-4">
+              <div>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5 font-sans">
+                  Diagnosis / Injury Class
+                </Label>
+                <Select value={selectedDiagnosis} onValueChange={setSelectedDiagnosis}>
+                  <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                    <SelectValue placeholder="Select diagnosis..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border border-slate-200 shadow-md">
+                    {INJURY_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{formatInjuryType(t)}</SelectItem>
+                    ))}
+                    {(customInjTypes.data ?? []).map((type) => (
+                      <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsDiagnosisOpen(false)} className="border-slate-200">Cancel</Button>
+              <Button onClick={handleDiagnosisSubmit} disabled={updateDiagnosisMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+                {updateDiagnosisMutation.isPending ? "Saving..." : "Save Diagnosis"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+    </AppShell>
   );
 }
