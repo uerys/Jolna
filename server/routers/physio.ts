@@ -186,6 +186,7 @@ export const physioRouter = router({
         exerciseType: ExerciseTypeEnum.optional(),
         reps: z.number().int().min(1).max(500).optional(),
         sets: z.number().int().min(1).max(100).optional(),
+        dailyFrequency: z.number().int().min(1).max(20).default(1).optional(),
         startDate: dateString,
         endDate: dateString,
       })
@@ -207,6 +208,7 @@ export const physioRouter = router({
         exerciseType: input.exerciseType ?? ex.exerciseType ?? "other",
         reps: repsToUse,
         sets: setsToUse,
+        dailyFrequency: input.dailyFrequency ?? 1,
         startDate: input.startDate,
         endDate: input.endDate,
       });

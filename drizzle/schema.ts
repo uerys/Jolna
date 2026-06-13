@@ -152,6 +152,7 @@ export const assignments = mysqlTable(
     exerciseType: varchar("exerciseType", { length: 255 }).default("other").notNull(),
     reps: int("reps").notNull(),
     sets: int("sets").notNull().default(1),
+    dailyFrequency: int("dailyFrequency").notNull().default(1),
     startDate: date("startDate", { mode: "string" }).notNull(),
     endDate: date("endDate", { mode: "string" }).notNull(),
     status: mysqlEnum("status", ASSIGNMENT_STATUSES)

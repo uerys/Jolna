@@ -1,0 +1,1 @@
+ALTER TABLE `assignments` ADD `dailyFrequency` int DEFAULT 1 NOT NULL;

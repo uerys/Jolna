@@ -252,7 +252,7 @@ try {
     physiotherapistId: physioId,
     clientId: clientId3,
     reps: 10,
-    startDate: plusDays(1),
+    startDate: plusDays(-1),
     endDate: plusDays(15),
   });
 

@@ -728,6 +728,7 @@ function AssignmentsTab() {
   const [sets, setSets] = useState<string | number>(1);
   const [injuryType, setInjuryType] = useState<string>("");
   const [exerciseType, setExerciseType] = useState<string>("");
+  const [dailyFrequency, setDailyFrequency] = useState<string | number>(1);
   const [exercisePreview, setExercisePreview] = useState<null | { title: string; defaultReps?: number; defaultSets?: number; exerciseType?: string }>(null);
 
   // When an exercise is selected, default reps to the exercise's defaultReps
@@ -835,6 +836,7 @@ function AssignmentsTab() {
                           setExercisePreview(null);
                           setReps("");
                           setSets("");
+                          setDailyFrequency(1);
                         }}
                       >
                         Clear Selection
@@ -900,14 +902,28 @@ function AssignmentsTab() {
                   {/* Set and Repetition Dose Block */}
                   <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-4">
                     <Label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block font-sans">Set and Repetition</Label>
-                    <div className="flex items-center gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Reps</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={500}
+                          className="w-full h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
+                          value={reps as unknown as string}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setReps(v === "" ? "" : Number(v));
+                          }}
+                        />
+                      </div>
                       <div className="space-y-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Sets</span>
                         <Input
                           type="number"
                           min={1}
                           max={100}
-                          className="w-24 h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
+                          className="w-full h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
                           value={sets as unknown as string}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -915,18 +931,17 @@ function AssignmentsTab() {
                           }}
                         />
                       </div>
-                      <span className="text-slate-300 font-light text-xl mt-4">×</span>
                       <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">Reps</span>
+                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block font-sans">PER DAY</span>
                         <Input
                           type="number"
                           min={1}
-                          max={500}
-                          className="w-24 h-10 text-center border-slate-200 focus-visible:ring-indigo-600 rounded-lg bg-white"
-                          value={reps as unknown as string}
+                          max={20}
+                          className="w-full h-10 text-center border-indigo-200 focus-visible:ring-indigo-600 rounded-lg bg-white text-indigo-700 font-semibold"
+                          value={dailyFrequency as unknown as string}
                           onChange={(e) => {
                             const v = e.target.value;
-                            setReps(v === "" ? "" : Number(v));
+                            setDailyFrequency(v === "" ? "" : Number(v));
                           }}
                         />
                       </div>
@@ -949,6 +964,7 @@ function AssignmentsTab() {
                       exerciseId: Number(exerciseId),
                       reps: (reps === "" ? undefined : Number(reps)),
                       sets: (sets === "" ? undefined : Number(sets)),
+                      dailyFrequency: (dailyFrequency === "" ? undefined : Number(dailyFrequency)),
                       injuryType: (injuryType || undefined) as any,
                       exerciseType: (exerciseType || undefined) as any,
                       startDate,

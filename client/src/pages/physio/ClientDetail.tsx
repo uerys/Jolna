@@ -336,6 +336,7 @@ export default function PhysioClientDetail() {
   const [newEndDate, setNewEndDate] = useState<string>("");
   const [newInjuryType, setNewInjuryType] = useState<string>("other");
   const [newExerciseType, setNewExerciseType] = useState<string>("other");
+  const [newDailyFrequency, setNewDailyFrequency] = useState<string>("1");
 
   // Mock visits and progress notes states
   const [visitDate, setVisitDate] = useState("");
@@ -423,6 +424,7 @@ export default function PhysioClientDetail() {
       setNewEndDate("");
       setNewInjuryType("other");
       setNewExerciseType("other");
+      setNewDailyFrequency("1");
     },
     onError: (err) => {
       toast.error(err.message || "Failed to assign exercise");
@@ -688,40 +690,57 @@ export default function PhysioClientDetail() {
   const activeStats = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
     const today = new Date(todayStr + "T00:00:00");
-    
-    // A session is considered active only if its start_date is on or before today
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    // Only assignments that have already started
     const activeSessions = (clientAssignments.data ?? []).filter((a) => {
       return a.assignment.status === "active" && a.assignment.startDate <= todayStr;
     });
 
+    const total = activeSessions.length;
+    if (total === 0) {
+      return { total: 0, loggedDays: 0, expectedDays: 0, rate: null };
+    }
+
+    const allLogs = feedbackEnriched.data ?? [];
     let totalExpectedDays = 0;
-    let totalLoggedDays = 0;
+    let creditSum = 0; // fractional: 0.5 means 1 log when target is 2
 
     activeSessions.forEach((a) => {
       const start = new Date(a.assignment.startDate + "T00:00:00");
       const end = new Date(a.assignment.endDate + "T00:00:00");
-      const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
-      
-      const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
+      const effectiveEnd = end < today ? end : today;
+      const expectedDays = Math.max(
+        0,
+        Math.round((effectiveEnd.getTime() - start.getTime()) / DAY_MS) + 1
+      );
       totalExpectedDays += expectedDays;
 
-      // Count unique logged days for this assignment in the expected range
-      const logsForA = (feedbackEnriched.data ?? []).filter((f) => {
-        if (f.feedback.assignmentId !== a.assignment.id) return false;
-        const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
-        return logDate >= start && logDate <= upperBound;
+      const freq = a.assignment.dailyFrequency ?? 1;
+
+      // Build a per-day count map for this assignment
+      const dayCountMap = new Map<string, number>();
+      allLogs.forEach((f) => {
+        if (f.feedback.assignmentId !== a.assignment.id) return;
+        const dayStr = new Date(f.feedback.submittedAt).toISOString().slice(0, 10);
+        dayCountMap.set(dayStr, (dayCountMap.get(dayStr) ?? 0) + 1);
       });
-      
-      const uniqueLoggedDates = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10)));
-      totalLoggedDays += uniqueLoggedDates.size;
+
+      // Proportional credit per day: min(actual, target) / target
+      const cursor = new Date(start);
+      for (let i = 0; i < expectedDays; i++) {
+        const dayStr = cursor.toISOString().slice(0, 10);
+        const logsThisDay = dayCountMap.get(dayStr) ?? 0;
+        creditSum += Math.min(logsThisDay, freq) / freq;
+        cursor.setDate(cursor.getDate() + 1);
+      }
     });
 
-    if (totalExpectedDays === 0) {
-      return { total: 0, completed: 0, rate: null };
-    }
+    const rate = totalExpectedDays > 0
+      ? Math.round((creditSum / totalExpectedDays) * 100)
+      : null;
 
-    const rate = Math.round((totalLoggedDays / totalExpectedDays) * 100);
-    return { total: totalExpectedDays, completed: totalLoggedDays, rate };
+    return { total, loggedDays: Math.round(creditSum), expectedDays: totalExpectedDays, rate };
   }, [clientAssignments.data, feedbackEnriched.data]);
 
   const lifetimeStats = useMemo(() => {
@@ -799,6 +818,7 @@ export default function PhysioClientDetail() {
       clientId,
       sets: Number(newSets),
       reps: Number(newReps),
+      dailyFrequency: Math.max(1, Number(newDailyFrequency) || 1),
       startDate: newStartDate,
       endDate: newEndDate,
       injuryType: newInjuryType as InjuryType,
@@ -996,112 +1016,6 @@ export default function PhysioClientDetail() {
           </div>
         </div>
 
-        <div className={`grid grid-cols-1 gap-4 mb-6 ${viewMode === "historical" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-          {/* Card 1: Daily Adherence Percentage (Only shown in Active Treatments view!) */}
-          {viewMode === "active" && (
-            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                  Daily Adherence
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {activeStats.rate === null ? (
-                  <>
-                    <div className="text-sm font-semibold text-[#667085] mb-4 h-[30px] flex items-center">
-                      No active sessions
-                    </div>
-                    <div className="progress-track mb-1">
-                      <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{activeStats.rate}%</div>
-                    <div className="progress-track mb-1">
-                      <div 
-                        className="progress-fill" 
-                        style={{ 
-                          width: `${activeStats.rate}%`, 
-                          background: activeStats.rate >= 80 ? "#10B981" : activeStats.rate >= 50 ? "#F59E0B" : "#F43F5E" 
-                        }} 
-                      />
-                    </div>
-                    <p className="text-[11px] text-[#667085] font-medium mt-2">
-                      {activeStats.completed} of {activeStats.total} total days logged
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-          {/* Card 2: Active Exercises / Assigned Exercises */}
-          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
-                {(() => {
-                  const todayStr = new Date().toISOString().slice(0, 10);
-                  return viewMode === "historical"
-                    ? clientAssignments.data?.length ?? 0
-                    : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
-                })()}
-              </div>
-              <p className="text-[11px] text-[#667085] font-medium">
-                {viewMode === "historical"
-                  ? "Including completed & discontinued exercises"
-                  : (() => {
-                      const todayStr = new Date().toISOString().slice(0, 10);
-                      const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
-                      return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
-                    })()}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Card 3: Latest Pain Level / Avg Pain Index */}
-          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                {viewMode === "historical" ? "Average Pain Index" : "Latest Pain Level"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {sortedData.length > 0 ? (
-                (() => {
-                  const painValue = viewMode === "historical" ? avgPain : sortedData[sortedData.length - 1].pain;
-                  const config = getPainScoreConfig(painValue);
-                  return (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-3xl font-bold text-[#101828] tabular-nums">{painValue}/10</span>
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
-                          <span>{config.label}</span>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#667085] font-medium">
-                        {viewMode === "historical"
-                          ? `Calculated across ${sortedData.length} lifetime logs`
-                          : `Reported on ${new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                  );
-                })()
-              ) : (
-                <div>
-                  <div className="text-3xl font-bold text-[#E4E7EC] mb-2">—</div>
-                  <p className="text-[11px] text-[#667085] font-medium">No reports logged yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Dashboard Filters Card (Top) */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100/80 flex flex-row items-center justify-between cursor-pointer select-none" onClick={() => setShowFilters(!showFilters)}>
@@ -1277,6 +1191,113 @@ export default function PhysioClientDetail() {
             </CardContent>
           )}
         </Card>
+
+        <div className={`grid grid-cols-1 gap-4 mb-6 ${viewMode === "historical" || (viewMode === "active" && selectedAssignment === "all") ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+          {/* Card 1: Daily Adherence Percentage (Only shown in Active Treatments view!) */}
+          {viewMode === "active" && selectedAssignment !== "all" && (
+            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                  Daily Adherence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeStats.rate === null ? (
+                  <>
+                    <div className="text-sm font-semibold text-[#667085] mb-4 h-[30px] flex items-center">
+                      No active sessions
+                    </div>
+                    <div className="progress-track mb-1">
+                      <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{activeStats.rate}%</div>
+                    <div className="progress-track mb-1">
+                      <div 
+                        className="progress-fill" 
+                        style={{ 
+                          width: `${activeStats.rate}%`, 
+                          background: activeStats.rate >= 80 ? "#10B981" : activeStats.rate >= 50 ? "#F59E0B" : "#F43F5E" 
+                        }} 
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#667085] font-medium mt-2">
+                      {activeStats.loggedDays} of {activeStats.expectedDays} target days logged
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {/* Card 2: Active Exercises / Assigned Exercises */}
+          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
+                {(() => {
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  return viewMode === "historical"
+                    ? clientAssignments.data?.length ?? 0
+                    : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                })()}
+              </div>
+              <p className="text-[11px] text-[#667085] font-medium">
+                {viewMode === "historical"
+                  ? "Including completed & discontinued exercises"
+                  : (() => {
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                      return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
+                    })()}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Latest Pain Level / Avg Pain Index */}
+          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                {viewMode === "historical" ? "Average Pain Index" : "Latest Pain Level"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sortedData.length > 0 ? (
+                (() => {
+                  const painValue = viewMode === "historical" ? avgPain : sortedData[sortedData.length - 1].pain;
+                  const config = getPainScoreConfig(painValue);
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-3xl font-bold text-[#101828] tabular-nums">{painValue}/10</span>
+                        <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
+                          <span>{config.label}</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[#667085] font-medium">
+                        {viewMode === "historical"
+                          ? `Calculated across ${sortedData.length} lifetime logs`
+                          : `Reported on ${new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div>
+                  <div className="text-3xl font-bold text-[#E4E7EC] mb-2">—</div>
+                  <p className="text-[11px] text-[#667085] font-medium">No reports logged yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
 
         {/* Pain Trend Card (Below) */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
@@ -1752,26 +1773,37 @@ export default function PhysioClientDetail() {
                             { label: "Injury Type", value: formatInjuryType(a.assignment.injuryType) },
                             { label: "Exercise Type", value: formatExerciseType(a.assignment.exerciseType) },
                             { label: "Sets & Reps", value: `${a.assignment.sets} × ${a.assignment.reps}` },
+                            { label: "Daily Target", value: `${a.assignment.dailyFrequency ?? 1}× per day` },
                             { label: "Assigned", value: new Date(a.assignment.createdAt).toLocaleDateString() }
                           ].filter((field) => {
                             const val = field.value?.trim().toLowerCase();
                             return val && val !== "other" && val !== "—" && val !== "";
                           });
 
-                          // Calculate daily adherence for this specific exercise
+                          // Per-card proportional adherence using dailyFrequency
                           const todayStr = new Date().toISOString().slice(0, 10);
                           const today = new Date(todayStr + "T00:00:00");
                           const start = new Date(a.assignment.startDate + "T00:00:00");
                           const end = new Date(a.assignment.endDate + "T00:00:00");
-                          const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
+                          const upperBound = end < today ? end : today;
                           const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
-                          const logsForA = (feedbackEnriched.data ?? []).filter((f) => {
-                            if (f.feedback.assignmentId !== a.assignment.id) return false;
-                            const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
-                            return logDate >= start && logDate <= upperBound;
+                          const freq = a.assignment.dailyFrequency ?? 1;
+
+                          // Build per-day log count map
+                          const dayCountMap = new Map<string, number>();
+                          (feedbackEnriched.data ?? []).forEach((f) => {
+                            if (f.feedback.assignmentId !== a.assignment.id) return;
+                            const d = new Date(f.feedback.submittedAt).toISOString().slice(0, 10);
+                            dayCountMap.set(d, (dayCountMap.get(d) ?? 0) + 1);
                           });
-                          const loggedDays = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10))).size;
-                          const adherenceRate = Math.round((loggedDays / expectedDays) * 100);
+
+                          // Proportional credit sum
+                          let creditSum = 0;
+                          for (let d = new Date(start); d <= upperBound; d.setDate(d.getDate() + 1)) {
+                            const dStr = d.toISOString().slice(0, 10);
+                            creditSum += Math.min(dayCountMap.get(dStr) ?? 0, freq) / freq;
+                          }
+                          const adherenceRate = Math.round((creditSum / expectedDays) * 100);
 
                           return (
                             <>
@@ -1789,8 +1821,11 @@ export default function PhysioClientDetail() {
                               {/* Exercise Adherence Info Section */}
                               <div className="mt-3 border-t border-slate-100 pt-2.5">
                                 <div className="flex items-center justify-between text-xs mb-1.5">
-                                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Exercise Adherence</span>
-                                  <span className="font-bold text-slate-700">{adherenceRate}% ({loggedDays} of {expectedDays} days logged)</span>
+                                  <span className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">Exercise Adherence</span>
+                                  <span className="font-bold text-[#344054]">
+                                    {adherenceRate}%
+                                    <span className="font-normal text-[#667085] ml-1">({freq}×/day target)</span>
+                                  </span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-1 relative overflow-hidden">
                                   <div 
@@ -2024,9 +2059,9 @@ export default function PhysioClientDetail() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reps Count</Label>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reps</Label>
                   <Input
                     type="number"
                     min={1}
@@ -2036,13 +2071,24 @@ export default function PhysioClientDetail() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sets Count</Label>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sets</Label>
                   <Input
                     type="number"
                     min={1}
                     className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                     value={newSets}
                     onChange={(e) => setNewSets(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-indigo-600 uppercase tracking-wider">PER DAY</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    className="h-10 mt-1 bg-white border-indigo-200 ring-1 ring-indigo-100 focus:ring-indigo-500 text-indigo-700 font-semibold"
+                    value={newDailyFrequency}
+                    onChange={(e) => setNewDailyFrequency(e.target.value)}
                   />
                 </div>
               </div>
