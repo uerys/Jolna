@@ -5,7 +5,7 @@ JOLNA is a specialized physiotherapy rehab platform supporting three user tiers:
 ## What The App Does
 
 - Admins manage users roles and permissions.
-- Physiotherapists track client progress and review recovery history.
+- Physiotherapists track client progress and review recovery history, assigns post rehab exercises to clients.
 - Clients see today’s routine, complete exercises, and log feedback.
 
 ## Requirements
