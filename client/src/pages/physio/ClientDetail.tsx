@@ -94,6 +94,7 @@ import {
   Dumbbell,
   SlidersHorizontal,
   X,
+  Pencil,
 } from "lucide-react";
 
 // Types matching the schema structures
@@ -351,6 +352,16 @@ export default function PhysioClientDetail() {
   const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
   const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
+  const [editReps, setEditReps] = useState<string>("1");
+  const [editSets, setEditSets] = useState<string>("1");
+  const [editDailyFrequency, setEditDailyFrequency] = useState<string>("1");
+  const [editStartDate, setEditStartDate] = useState<string>("");
+  const [editEndDate, setEditEndDate] = useState<string>("");
+  const [editInjuryType, setEditInjuryType] = useState<string>("other");
+  const [editExerciseType, setEditExerciseType] = useState<string>("other");
+  const [editExerciseTitle, setEditExerciseTitle] = useState<string>("");
 
   // New Exercise Form States
   const [newExerciseId, setNewExerciseId] = useState<string>("");
@@ -378,6 +389,7 @@ export default function PhysioClientDetail() {
   const [assignStatus, setAssignStatus] = useState<string>("all");
   const [assignCategory, setAssignCategory] = useState<string>("all");
   const [assignInjuryType, setAssignInjuryType] = useState<string>("all");
+  const [assignExerciseName, setAssignExerciseName] = useState<string>("all");
   const [assignSearchQuery, setAssignSearchQuery] = useState<string>("");
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState<boolean>(false);
 
@@ -479,6 +491,17 @@ export default function PhysioClientDetail() {
       toast.error(err.message || "Failed to update status");
     },
   });
+  const updateAssignmentMutation = trpc.physio.updateAssignment.useMutation({
+    onSuccess: async () => {
+      await utils.physio.listClientAssignments.invalidate();
+      await utils.physio.getClientStats.invalidate();
+      toast.success("Assignment updated successfully");
+      setIsEditOpen(false);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update assignment");
+    },
+  });
   const updateDiagnosisMutation = trpc.physio.updateClientDiagnosis.useMutation({
     onSuccess: async () => {
       await utils.physio.getClientDetail.invalidate({ clientId });
@@ -558,6 +581,9 @@ export default function PhysioClientDetail() {
     if (assignInjuryType !== "all") {
       list = list.filter((a) => a.assignment.injuryType === assignInjuryType);
     }
+    if (assignExerciseName !== "all") {
+      list = list.filter((a) => a.exercise.title === assignExerciseName);
+    }
 
     if (needsAttentionOnly) {
       list = list.filter((a) => {
@@ -572,10 +598,18 @@ export default function PhysioClientDetail() {
     }
 
     return list;
-  }, [clientAssignments.data, feedbackEnriched.data, assignSearchQuery, assignStatus, assignCategory, assignInjuryType, needsAttentionOnly, viewMode, filterYear]);
+  }, [clientAssignments.data, feedbackEnriched.data, assignSearchQuery, assignStatus, assignCategory, assignInjuryType, assignExerciseName, needsAttentionOnly, viewMode, filterYear]);
 
   const uniqueExercises = useMemo(() => {
-    const list = clientAssignments.data ?? [];
+    let list = clientAssignments.data ?? [];
+    const todayStr = new Date().toLocaleDateString("en-CA");
+
+    if (viewMode === "active") {
+      list = list.filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr);
+    } else if (viewMode === "historical") {
+      list = list.filter((a) => a.assignment.status === "completed" || a.assignment.status === "cancelled" || a.assignment.endDate < todayStr);
+    }
+
     const seen = new Set<number>();
     const exercises: Array<{ id: number; title: string }> = [];
     for (const a of list) {
@@ -585,7 +619,7 @@ export default function PhysioClientDetail() {
       }
     }
     return exercises;
-  }, [clientAssignments.data]);
+  }, [clientAssignments.data, viewMode]);
 
   const historyRecords = useMemo(() => {
     const todayStr = new Date().toLocaleDateString("en-CA");
@@ -719,7 +753,6 @@ export default function PhysioClientDetail() {
 
       return (
         a.assignment.status === "active" &&
-        a.assignment.startDate <= todayStr &&
         a.assignment.endDate >= todayStr
       );
     });
@@ -828,22 +861,18 @@ export default function PhysioClientDetail() {
     );
   }, [chartData]);
 
-  if (!loading && user?.role !== "physiotherapist" && user?.role !== "admin") {
-    return (
-      <AppShell>
-        <Card className="bg-white border border-slate-200/80 shadow-sm max-w-xl mx-auto mt-12">
-          <CardHeader>
-            <CardTitle className="text-slate-900 text-lg font-bold">
-              <FormattedMessage id="common.notAuthorised" />
-            </CardTitle>
-            <CardDescription className="text-slate-500">
-              <FormattedMessage id="physio.detail.onlyPhysio" />
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </AppShell>
-    );
-  }
+  const avgPain = useMemo(() => {
+    if (sortedData.length === 0) return 0;
+    const total = sortedData.reduce((acc, d) => acc + d.pain, 0);
+    return Math.round((total / sortedData.length) * 10) / 10;
+  }, [sortedData]);
+
+  const chartDateRangeStr = useMemo(() => {
+    if (sortedData.length === 0) return "No data";
+    const startD = new Date(sortedData[0].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const endD = new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return `${startD} – ${endD}`;
+  }, [sortedData]);
 
   // Handlers
   const handleAssignSubmit = () => {
@@ -870,6 +899,35 @@ export default function PhysioClientDetail() {
     }
   };
 
+  const handleEditClick = (a: any) => {
+    setEditAssignmentId(a.assignment.id);
+    setEditReps(String(a.assignment.reps));
+    setEditSets(String(a.assignment.sets));
+    setEditDailyFrequency(String(a.assignment.dailyFrequency ?? 1));
+    setEditStartDate(a.assignment.startDate);
+    setEditEndDate(a.assignment.endDate);
+    setEditInjuryType(a.assignment.injuryType);
+    setEditExerciseType(a.assignment.exerciseType);
+    setEditExerciseTitle(a.exercise.title);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editAssignmentId) return;
+    updateAssignmentMutation.mutate({
+      id: editAssignmentId,
+      patch: {
+        reps: parseInt(editReps),
+        sets: parseInt(editSets),
+        dailyFrequency: parseInt(editDailyFrequency),
+        startDate: editStartDate,
+        endDate: editEndDate,
+        injuryType: editInjuryType,
+        exerciseType: editExerciseType,
+      },
+    });
+  };
+
   const handleCopyContact = () => {
     const contactInfo = `Name: ${client.data?.name ?? "Patient"}\nEmail: ${client.data?.email ?? "—"}\nPhone: ${client.data?.phoneNumber ?? "—"}`;
     navigator.clipboard.writeText(contactInfo);
@@ -892,25 +950,26 @@ export default function PhysioClientDetail() {
     setAssignStatus("all");
     setAssignCategory("all");
     setAssignInjuryType("all");
+    setAssignExerciseName("all");
     setAssignSearchQuery("");
     setNeedsAttentionOnly(false);
   };
 
-  const avgPain = useMemo(() => {
-    if (sortedData.length === 0) return 0;
-    const total = sortedData.reduce((acc, d) => acc + d.pain, 0);
-    return Math.round((total / sortedData.length) * 10) / 10;
-  }, [sortedData]);
-
-  const chartDateRangeStr = useMemo(() => {
-    if (sortedData.length === 0) return "No data";
-    const startD = new Date(sortedData[0].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-    const endD = new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-    return `${startD} – ${endD}`;
-  }, [sortedData]);
-
   return (
     <AppShell>
+      {!loading && user?.role !== "physiotherapist" && user?.role !== "admin" ? (
+        <Card className="bg-white border border-slate-200/80 shadow-sm max-w-xl mx-auto mt-12">
+          <CardHeader>
+            <CardTitle className="text-slate-900 text-lg font-bold">
+              <FormattedMessage id="common.notAuthorised" />
+            </CardTitle>
+            <CardDescription className="text-slate-500">
+              <FormattedMessage id="physio.detail.onlyPhysio" />
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <Button asChild size="sm" className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 rounded-lg transition-all">
             <Link href="/physio" className="flex items-center gap-1.5">
@@ -1135,11 +1194,16 @@ export default function PhysioClientDetail() {
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
                         <SelectItem value="all">All assignments</SelectItem>
-                        {(clientAssignments.data ?? []).map((a) => (
-                          <SelectItem key={a.assignment.id} value={String(a.assignment.id)}>
-                            {a.exercise.title}
-                          </SelectItem>
-                        ))}
+                        {(clientAssignments.data ?? [])
+                          .filter((a) => {
+                            const todayStr = new Date().toLocaleDateString("en-CA");
+                            return a.assignment.status === "active" && a.assignment.endDate >= todayStr;
+                          })
+                          .map((a) => (
+                            <SelectItem key={a.assignment.id} value={String(a.assignment.id)}>
+                              {a.exercise.title}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1525,6 +1589,23 @@ export default function PhysioClientDetail() {
                   />
                 </div>
               )}
+              {viewMode === "historical" && (
+                <div className="w-full md:w-48 shrink-0">
+                  <Select value={assignExerciseName} onValueChange={setAssignExerciseName}>
+                    <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
+                      <SelectValue placeholder="Exercise Plan" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
+                      <SelectItem value="all">All Exercise Plans</SelectItem>
+                      {uniqueExercises.map((ex) => (
+                        <SelectItem key={ex.id} value={ex.title}>
+                          {ex.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="w-full md:w-32 shrink-0">
                 <Select value={assignCategory} onValueChange={setAssignCategory}>
                   <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
@@ -1573,7 +1654,7 @@ export default function PhysioClientDetail() {
             </div>
 
             {/* Active Filter Pills */}
-            {(assignStatus !== "all" || assignCategory !== "all" || assignInjuryType !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
+            {(assignStatus !== "all" || assignCategory !== "all" || assignInjuryType !== "all" || assignExerciseName !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
               <div className="flex flex-wrap items-center gap-2 py-1">
                 <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active Filters:</span>
                 
@@ -1602,6 +1683,12 @@ export default function PhysioClientDetail() {
                   <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
                     <span>Injury Type: {formatInjuryType(assignInjuryType)}</span>
                     <button onClick={() => setAssignInjuryType("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Injury Type Filter">×</button>
+                  </span>
+                )}
+                {viewMode === "historical" && assignExerciseName !== "all" && (
+                  <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+                    <span>Exercise: {assignExerciseName}</span>
+                    <button onClick={() => setAssignExerciseName("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Exercise Filter">×</button>
                   </span>
                 )}
 
@@ -1783,6 +1870,15 @@ export default function PhysioClientDetail() {
                             }>
                               {isFinished ? "completed" : isCancelled ? "paused" : "active"}
                             </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditClick(a)}
+                              className="h-6 w-6 p-0 text-slate-400 hover:text-indigo-600 rounded-md focus-visible:ring-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              aria-label={`Edit assignment ${a.exercise.title}`}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -2215,6 +2311,116 @@ export default function PhysioClientDetail() {
           </DialogContent>
         </Dialog>
 
+        {/* Dialog: Edit Assignment */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="text-slate-950 font-bold text-lg">Edit Assignment: {editExerciseTitle}</DialogTitle>
+              <DialogDescription className="text-slate-500 text-xs">
+                Modify the parameters for this exercise assignment.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 my-2">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reps</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                    value={editReps}
+                    onChange={(e) => setEditReps(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sets</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                    value={editSets}
+                    onChange={(e) => setEditSets(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">PER DAY</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                    value={editDailyFrequency}
+                    onChange={(e) => setEditDailyFrequency(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date</Label>
+                  <Input
+                    type="date"
+                    className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">End Date</Label>
+                  <Input
+                    type="date"
+                    className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Injury Type</Label>
+                  <Select value={editInjuryType} onValueChange={setEditInjuryType}>
+                    <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                      <SelectValue placeholder="Injury Class" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-slate-200 shadow-md">
+                      {INJURY_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{formatInjuryType(t)}</SelectItem>
+                      ))}
+                      {(customInjTypes.data ?? []).map((type) => (
+                        <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Exercise Type</Label>
+                  <Select value={editExerciseType} onValueChange={setEditExerciseType}>
+                    <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                      <SelectValue placeholder="Exercise Class" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-slate-200 shadow-md">
+                      {EXERCISE_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{formatExerciseType(t)}</SelectItem>
+                      ))}
+                      {(customExTypes.data ?? []).map((type) => (
+                        <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4 gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="border-slate-200 focus:ring-slate-400">Cancel</Button>
+              <Button onClick={handleEditSubmit} disabled={updateAssignmentMutation.isPending} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold focus-visible:ring-[#534AB7]">
+                {updateAssignmentMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {/* Dialog: Schedule Next Visit */}
         <Dialog open={isVisitOpen} onOpenChange={setIsVisitOpen}>
           <DialogContent className="max-w-sm bg-white border border-slate-200 shadow-xl rounded-xl">
@@ -2362,6 +2568,8 @@ export default function PhysioClientDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </>
+      )}
     </AppShell>
   );
 }

@@ -22,6 +22,7 @@ import {
   listFeedbackForPhysio,
   listUsers,
   updateAssignmentStatus,
+  updateAssignment,
   updateExercise,
   updateFeedbackNotes,
   updateUserFields,
@@ -286,6 +287,40 @@ export const physioRouter = router({
           href: "/client/exercises",
         });
       }
+      return { success: true };
+    }),
+  updateAssignment: physioProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        patch: z.object({
+          injuryType: InjuryTypeEnum.optional(),
+          exerciseType: ExerciseTypeEnum.optional(),
+          reps: z.number().int().min(1).max(500).optional(),
+          sets: z.number().int().min(1).max(100).optional(),
+          dailyFrequency: z.number().int().min(1).max(20).optional(),
+          startDate: dateString.optional(),
+          endDate: dateString.optional(),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const assignment = await getAssignmentById(input.id);
+      if (!assignment) throw new TRPCError({ code: "NOT_FOUND" });
+      if (assignment.physiotherapistId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      await updateAssignment(input.id, input.patch);
+
+      // Audit log
+      await createAuditLog({
+        actorId: ctx.user.id,
+        action: "assignment_updated",
+        targetType: "assignment",
+        targetId: input.id,
+        description: `Updated assignment #${input.id}`,
+      });
+
       return { success: true };
     }),
 

@@ -428,6 +428,13 @@ export async function updateAssignmentStatus(
   if (!db) throw new Error("Database not available");
   await db.update(assignments).set({ status }).where(eq(assignments.id, id));
 }
+export async function updateAssignment(
+  id: number,
+  patch: Partial<InsertAssignment>
+) {
+  const db = await getDb();
+  await db.update(assignments).set(patch).where(eq(assignments.id, id));
+}
 
 export async function deleteAssignment(id: number) {
   const db = await getDb();

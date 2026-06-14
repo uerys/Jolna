@@ -143,7 +143,7 @@ function ClientsTab() {
 
   const clientDataList = useMemo(() => {
     if (!clients.data) return [];
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString("en-CA");
     const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
     const yesterdayStr = yesterday.toISOString().slice(0, 10);
     const dayBefore = new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000);
@@ -154,7 +154,7 @@ function ClientsTab() {
       // Find assignments for this client
       const cAssignments = (assignments.data ?? []).filter((a) => a.assignment.clientId === c.id);
       const activeSessions = cAssignments.filter((a) => {
-        return a.assignment.status === "active" && a.assignment.startDate <= todayStr;
+        return a.assignment.status === "active" && a.assignment.endDate >= todayStr;
       });
 
       // Find logs
