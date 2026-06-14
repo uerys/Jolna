@@ -23,10 +23,16 @@
   "status.active": "Active",
   "status.inactive": "Inactive",
 
-  "home.heroTitle": "Rehabilitation, delivered daily.",
-  "home.heroSubtitle": "JOLNA connects physiotherapists with their clients, turning every exercise plan into a daily routine they can actually follow — with bilingual support in English and Khmer.",
+  "home.heroTitle": "Rehabilitate effectively with {accent} recovery plans and clinical tracking.",
+  "home.heroSubtitle": "Jolna is a digital physiotherapy platform designed for a Cambodian clinic. We empower physiotherapists to assign custom protocols and track recovery indices while providing patients with daily guided routines.",
   "home.ctaSignIn": "Sign in to continue",
   "home.ctaContinue": "Go to my dashboard",
+  "home.feature1Title": "Manage clients",
+  "home.feature1Desc": "Create client profiles, register patients, and assign them directly to designated clinic physiotherapists.",
+  "home.feature2Title": "Daily routines",
+  "home.feature2Desc": "Patients review daily prescribed exercise schedules, watch clinic video tutorials, and report daily completion.",
+  "home.feature3Title": "Track recovery",
+  "home.feature3Desc": "Physiotherapists monitor daily pain progress, logs, and calendar schedules to track patient compliance.",
 
   "admin.title": "User Management",
   "admin.subtitle": "Create, verify, and manage accounts across all roles.",

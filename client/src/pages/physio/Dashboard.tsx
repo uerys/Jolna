@@ -399,7 +399,7 @@ function ClientsTab() {
 
             const progressColor = data.progressRate !== null && data.progressRate < 50
               ? "#F59E0B"
-              : "#6366F1";
+              : "#534AB7";
 
             const cardAccent = data.category === "urgent"
               ? "border-l-rose-500"
@@ -497,7 +497,7 @@ function ClientsTab() {
 
                       {/* ── CTA ── */}
                       <div className="flex items-center justify-end shrink-0 md:ml-auto">
-                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#534AB7] group-hover:text-[#534AB7]/90 transition-colors">
                           View details
                           <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
                         </span>
@@ -557,7 +557,7 @@ function ExercisesTab() {
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.exercises" })}</h3>
-          <Button size="sm" onClick={() => setCreating(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm">
+          <Button size="sm" onClick={() => setCreating(true)} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm">
             <Plus className="size-4 mr-1" />
             <FormattedMessage id="physio.exercise.new" />
           </Button>
@@ -696,7 +696,7 @@ function ExerciseDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}><FormattedMessage id="common.cancel" /></Button>
-          <Button onClick={submit} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm"><FormattedMessage id="physio.exercise.save" /></Button>
+          <Button onClick={submit} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"><FormattedMessage id="physio.exercise.save" /></Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -770,7 +770,7 @@ function AssignmentsTab() {
           <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.assignments" })}</h3>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
+              <Button size="sm" className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
             </DialogTrigger>
             <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
               <DialogHeader>
@@ -844,7 +844,7 @@ function AssignmentsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-indigo-600 uppercase tracking-wider font-sans">PER DAY</Label>
+                    <Label className="text-xs font-bold text-[#534AB7] uppercase tracking-wider font-sans">PER DAY</Label>
                     <Input
                       type="number"
                       min={1}
@@ -921,7 +921,7 @@ function AssignmentsTab() {
                 <Button
                   disabled={!clientId || !exerciseId}
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
+                  className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
                   onClick={() =>
                     assign.mutate({
                       clientId: Number(clientId),
@@ -1097,7 +1097,7 @@ function ConfigurationTab() {
             />
             <Button
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg h-9 text-xs"
+              className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg h-9 text-xs"
               disabled={createExMutation.isPending || !newExType.trim()}
               onClick={handleCreateExType}
             >
@@ -1147,7 +1147,7 @@ function ConfigurationTab() {
             />
             <Button
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg h-9 text-xs"
+              className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg h-9 text-xs"
               disabled={createInjMutation.isPending || !newInjType.trim()}
               onClick={handleCreateInjType}
             >

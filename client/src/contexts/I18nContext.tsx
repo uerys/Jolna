@@ -45,6 +45,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [me.data]);
 
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language === "kh" ? "km" : "en";
+    }
+  }, [language]);
+
   const saveToServer = trpc.settings.setLanguagePreference.useMutation();
 
   const setLanguage = useCallback(
@@ -54,9 +60,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         window.localStorage.setItem(LANG_STORAGE_KEY, next);
       }
       // Persist to DB if signed in — ignore errors for unauthenticated visitors.
-      saveToServer.mutate({ language: next }, { onError: () => void 0 });
+      if (me.data) {
+        saveToServer.mutate({ language: next }, { onError: () => void 0 });
+      }
     },
-    [saveToServer],
+    [saveToServer, me.data],
   );
 
   const value = useMemo(() => ({ language, setLanguage }), [language, setLanguage]);

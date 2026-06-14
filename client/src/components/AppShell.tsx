@@ -11,12 +11,12 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { useI18n } from "@/contexts/I18nContext";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Activity, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 type Props = {
   children: ReactNode;
@@ -41,7 +41,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
   const { user, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const intl = useIntl();
-
+  const { language, setLanguage } = useI18n();
   const impersonating = (user as { __impersonating?: boolean } | null)
     ?.__impersonating;
   const utils = trpc.useUtils();
@@ -69,6 +69,15 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
       console.error("Impersonation failed:", error.message);
     },
   });
+
+  const handleSignOutClick = () => {
+    const confirmMsg = language === "kh"
+      ? "តើអ្នកប្រាកដជាចង់ចាកចេញមែនទេ?"
+      : "Are you sure you want to sign out?";
+    if (window.confirm(confirmMsg)) {
+      logout();
+    }
+  };
   const stopImpersonation = trpc.dev.stopImpersonation.useMutation({
     onSuccess: async () => {
       await utils.auth.me.invalidate();
@@ -81,19 +90,27 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-30">
-        <div className="container flex items-center gap-3 py-2.5">
+      <header className="border-b-[0.5px] border-slate-200/80 bg-white/85 backdrop-blur-md sticky top-0 z-30 px-6 py-2">
+        <div className="container flex items-center gap-3 py-1">
           <Link
             href="/"
-            className="flex items-center gap-2 font-semibold text-[15px] tracking-tight text-foreground hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity select-none"
           >
-            <Activity className="size-5 text-primary" />
-            <FormattedMessage id="app.name" />
+            <div className="w-8 h-8 bg-[#534AB7] rounded-[8px] flex items-center justify-center text-white font-extrabold text-sm shadow-sm">
+              J
+            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">JOLNA</span>
           </Link>
 
           <div className="flex-1" />
 
-          <LanguageToggle />
+          <button
+            onClick={() => setLanguage(language === "en" ? "kh" : "en")}
+            className="h-8 border-[0.5px] border-slate-200 bg-white hover:bg-slate-50 px-3.5 rounded-full text-slate-600 font-semibold text-xs transition flex items-center gap-1.5 focus:outline-none"
+            aria-label="Toggle language"
+          >
+            <span>{language === "en" ? "EN" : "KH"}</span>
+          </button>
           {isAuthenticated && <NotificationCenter enabled={isAuthenticated} />}
 
           {isAuthenticated ? (
@@ -176,13 +193,19 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
                   </span>
                 </div>
               </Link>
-              <Button variant="outline" size="sm" onClick={() => logout()}>
-                <LogOut className="size-4 mr-1" />
+              <Button
+                onClick={handleSignOutClick}
+                className="h-8 px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition flex items-center gap-1.5 shadow-sm border-none"
+              >
+                <LogOut className="size-3.5 text-white" />
                 <FormattedMessage id="nav.signOut" />
               </Button>
             </>
           ) : (
-            <Button asChild size="sm">
+            <Button
+              asChild
+              className="h-8 px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition shadow-sm border-none"
+            >
               <a href={getLoginUrl()}>
                 <FormattedMessage id="nav.signIn" />
               </a>

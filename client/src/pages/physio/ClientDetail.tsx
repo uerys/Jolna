@@ -892,7 +892,7 @@ export default function PhysioClientDetail() {
   return (
     <AppShell>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 rounded-lg transition-all">
+          <Button asChild size="sm" className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold shadow-sm focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 rounded-lg transition-all">
             <Link href="/physio" className="flex items-center gap-1.5">
               <ArrowLeft className="size-4" />
               <span>Back to Dashboard</span>
@@ -905,7 +905,7 @@ export default function PhysioClientDetail() {
                 onClick={() => setViewMode("active")}
                 className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
                   viewMode === "active"
-                    ? "bg-white text-indigo-600 shadow-sm font-extrabold"
+                    ? "bg-white text-[#534AB7] shadow-sm font-extrabold"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/30"
                 }`}
               >
@@ -915,7 +915,7 @@ export default function PhysioClientDetail() {
                 onClick={() => setViewMode("historical")}
                 className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
                   viewMode === "historical"
-                    ? "bg-white text-indigo-600 shadow-sm font-extrabold"
+                    ? "bg-white text-[#534AB7] shadow-sm font-extrabold"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/30"
                 }`}
               >
@@ -973,7 +973,7 @@ export default function PhysioClientDetail() {
                 /* Historical mode: direct Copy Contact Info button */
                 <Button
                   onClick={handleCopyContact}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 transition-all"
+                  className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 transition-all"
                 >
                   <ClipboardCopy className="size-4" />
                   <span>Copy Contact Info</span>
@@ -982,7 +982,7 @@ export default function PhysioClientDetail() {
                 /* Active mode: full Quick Actions dropdown */
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 transition-all">
+                    <Button className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 transition-all">
                       <span>Quick Actions</span>
                       <MoreVertical className="size-4" />
                     </Button>
@@ -991,22 +991,22 @@ export default function PhysioClientDetail() {
                     <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Patient Care</DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-[#F2F4F7]" />
                     <DropdownMenuItem onClick={() => setIsAssignOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
-                      <Plus className="size-4 text-indigo-600" />
+                      <Plus className="size-4 text-[#534AB7]" />
                       <span>Assign New Exercise</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsVisitOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
-                      <CalendarIcon className="size-4 text-indigo-600" />
+                      <CalendarIcon className="size-4 text-[#534AB7]" />
                       <span>Schedule Next Visit</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsDiagnosisOpen(true)} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
-                      <Activity className="size-4 text-indigo-600" />
+                      <Activity className="size-4 text-[#534AB7]" />
                       <span>Add Diagnosis</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-[#F2F4F7]" />
                     <DropdownMenuLabel className="text-[10px] text-[#98A2B3] font-semibold px-3 py-1.5 uppercase tracking-widest">Contact Info</DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-[#F2F4F7]" />
                     <DropdownMenuItem onClick={handleCopyContact} className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-[#344054] hover:bg-[#F8FAFC]">
-                      <ClipboardCopy className="size-4 text-indigo-600" />
+                      <ClipboardCopy className="size-4 text-[#534AB7]" />
                       <span>Copy Contact Info</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1054,7 +1054,7 @@ export default function PhysioClientDetail() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-slate-500 hover:text-indigo-600 hover:bg-slate-50 font-semibold text-xs rounded-lg h-8 px-2.5"
+              className="text-slate-500 hover:text-[#534AB7] hover:bg-slate-50 font-semibold text-xs rounded-lg h-8 px-2.5"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowFilters(!showFilters);
@@ -1199,7 +1199,7 @@ export default function PhysioClientDetail() {
                       onClick={() => {
                         toast.success("Filters applied");
                       }}
-                      className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium px-4"
+                      className="h-9 text-xs bg-[#534AB7] hover:bg-[#534AB7]/90 text-white rounded-lg font-medium px-4"
                     >
                       Apply
                     </Button>
@@ -1226,7 +1226,7 @@ export default function PhysioClientDetail() {
                       No active sessions
                     </div>
                     <div className="progress-track mb-1">
-                      <div className="progress-fill" style={{ width: "0%", background: "#6366F1" }} />
+                      <div className="progress-fill" style={{ width: "0%", background: "#534AB7" }} />
                     </div>
                   </>
                 ) : (
@@ -1327,7 +1327,7 @@ export default function PhysioClientDetail() {
               </p>
             </div>
             {sortedData.length > 0 && (
-              <span className="text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-0.5">
+              <span className="text-xs font-medium text-[#534AB7] bg-[#EEEDFE] border border-[#534AB7]/15 rounded-full px-2.5 py-0.5">
                 Clinical overview
               </span>
             )}
@@ -1470,7 +1470,7 @@ export default function PhysioClientDetail() {
               </Badge>
             </div>
             {viewMode === "active" && (
-              <Button size="sm" onClick={() => setIsAssignOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 focus-visible:ring-indigo-600 rounded-lg shrink-0">
+              <Button size="sm" onClick={() => setIsAssignOpen(true)} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold flex items-center gap-1.5 focus-visible:ring-[#534AB7] rounded-lg shrink-0">
                 <Plus className="size-4" />
                 <span>Assign Exercise</span>
               </Button>
@@ -1602,7 +1602,7 @@ export default function PhysioClientDetail() {
 
                 <button
                   onClick={handleResetFilters}
-                  className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors ml-1"
+                  className="text-xs font-bold text-slate-500 hover:text-[#534AB7] transition-colors ml-1"
                 >
                   Clear All
                 </button>
@@ -1620,7 +1620,7 @@ export default function PhysioClientDetail() {
                 <Button
                   size="sm"
                   onClick={handleResetFilters}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 py-1.5 rounded-lg focus-visible:ring-indigo-600 focus-visible:ring-offset-2"
+                  className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs px-4 py-1.5 rounded-lg focus-visible:ring-[#534AB7] focus-visible:ring-offset-2"
                 >
                   Isolate Filters
                 </Button>
@@ -2170,7 +2170,7 @@ export default function PhysioClientDetail() {
 
             <DialogFooter className="mt-4 gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setIsAssignOpen(false)} className="border-slate-200 focus:ring-slate-400">Cancel</Button>
-              <Button onClick={handleAssignSubmit} disabled={assignMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold focus-visible:ring-indigo-600">
+              <Button onClick={handleAssignSubmit} disabled={assignMutation.isPending} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold focus-visible:ring-[#534AB7]">
                 {assignMutation.isPending ? "Assigning..." : "Confirm Assignment"}
               </Button>
             </DialogFooter>
