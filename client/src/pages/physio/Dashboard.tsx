@@ -844,12 +844,12 @@ function AssignmentsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-[#534AB7] uppercase tracking-wider font-sans">PER DAY</Label>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">PER DAY</Label>
                     <Input
                       type="number"
                       min={1}
                       max={20}
-                      className="h-10 mt-1 bg-white border-indigo-200 ring-1 ring-indigo-100 focus:ring-indigo-500 text-indigo-700 font-semibold"
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                       value={dailyFrequency as unknown as string}
                       onChange={(e) => {
                         const v = e.target.value;
