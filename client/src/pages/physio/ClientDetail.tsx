@@ -215,22 +215,19 @@ function formatClinicVisit(visitStr: string | null | undefined): string {
 interface DurationBarProps {
   startDate: string;
   endDate: string;
-  loggedSessions: number;
-  totalExpectedSessions: number;
-  dailyFrequency: number;
 }
 
-function DurationBar({ startDate, endDate, loggedSessions, totalExpectedSessions, dailyFrequency }: DurationBarProps) {
-  const progressPercent = totalExpectedSessions > 0
-    ? Math.min(100, Math.round((loggedSessions / totalExpectedSessions) * 100))
-    : 0;
+function DurationBar({ startDate, endDate }: DurationBarProps) {
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
-  const barColor =
-    progressPercent >= 80
-      ? "#10B981"
-      : progressPercent >= 50
-      ? "#F59E0B"
-      : "#6366F1";
+  const total = Math.max(1, differenceInDays(end, start) + 1);
+  const elapsed = Math.max(0, Math.min(total, differenceInDays(now, start) + 1));
+  const progressPercent = Math.round((elapsed / total) * 100);
+
+  const barColor = "#6366F1"; // Consistent purple for duration
 
   return (
     <div className="space-y-2">
@@ -705,6 +702,14 @@ export default function PhysioClientDetail() {
         const toTime = new Date(historyDateTo + "T23:59:59").getTime();
         combined = combined.filter((r) => new Date(r.feedback.submittedAt).getTime() <= toTime);
       }
+    } else if (viewMode === "active") {
+      // In active view, only show logs for assignments that are currently active
+      const todayStrLocal = new Date().toLocaleDateString("en-CA");
+      combined = combined.filter((r) => {
+        const assignment = assignmentsList.find(a => a.assignment.id === r.assignment.id);
+        if (!assignment) return false;
+        return assignment.assignment.status === "active" && assignment.assignment.endDate >= todayStrLocal;
+      });
     }
 
     if (noteSearchQuery.trim()) {
@@ -1994,13 +1999,10 @@ export default function PhysioClientDetail() {
                         })()}
                       </div>
 
-                      {/* ── Updated DurationBar call ── */}
+                      {/* ── Updated DurationBar call (Now shows temporal duration) ── */}
                       <DurationBar
                         startDate={a.assignment.startDate}
                         endDate={a.assignment.endDate}
-                        loggedSessions={totalLoggedSessions}
-                        totalExpectedSessions={totalExpectedSessions}
-                        dailyFrequency={freq}
                       />
                     </div>
                   );

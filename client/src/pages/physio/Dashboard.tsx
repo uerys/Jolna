@@ -447,14 +447,20 @@ function ClientsTab() {
 
                       {/* ── Col 2: Pain Level ── */}
                       <div className="flex items-center gap-2 md:w-24 md:justify-center">
-                        <div className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}>
-                          {data.latestPain !== null && data.latestPain >= 7 && (
-                            <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
-                          )}
-                          <span className="tabular-nums">
-                            {data.latestPain !== null ? `${data.latestPain}/10` : "—"}
-                          </span>
-                        </div>
+                        {data.activeCount > 0 ? (
+                          <div className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}>
+                            {data.latestPain !== null && data.latestPain >= 7 && (
+                              <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
+                            )}
+                            <span className="tabular-nums">
+                              {data.latestPain !== null ? `${data.latestPain}/10` : "—"}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="h-9 w-9 flex items-center justify-center bg-[#F2F4F7] text-[#98A2B3] rounded-lg border border-[#E4E7EC]">
+                            <span className="text-sm font-bold">—</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* ── Col 3: Progress ── */}
