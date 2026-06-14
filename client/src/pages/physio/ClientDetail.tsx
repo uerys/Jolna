@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, addDays, differenceInDays } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -214,18 +214,22 @@ function formatClinicVisit(visitStr: string | null | undefined): string {
 interface DurationBarProps {
   startDate: string;
   endDate: string;
+  loggedSessions: number;
+  totalExpectedSessions: number;
+  dailyFrequency: number;
 }
 
-function DurationBar({ startDate, endDate }: DurationBarProps) {
-  const start = new Date(startDate + "T00:00:00");
-  const end = new Date(endDate + "T00:00:00");
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+function DurationBar({ startDate, endDate, loggedSessions, totalExpectedSessions, dailyFrequency }: DurationBarProps) {
+  const progressPercent = totalExpectedSessions > 0
+    ? Math.min(100, Math.round((loggedSessions / totalExpectedSessions) * 100))
+    : 0;
 
-  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 864e5));
-  const elapsedDays = Math.max(0, Math.round((now.getTime() - start.getTime()) / 864e5));
-  const progressPercent = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
-  const daysRemaining = Math.max(0, Math.round((end.getTime() - now.getTime()) / 864e5));
+  const barColor =
+    progressPercent >= 80
+      ? "#10B981"
+      : progressPercent >= 50
+      ? "#F59E0B"
+      : "#6366F1";
 
   return (
     <div className="space-y-2">
@@ -239,15 +243,20 @@ function DurationBar({ startDate, endDate }: DurationBarProps) {
           {formatDateShort(endDate)}
         </span>
       </div>
-      <div className="progress-track" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+      <div
+        className="progress-track"
+        role="progressbar"
+        aria-valuenow={progressPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
           className="progress-fill"
-          style={{ width: `${progressPercent}%`, background: "#6366F1" }}
+          style={{ width: `${progressPercent}%`, background: barColor }}
         />
       </div>
-      <div className="flex justify-between text-[11px] text-[#98A2B3] font-medium">
-        <span>{progressPercent}% elapsed</span>
-        <span>{daysRemaining} day{daysRemaining !== 1 ? "s" : ""} left</span>
+      <div className="flex justify-end text-[11px] text-[#98A2B3] font-medium">
+        <span>{progressPercent}% complete</span>
       </div>
     </div>
   );
@@ -343,12 +352,11 @@ export default function PhysioClientDetail() {
   const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
 
-
   // New Exercise Form States
   const [newExerciseId, setNewExerciseId] = useState<string>("");
   const [newSets, setNewSets] = useState<string>("1");
   const [newReps, setNewReps] = useState<string>("10");
-  const [newStartDate, setNewStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [newStartDate, setNewStartDate] = useState<string>(new Date().toLocaleDateString("en-CA"));
   const [newEndDate, setNewEndDate] = useState<string>("");
   const [newInjuryType, setNewInjuryType] = useState<string>("other");
   const [newExerciseType, setNewExerciseType] = useState<string>("other");
@@ -399,11 +407,11 @@ export default function PhysioClientDetail() {
   );
 
   const fromQueryParam = useMemo(() => {
-    return filterDateFrom ? filterDateFrom.toISOString().slice(0, 10) : undefined;
+    return filterDateFrom ? filterDateFrom.toLocaleDateString("en-CA") : undefined;
   }, [filterDateFrom]);
 
   const toQueryParam = useMemo(() => {
-    return filterDateTo ? filterDateTo.toISOString().slice(0, 10) : undefined;
+    return filterDateTo ? filterDateTo.toLocaleDateString("en-CA") : undefined;
   }, [filterDateTo]);
 
   const feedbackEnriched = trpc.physio.listClientFeedbackEnriched.useQuery(
@@ -438,7 +446,7 @@ export default function PhysioClientDetail() {
       setNewExerciseId("");
       setNewSets("1");
       setNewReps("10");
-      setNewStartDate(new Date().toISOString().slice(0, 10));
+      setNewStartDate(new Date().toLocaleDateString("en-CA"));
       setNewEndDate("");
       setNewInjuryType("other");
       setNewExerciseType("other");
@@ -518,11 +526,9 @@ export default function PhysioClientDetail() {
     },
   });
 
-
-
   const assignmentRecords = useMemo(() => {
     let list = clientAssignments.data ?? [];
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString("en-CA");
 
     if (viewMode === "active") {
       list = list.filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr);
@@ -582,13 +588,12 @@ export default function PhysioClientDetail() {
   }, [clientAssignments.data]);
 
   const historyRecords = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString("en-CA");
     const assignmentsList = clientAssignments.data ?? [];
     const logsList = feedbackEnriched.data ?? [];
 
     const missedLogs: any[] = [];
     if (showMissedDays) {
-      // Loop through every assignment
       assignmentsList.forEach((a) => {
         const start = new Date(a.assignment.startDate + "T00:00:00");
         const end = new Date(a.assignment.endDate + "T00:00:00");
@@ -596,17 +601,15 @@ export default function PhysioClientDetail() {
 
         const current = new Date(start);
         while (current <= end) {
-          // Only show missed rows for dates that have already passed (current < today)
           if (current >= today) {
             break;
           }
 
-          const currentDateStr = current.toISOString().slice(0, 10);
+          const currentDateStr = current.toLocaleDateString("en-CA");
           
-          // Check if a log exists for this assignmentId on this date
           const logExists = logsList.some((l) => {
-            const logDateStr = new Date(l.feedback.submittedAt).toISOString().slice(0, 10);
-            return l.feedback.assignmentId === a.assignment.id && logDateStr === currentDateStr;
+            const logDateStr = new Date(l.feedback.submittedAt).toLocaleDateString("en-CA");
+            return l.assignment.id === a.assignment.id && logDateStr === currentDateStr;
           });
 
           if (!logExists) {
@@ -676,11 +679,9 @@ export default function PhysioClientDetail() {
     }
 
     if (highPainOnly) {
-      // Missed rows should still appear alongside the high pain rows
       combined = combined.filter((r) => r.feedback.isMissed || (r.feedback.painScore !== null && r.feedback.painScore >= 7));
     }
 
-    // Sort all rows by date descending
     combined.sort((a, b) => new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime());
 
     return combined;
@@ -706,13 +707,21 @@ export default function PhysioClientDetail() {
   }, [feedbackEnriched.data, viewMode]);
 
   const activeStats = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const today = new Date(todayStr + "T00:00:00");
-    const DAY_MS = 24 * 60 * 60 * 1000;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Only assignments that have already started
     const activeSessions = (clientAssignments.data ?? []).filter((a) => {
-      return a.assignment.status === "active" && a.assignment.startDate <= todayStr;
+      const todayStr = new Date().toLocaleDateString("en-CA");
+      
+      if (selectedAssignment !== "all" && String(a.assignment.id) !== selectedAssignment) {
+        return false;
+      }
+
+      return (
+        a.assignment.status === "active" &&
+        a.assignment.startDate <= todayStr &&
+        a.assignment.endDate >= todayStr
+      );
     });
 
     const total = activeSessions.length;
@@ -722,35 +731,30 @@ export default function PhysioClientDetail() {
 
     const allLogs = feedbackEnriched.data ?? [];
     let totalExpectedDays = 0;
-    let creditSum = 0; // fractional: 0.5 means 1 log when target is 2
+    let creditSum = 0;
 
     activeSessions.forEach((a) => {
       const start = new Date(a.assignment.startDate + "T00:00:00");
       const end = new Date(a.assignment.endDate + "T00:00:00");
       const effectiveEnd = end < today ? end : today;
-      const expectedDays = Math.max(
-        0,
-        Math.round((effectiveEnd.getTime() - start.getTime()) / DAY_MS) + 1
-      );
+      
+      const expectedDays = Math.max(1, differenceInDays(effectiveEnd, start) + 1);
       totalExpectedDays += expectedDays;
 
       const freq = a.assignment.dailyFrequency ?? 1;
-
-      // Build a per-day count map for this assignment
       const dayCountMap = new Map<string, number>();
+      
       allLogs.forEach((f) => {
-        if (f.feedback.assignmentId !== a.assignment.id) return;
-        const dayStr = new Date(f.feedback.submittedAt).toISOString().slice(0, 10);
+        if (f.assignment.id !== a.assignment.id) return;
+        const dayStr = new Date(f.feedback.submittedAt).toLocaleDateString("en-CA");
         dayCountMap.set(dayStr, (dayCountMap.get(dayStr) ?? 0) + 1);
       });
 
-      // Proportional credit per day: min(actual, target) / target
-      const cursor = new Date(start);
       for (let i = 0; i < expectedDays; i++) {
-        const dayStr = cursor.toISOString().slice(0, 10);
+        const cursor = addDays(start, i);
+        const dayStr = cursor.toLocaleDateString("en-CA");
         const logsThisDay = dayCountMap.get(dayStr) ?? 0;
         creditSum += Math.min(logsThisDay, freq) / freq;
-        cursor.setDate(cursor.getDate() + 1);
       }
     });
 
@@ -759,39 +763,54 @@ export default function PhysioClientDetail() {
       : null;
 
     return { total, loggedDays: Math.round(creditSum), expectedDays: totalExpectedDays, rate };
-  }, [clientAssignments.data, feedbackEnriched.data]);
+  }, [clientAssignments.data, feedbackEnriched.data, selectedAssignment]);
 
   const lifetimeStats = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const today = new Date(todayStr + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const assignmentsList = clientAssignments.data ?? [];
-    const logsList = feedbackEnriched.data ?? [];
+    const allLogs = feedbackEnriched.data ?? [];
 
     let totalExpectedDays = 0;
-    let totalLoggedDays = 0;
+    let creditSum = 0;
 
     assignmentsList.forEach((a) => {
       const start = new Date(a.assignment.startDate + "T00:00:00");
       const end = new Date(a.assignment.endDate + "T00:00:00");
-      const upperBound = new Date(Math.min(today.getTime(), end.getTime()));
+      const upperBound = end < today ? end : today;
 
       if (start <= upperBound) {
-        const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
+        const expectedDays = Math.max(1, differenceInDays(upperBound, start) + 1);
         totalExpectedDays += expectedDays;
 
-        const logsForA = logsList.filter((f) => {
-          if (f.feedback.assignmentId !== a.assignment.id) return false;
-          const logDate = new Date(f.feedback.submittedAt + "T00:00:00");
-          return logDate >= start && logDate <= upperBound;
+        const freq = a.assignment.dailyFrequency ?? 1;
+        const dayCountMap = new Map<string, number>();
+
+        allLogs.forEach((f) => {
+          if (f.assignment.id !== a.assignment.id) return;
+          const dayStr = new Date(f.feedback.submittedAt).toLocaleDateString("en-CA");
+          dayCountMap.set(dayStr, (dayCountMap.get(dayStr) ?? 0) + 1);
         });
 
-        const uniqueLoggedDates = new Set(logsForA.map(l => new Date(l.feedback.submittedAt).toISOString().slice(0, 10)));
-        totalLoggedDays += uniqueLoggedDates.size;
+        for (let i = 0; i < expectedDays; i++) {
+          const cursor = addDays(start, i);
+          const dayStr = cursor.toLocaleDateString("en-CA");
+          const logsThisDay = dayCountMap.get(dayStr) ?? 0;
+          creditSum += Math.min(logsThisDay, freq) / freq;
+        }
       }
     });
 
-    const rate = totalExpectedDays > 0 ? Math.round((totalLoggedDays / totalExpectedDays) * 100) : 0;
-    return { total: totalExpectedDays, completed: totalLoggedDays, rate };
+    const rate = totalExpectedDays > 0 
+      ? Math.round((creditSum / totalExpectedDays) * 100) 
+      : 0;
+
+    return { 
+      total: totalExpectedDays, 
+      completed: Math.round(creditSum), 
+      rate 
+    };
   }, [clientAssignments.data, feedbackEnriched.data]);
 
   const clientInfoFields = useMemo(() => {
@@ -802,6 +821,7 @@ export default function PhysioClientDetail() {
       { icon: CalendarDays, label: "Next Clinic Visit", value: formatClinicVisit(client.data?.nextClinicVisit) }
     ];
   }, [client.data]);
+
   const sortedData = useMemo(() => {
     return [...chartData].sort(
       (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
@@ -868,7 +888,6 @@ export default function PhysioClientDetail() {
     });
   };
 
-
   const handleResetFilters = () => {
     setAssignStatus("all");
     setAssignCategory("all");
@@ -889,6 +908,7 @@ export default function PhysioClientDetail() {
     const endD = new Date(sortedData[sortedData.length - 1].submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     return `${startD} – ${endD}`;
   }, [sortedData]);
+
   return (
     <AppShell>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -970,7 +990,6 @@ export default function PhysioClientDetail() {
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
               {viewMode === "historical" ? (
-                /* Historical mode: direct Copy Contact Info button */
                 <Button
                   onClick={handleCopyContact}
                   className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 transition-all"
@@ -979,7 +998,6 @@ export default function PhysioClientDetail() {
                   <span>Copy Contact Info</span>
                 </Button>
               ) : (
-                /* Active mode: full Quick Actions dropdown */
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 text-white shadow-sm font-semibold flex items-center gap-2 py-2 px-4 rounded-lg focus-visible:ring-2 focus-visible:ring-[#534AB7] focus-visible:ring-offset-2 transition-all">
@@ -1066,7 +1084,6 @@ export default function PhysioClientDetail() {
           {showFilters && (
             <CardContent className="pt-6 space-y-6">
               {viewMode === "historical" ? (
-                /* Historical Mode Filters */
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="flex-1 min-w-[200px]">
                     <Label className="text-[11px] font-medium tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
@@ -1106,9 +1123,7 @@ export default function PhysioClientDetail() {
                   </div>
                 </div>
               ) : (
-                /* Active Mode Filters */
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                  {/* 1. Assignment Filter */}
                   <div className="flex-1 min-w-[200px]">
                     <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                       <ClipboardCopy className="size-3 text-slate-400" />
@@ -1129,7 +1144,6 @@ export default function PhysioClientDetail() {
                     </Select>
                   </div>
 
-                  {/* 2. Date Range From (Calendar Popover) */}
                   <div className="flex flex-col gap-1.5 w-full sm:w-36 shrink-0">
                     <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                       <CalendarDays className="size-3 text-slate-400" />
@@ -1155,7 +1169,6 @@ export default function PhysioClientDetail() {
                     </Popover>
                   </div>
 
-                  {/* 3. Date Range To (Calendar Popover) */}
                   <div className="flex flex-col gap-1.5 w-full sm:w-36 shrink-0">
                     <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                       <CalendarDays className="size-3 text-slate-400" />
@@ -1181,7 +1194,6 @@ export default function PhysioClientDetail() {
                     </Popover>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0 self-end">
                     <Button
                       variant="outline"
@@ -1211,7 +1223,6 @@ export default function PhysioClientDetail() {
         </Card>
 
         <div className={`grid grid-cols-1 gap-4 mb-6 ${viewMode === "historical" || (viewMode === "active" && selectedAssignment === "all") ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
-          {/* Card 1: Daily Adherence Percentage (Only shown in Active Treatments view!) */}
           {viewMode === "active" && selectedAssignment !== "all" && (
             <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
               <CardHeader className="pb-2">
@@ -1249,7 +1260,7 @@ export default function PhysioClientDetail() {
               </CardContent>
             </Card>
           )}
-          {/* Card 2: Active Exercises / Assigned Exercises */}
+
           <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
@@ -1259,7 +1270,7 @@ export default function PhysioClientDetail() {
             <CardContent>
               <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
                 {(() => {
-                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const todayStr = new Date().toLocaleDateString("en-CA");
                   return viewMode === "historical"
                     ? clientAssignments.data?.length ?? 0
                     : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
@@ -1269,15 +1280,45 @@ export default function PhysioClientDetail() {
                 {viewMode === "historical"
                   ? "Including completed & discontinued exercises"
                   : (() => {
-                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const todayStr = new Date().toLocaleDateString("en-CA");
                       const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
                       return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
                     })()}
               </p>
+              {viewMode === "active" && (() => {
+                const logs = feedbackEnriched.data ?? [];
+                if (logs.length === 0) return (
+                  <p className="text-[10px] text-[#98A2B3] mt-2 italic">No logs submitted yet.</p>
+                );
+                const latest = [...logs].sort((a, b) =>
+                  new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime()
+                )[0];
+                const submittedAt = new Date(latest.feedback.submittedAt);
+                const now = new Date();
+                const diffMs = now.getTime() - submittedAt.getTime();
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMins / 60);
+                const diffDays = Math.floor(diffHours / 24);
+                const timeAgo = diffDays > 0
+                  ? `${diffDays}d ago`
+                  : diffHours > 0
+                  ? `${diffHours}h ago`
+                  : diffMins > 0
+                  ? `${diffMins}m ago`
+                  : "Just now";
+                return (
+                  <div className="mt-3 pt-2 border-t border-slate-100">
+                    <span className="text-[9px] text-[#98A2B3] uppercase tracking-widest font-semibold block mb-0.5">Last logged</span>
+                    <span className="text-[11px] text-[#101828] font-semibold block truncate" title={latest.exercise.title}>
+                      {latest.exercise.title}
+                    </span>
+                    <span className="text-[10px] text-[#667085]">{timeAgo} · {submittedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
-          {/* Card 3: Latest Pain Level / Avg Pain Index */}
           <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
@@ -1316,12 +1357,11 @@ export default function PhysioClientDetail() {
           </Card>
         </div>
 
-
-        {/* Pain Trend Card (Below) */}
+        {/* Pain Trend Card */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <CardTitle className="text-sm font-medium text-slate-900 font-sans">Pain trend</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900 font-sans">Pain Chart</CardTitle>
               <p className="text-xs text-slate-400 font-normal">
                 {chartDateRangeStr}
               </p>
@@ -1333,7 +1373,6 @@ export default function PhysioClientDetail() {
             )}
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
-            {/* Summary Stat Pills */}
             {sortedData.length > 0 && (
               (() => {
                 const latestReadingVal = sortedData[sortedData.length - 1].pain;
@@ -1355,7 +1394,7 @@ export default function PhysioClientDetail() {
                     </div>
                     <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
                       <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">Peak value</span>
-                      <span className="text-[#101828] text-sm font-semibold tabular-nums">{peakValueVal}/10</span>
+                      <span className="text-[#101828] text-sm font-semibold tabular-nums">{latestReadingVal}/10</span>
                     </div>
                     <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
                       <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">3-day average</span>
@@ -1366,7 +1405,6 @@ export default function PhysioClientDetail() {
               })()
             )}
 
-            {/* Recharts area chart container */}
             <div className="h-80 md:h-[24rem] lg:h-[28rem] w-full flex flex-col justify-between">
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1442,7 +1480,6 @@ export default function PhysioClientDetail() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Horizontal Severity Bar aligned with Recharts grid */}
               <div className="space-y-1.5 pt-4 ml-[34px] mr-[24px] shrink-0">
                 <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" />
                 <div className="flex justify-between text-[10px] font-medium text-[#98A2B3]">
@@ -1452,13 +1489,10 @@ export default function PhysioClientDetail() {
                 </div>
               </div>
             </div>
-
-
           </CardContent>
         </Card>
 
-        {/* Exercises Grid with visual progress bar */}
-        {/* Exercises Grid with visual progress bar */}
+        {/* Exercises Grid */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
@@ -1477,9 +1511,8 @@ export default function PhysioClientDetail() {
             )}
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
-            {/* Sleek, Horizontal Filter Bar for Exercise Assignments */}
+            {/* Filter Bar */}
             <div className="bg-slate-50 border border-slate-200/80 p-2 rounded-lg flex flex-col md:flex-row items-center gap-2 text-xs">
-              {/* Search Exercise Plans */}
               {viewMode === "active" && (
                 <div className="relative flex-1 w-full min-w-[150px]">
                   <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
@@ -1492,25 +1525,6 @@ export default function PhysioClientDetail() {
                   />
                 </div>
               )}
-
-              {/* Status Select */}
-              {viewMode === "active" && (
-                <div className="w-full md:w-32 shrink-0">
-                  <Select value={assignStatus} onValueChange={setAssignStatus}>
-                    <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="completed">Archived</SelectItem>
-                      <SelectItem value="cancelled">Paused</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Category Select */}
               <div className="w-full md:w-32 shrink-0">
                 <Select value={assignCategory} onValueChange={setAssignCategory}>
                   <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
@@ -1529,7 +1543,6 @@ export default function PhysioClientDetail() {
                 </Select>
               </div>
 
-              {/* Injury Type Select */}
               <div className="w-full md:w-36 shrink-0">
                 <Select value={assignInjuryType} onValueChange={setAssignInjuryType}>
                   <SelectTrigger className="h-8 bg-white border-slate-200 text-slate-700 text-xs rounded-full">
@@ -1546,7 +1559,6 @@ export default function PhysioClientDetail() {
                 </Select>
               </div>
 
-              {/* Needs Attention Toggle */}
               {viewMode === "active" && (
                 <div className="flex items-center gap-2 border-l border-slate-200 pl-2 shrink-0 w-full md:w-auto justify-between md:justify-start h-8">
                   <span className="text-slate-500 font-medium whitespace-nowrap text-[11px]">Needs Attention</span>
@@ -1560,7 +1572,7 @@ export default function PhysioClientDetail() {
               )}
             </div>
 
-            {/* Active Filter Pills (Soft Blue Backgrounds for Active States) */}
+            {/* Active Filter Pills */}
             {(assignStatus !== "all" || assignCategory !== "all" || assignInjuryType !== "all" || assignSearchQuery.trim() !== "" || needsAttentionOnly) && (
               <div className="flex flex-wrap items-center gap-2 py-1">
                 <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active Filters:</span>
@@ -1574,7 +1586,7 @@ export default function PhysioClientDetail() {
 
                 {assignStatus !== "all" && (
                   <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
-                    <span>Status: {assignStatus === "completed" ? "Archived" : assignStatus === "cancelled" ? "Paused" : "Active"}</span>
+                    <span>Status: {assignStatus === "completed" ? "Completed" : "Active"}</span>
                     <button onClick={() => setAssignStatus("all")} className="hover:text-indigo-900 font-bold leading-none ml-0.5" aria-label="Clear Status Filter">×</button>
                   </span>
                 )}
@@ -1626,7 +1638,6 @@ export default function PhysioClientDetail() {
                 </Button>
               </div>
             ) : viewMode === "historical" ? (
-              /* Historical View: Detailed Protocols Table */
               <div className="overflow-x-auto rounded-lg border border-slate-200/60 bg-white">
                 <Table>
                   <TableHeader className="bg-slate-50">
@@ -1637,12 +1648,11 @@ export default function PhysioClientDetail() {
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Protocol Window</TableHead>
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Sets × Reps</TableHead>
                       <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Status</TableHead>
-                      {/* Actions column hidden in historical record view */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {assignmentRecords.map((a) => {
-                      const todayStr = new Date().toISOString().slice(0, 10);
+                      const todayStr = new Date().toLocaleDateString("en-CA");
                       const isFinished = a.assignment.status === "completed" || a.assignment.endDate < todayStr;
                       const isCancelled = a.assignment.status === "cancelled";
                       const statusBadgeClass = 
@@ -1672,7 +1682,6 @@ export default function PhysioClientDetail() {
                               {statusLabel}
                             </Badge>
                           </TableCell>
-                      {/* Actions cell hidden in historical record view */}
                         </TableRow>
                       );
                     })}
@@ -1726,7 +1735,7 @@ export default function PhysioClientDetail() {
                     );
                   }
 
-                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const todayStr = new Date().toLocaleDateString("en-CA");
                   const isFinished = a.assignment.status === "completed" || a.assignment.endDate < todayStr;
                   const isCancelled = a.assignment.status === "cancelled";
 
@@ -1739,6 +1748,22 @@ export default function PhysioClientDetail() {
                   }
 
                   const cardClass = `border border-slate-200/75 ${accentClass} rounded-xl p-4 bg-white hover:shadow-md transition-all flex flex-col justify-between group`;
+
+                  // ── Compute sessions for DurationBar ──────────────────────
+                  const assignStart = new Date(a.assignment.startDate + "T00:00:00");
+                  const assignEnd = new Date(a.assignment.endDate + "T00:00:00");
+                  const freq = a.assignment.dailyFrequency ?? 1;
+
+                  // Total expected sessions across the full duration
+                  const totalDurationDays = Math.max(1, differenceInDays(assignEnd, assignStart) + 1);
+                  const totalExpectedSessions = totalDurationDays * freq;
+
+                  // Count actual logs for this assignment (fixed: f.assignment.id)
+                  const logsForThisCard = (feedbackEnriched.data ?? []).filter(
+                    f => f.assignment.id === a.assignment.id
+                  );
+                  const totalLoggedSessions = logsForThisCard.length;
+                  // ──────────────────────────────────────────────────────────
 
                   return (
                     <div key={a.assignment.id} className={cardClass}>
@@ -1798,30 +1823,40 @@ export default function PhysioClientDetail() {
                             return val && val !== "other" && val !== "—" && val !== "";
                           });
 
-                          // Per-card proportional adherence using dailyFrequency
-                          const todayStr = new Date().toISOString().slice(0, 10);
-                          const today = new Date(todayStr + "T00:00:00");
-                          const start = new Date(a.assignment.startDate + "T00:00:00");
-                          const end = new Date(a.assignment.endDate + "T00:00:00");
-                          const upperBound = end < today ? end : today;
-                          const expectedDays = Math.max(1, Math.round((upperBound.getTime() - start.getTime()) / 864e5) + 1);
-                          const freq = a.assignment.dailyFrequency ?? 1;
+                          // Per-card proportional adherence (Timezone Fixed)
+                          const cardLocalToday = new Date();
+                          cardLocalToday.setHours(0, 0, 0, 0); // Anchor to local midnight
+                          const startLocal = new Date(a.assignment.startDate + "T00:00:00");
+                          const endLocal = new Date(a.assignment.endDate + "T00:00:00");
+                          const freqLocal = a.assignment.dailyFrequency ?? 1;
 
-                          // Build per-day log count map
-                          const dayCountMap = new Map<string, number>();
-                          (feedbackEnriched.data ?? []).forEach((f) => {
-                            if (f.feedback.assignmentId !== a.assignment.id) return;
-                            const d = new Date(f.feedback.submittedAt).toISOString().slice(0, 10);
-                            dayCountMap.set(d, (dayCountMap.get(d) ?? 0) + 1);
-                          });
+                          const upperBound = endLocal < cardLocalToday ? endLocal : cardLocalToday;
+                          let adherenceRate: number | null = null;
 
-                          // Proportional credit sum
-                          let creditSum = 0;
-                          for (let d = new Date(start); d <= upperBound; d.setDate(d.getDate() + 1)) {
-                            const dStr = d.toISOString().slice(0, 10);
-                            creditSum += Math.min(dayCountMap.get(dStr) ?? 0, freq) / freq;
+                          if (startLocal <= upperBound) {
+                            const elapsedDays = Math.max(1, differenceInDays(upperBound, startLocal) + 1);
+
+                            const dayCountMap = new Map<string, number>();
+                            (feedbackEnriched.data ?? []).forEach((f) => {
+                              if (f.assignment.id !== a.assignment.id) return;
+                              // Force local date string extraction
+                              const d = new Date(f.feedback.submittedAt).toLocaleDateString("en-CA");
+                              dayCountMap.set(d, (dayCountMap.get(d) ?? 0) + 1);
+                            });
+
+                            const hasAnyLogs = dayCountMap.size > 0;
+
+                            let creditSum = 0;
+                            for (let i = 0; i < elapsedDays; i++) {
+                              const cursor = addDays(startLocal, i);
+                              const dStr = cursor.toLocaleDateString("en-CA");
+                              creditSum += Math.min(dayCountMap.get(dStr) ?? 0, freqLocal) / freqLocal;
+                            }
+
+                            if (hasAnyLogs) {
+                              adherenceRate = Math.round((creditSum / elapsedDays) * 100);
+                            }
                           }
-                          const adherenceRate = Math.round((creditSum / expectedDays) * 100);
 
                           return (
                             <>
@@ -1836,22 +1871,26 @@ export default function PhysioClientDetail() {
                                 </div>
                               )}
 
-                              {/* Exercise Adherence Info Section */}
+                              {/* Exercise Adherence Bar */}
                               <div className="mt-3 border-t border-slate-100 pt-2.5">
                                 <div className="flex items-center justify-between text-xs mb-1.5">
                                   <span className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">Exercise Adherence</span>
                                   <span className="font-bold text-[#344054]">
-                                    {adherenceRate}%
-                                    <span className="font-normal text-[#667085] ml-1">({freq}×/day target)</span>
+                                    {adherenceRate === null
+                                      ? <span className="font-normal text-[#98A2B3] italic">No data yet</span>
+                                      : <>{adherenceRate}%<span className="font-normal text-[#667085] ml-1">({freqLocal}×/day target)</span></>
+                                    }
                                   </span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-1 relative overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full ${
-                                      adherenceRate >= 80 ? "bg-emerald-500" : adherenceRate >= 50 ? "bg-amber-500" : "bg-rose-500"
-                                    }`} 
-                                    style={{ width: `${adherenceRate}%` }} 
-                                  />
+                                  {adherenceRate !== null && (
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        adherenceRate >= 80 ? "bg-emerald-500" : adherenceRate >= 50 ? "bg-amber-500" : "bg-rose-500"
+                                      }`}
+                                      style={{ width: `${adherenceRate}%` }}
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </>
@@ -1859,7 +1898,14 @@ export default function PhysioClientDetail() {
                         })()}
                       </div>
 
-                      <DurationBar startDate={a.assignment.startDate} endDate={a.assignment.endDate} />
+                      {/* ── Updated DurationBar call ── */}
+                      <DurationBar
+                        startDate={a.assignment.startDate}
+                        endDate={a.assignment.endDate}
+                        loggedSessions={totalLoggedSessions}
+                        totalExpectedSessions={totalExpectedSessions}
+                        dailyFrequency={freq}
+                      />
                     </div>
                   );
                 })}
@@ -1885,10 +1931,7 @@ export default function PhysioClientDetail() {
               </div>
             ) : (
               <>
-                {/* Compact, horizontal filter bar */}
                 <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-lg flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-
-                  {/* Search Bar for notes */}
                   {viewMode === "active" && (
                     <div className="relative w-full md:w-1/2">
                       <Search className="absolute left-2.5 top-2.5 size-3.5 text-slate-400" />
@@ -1902,7 +1945,6 @@ export default function PhysioClientDetail() {
                     </div>
                   )}
 
-                  {/* Dropdown for Exercise Template */}
                   {viewMode === "historical" && (
                     <div className="w-full md:w-1/3">
                       <Select value={historyExerciseId} onValueChange={setHistoryExerciseId}>
@@ -1921,7 +1963,6 @@ export default function PhysioClientDetail() {
                     </div>
                   )}
 
-                  {/* Date Range Selector */}
                   {viewMode === "historical" && (
                     <div className="flex items-center gap-1.5 w-full md:w-1/3">
                       <Input
@@ -1943,7 +1984,6 @@ export default function PhysioClientDetail() {
                   )}
 
                   <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto">
-                    {/* High Pain Alert Toggle */}
                     <div className={`flex items-center justify-between gap-3 shrink-0 h-8 ${viewMode === "historical" ? "border-l border-slate-200 pl-3" : ""}`}>
                       <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap">High Pain (≥7)</span>
                       <Switch
@@ -1954,7 +1994,6 @@ export default function PhysioClientDetail() {
                       />
                     </div>
 
-                    {/* Show Missed Days Toggle */}
                     <div className="flex items-center justify-between gap-3 shrink-0 h-8 border-l border-slate-200 pl-3">
                       <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap">Show missed days</span>
                       <Switch
@@ -1967,7 +2006,6 @@ export default function PhysioClientDetail() {
                   </div>
                 </div>
 
-                {/* Table Container */}
                 {historyRecords.length === 0 ? (
                   <p className="text-sm font-semibold text-slate-400 text-center py-8">
                     No session logs match the selected filter criteria.
@@ -2033,20 +2071,20 @@ export default function PhysioClientDetail() {
                                   <Badge className="bg-slate-50 text-slate-500 hover:bg-slate-50 border-slate-200 border font-bold text-xs w-fit">
                                     Missed
                                   </Badge>
-                                 )}
+                                )}
                               </TableCell>
                               <TableCell className="text-slate-500 text-sm font-medium min-w-[300px] whitespace-pre-wrap">
                                 {f.feedback.notes ?? <span className="text-slate-300 font-normal">No notes logged</span>}
-                               </TableCell>
-                             </TableRow>
-                           );
-                         })}
-                       </TableBody>
-                     </Table>
-                   </div>
-                 )}
-               </>
-             )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 

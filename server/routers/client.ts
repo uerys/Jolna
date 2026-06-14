@@ -44,42 +44,49 @@ export const clientRouter = router({
    * Rehabilitation summary for the client landing page.
    * Returns client info, assigned physiotherapist, injury type, next clinic visit, active assignment count.
    */
-  getRehabSummary: clientProcedure.query(async ({ ctx }) => {
-    const user = ctx.user;
-    let physioName: string | null = null;
-    let physioEmail: string | null = null;
-    if (user.physiotherapistId) {
-      const physio = await getUserById(user.physiotherapistId);
-      if (physio) {
-        physioName = physio.name;
-        physioEmail = physio.email;
+  getRehabSummary: clientProcedure
+    .input(z.object({ clientDate: dateString.optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const user = ctx.user;
+      let physioName: string | null = null;
+      let physioEmail: string | null = null;
+      if (user.physiotherapistId) {
+        const physio = await getUserById(user.physiotherapistId);
+        if (physio) {
+          physioName = physio.name;
+          physioEmail = physio.email;
+        }
       }
-    }
 
-    // Count active assignments
-    const today = new Date().toISOString().slice(0, 10);
-    const activeAssignments = await listAssignmentsForClient(user.id, {
-      activeOn: today,
-      status: "active",
-    });
+      // TIMEZONE FIX: Trust the client date if provided, otherwise fallback to server UTC
+      const today = input?.clientDate ?? new Date().toISOString().slice(0, 10);
+      
+      const activeAssignments = await listAssignmentsForClient(user.id, {
+        activeOn: today,
+        status: "active",
+      });
 
-    return {
-      clientName: user.name ?? user.email ?? "Client",
-      physiotherapistName: physioName,
-      physiotherapistEmail: physioEmail,
-      injuryType: user.injuryType ?? null,
-      nextClinicVisit: user.nextClinicVisit ?? null,
-      activeAssignmentCount: activeAssignments.length,
-    };
-  }),
+      return {
+        clientName: user.name ?? user.email ?? "Client",
+        physiotherapistName: physioName,
+        physiotherapistEmail: physioEmail,
+        injuryType: user.injuryType ?? null,
+        nextClinicVisit: user.nextClinicVisit ?? null,
+        activeAssignmentCount: activeAssignments.length,
+      };
+    }),
 
-  listTodayAssignments: clientProcedure.query(({ ctx }) => {
-    const today = new Date().toISOString().slice(0, 10);
-    return listAssignmentsForClient(ctx.user.id, {
-      activeOn: today,
-      status: "active",
-    });
-  }),
+  listTodayAssignments: clientProcedure
+    .input(z.object({ clientDate: dateString.optional() }).optional())
+    .query(({ ctx, input }) => {
+      // TIMEZONE FIX: Trust the client date if provided, otherwise fallback to server UTC
+      const today = input?.clientDate ?? new Date().toISOString().slice(0, 10);
+      
+      return listAssignmentsForClient(ctx.user.id, {
+        activeOn: today,
+        status: "active",
+      });
+    }),
 
   listMyAssignments: clientProcedure
     .input(z.object({ activeOn: dateString.optional() }).optional())

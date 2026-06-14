@@ -63,13 +63,19 @@ export default function ClientExercises() {
 
   const isClient = !!user && (user.role === "client" || user.role === "user");
 
-  const today = trpc.clientApp.listTodayAssignments.useQuery(undefined, {
-    enabled: !loading && isClient,
-  });
+  // TIMEZONE FIX: 1. Get the patient's exact local date in YYYY-MM-DD
+  const localToday = new Date().toLocaleDateString("en-CA");
 
-  const rehabSummary = trpc.clientApp.getRehabSummary.useQuery(undefined, {
-    enabled: !loading && isClient,
-  });
+  // TIMEZONE FIX: 2. Pass it forcefully into the backend queries
+  const today = trpc.clientApp.listTodayAssignments.useQuery(
+    { clientDate: localToday }, 
+    { enabled: !loading && isClient }
+  );
+
+  const rehabSummary = trpc.clientApp.getRehabSummary.useQuery(
+    { clientDate: localToday }, 
+    { enabled: !loading && isClient }
+  );
 
   useEffect(() => {
     if (loading || !user) return;
@@ -206,7 +212,8 @@ export default function ClientExercises() {
 
 /** Duration bar visualization */
 function DurationBar({ startDate, endDate }: { startDate: string; endDate: string }) {
-  const today = new Date().toISOString().slice(0, 10);
+  // TIMEZONE FIX: Use local date string instead of UTC toISOString()
+  const today = new Date().toLocaleDateString("en-CA");
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
   const now = new Date(today + "T00:00:00");
