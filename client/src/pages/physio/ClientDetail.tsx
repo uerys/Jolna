@@ -1463,7 +1463,7 @@ export default function PhysioClientDetail() {
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CardTitle className="text-sm font-semibold text-[#101828]">
-                {viewMode === "historical" ? "Completed Exercise" : "Exercise Protocol Assignments"}
+                {viewMode === "historical" ? "Completed Exercise" : "Assigned Exercises"}
               </CardTitle>
               <Badge className="bg-[#F2F4F7] text-[#667085] hover:bg-[#F2F4F7] border-none font-semibold text-[10px] py-0.5 px-2">
                 {assignmentRecords.length} {viewMode === "historical" ? "completed" : "assigned"}
