@@ -4,6 +4,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
@@ -36,10 +37,9 @@ function Router() {
         path={"/client/today"}
         component={() => {
           const [, navigate] = useLocation();
-          // redirect client/today -> client/exercises
-          // navigate is synchronous here; use effect to avoid render loop
-          // but wouter's navigate can be called directly in render for simple redirect
-          navigate("/client/exercises", { replace: true });
+          useEffect(() => {
+            navigate("/client/exercises", { replace: true });
+          }, [navigate]);
           return null;
         }}
       />
