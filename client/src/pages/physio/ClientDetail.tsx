@@ -1330,65 +1330,68 @@ export default function PhysioClientDetail() {
             </Card>
           )}
 
-          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
-                {(() => {
-                  const todayStr = new Date().toLocaleDateString("en-CA");
-                  return viewMode === "historical"
-                    ? clientAssignments.data?.length ?? 0
-                    : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+          {(viewMode === "historical" || activeStats.total > 0) && (
+            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
+                  {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">
+                  {(() => {
+                    const todayStr = new Date().toLocaleDateString("en-CA");
+                    return viewMode === "historical"
+                      ? clientAssignments.data?.length ?? 0
+                      : (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                  })()}
+                </div>
+                <p className="text-[11px] text-[#667085] font-medium">
+                  {viewMode === "historical"
+                    ? "Including completed & discontinued exercises"
+                    : (() => {
+                        const todayStr = new Date().toLocaleDateString("en-CA");
+                        const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
+                        return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
+                      })()}
+                </p>
+                {viewMode === "active" && (() => {
+                  const logs = feedbackEnriched.data ?? [];
+                  if (logs.length === 0) return (
+                    <p className="text-[10px] text-[#98A2B3] mt-2 italic">No logs submitted yet.</p>
+                  );
+                  const latest = [...logs].sort((a, b) =>
+                    new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime()
+                  )[0];
+                  const submittedAt = new Date(latest.feedback.submittedAt);
+                  const now = new Date();
+                  const diffMs = now.getTime() - submittedAt.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  const diffDays = Math.floor(diffHours / 24);
+                  const timeAgo = diffDays > 0
+                    ? `${diffDays}d ago`
+                    : diffHours > 0
+                    ? `${diffHours}h ago`
+                    : diffMins > 0
+                    ? `${diffMins}m ago`
+                    : "Just now";
+                  return (
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                      <span className="text-[9px] text-[#98A2B3] uppercase tracking-widest font-semibold block mb-0.5">Last logged</span>
+                      <span className="text-[11px] text-[#101828] font-semibold block truncate" title={latest.exercise.title}>
+                        {latest.exercise.title}
+                      </span>
+                      <span className="text-[10px] text-[#667085]">{timeAgo} · {submittedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                    </div>
+                  );
                 })()}
-              </div>
-              <p className="text-[11px] text-[#667085] font-medium">
-                {viewMode === "historical"
-                  ? "Including completed & discontinued exercises"
-                  : (() => {
-                      const todayStr = new Date().toLocaleDateString("en-CA");
-                      const activeCount = (clientAssignments.data ?? []).filter((a) => a.assignment.status === "active" && a.assignment.endDate >= todayStr).length;
-                      return `${activeCount} active exercise${activeCount !== 1 ? "s" : ""}`;
-                    })()}
-              </p>
-              {viewMode === "active" && (() => {
-                const logs = feedbackEnriched.data ?? [];
-                if (logs.length === 0) return (
-                  <p className="text-[10px] text-[#98A2B3] mt-2 italic">No logs submitted yet.</p>
-                );
-                const latest = [...logs].sort((a, b) =>
-                  new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime()
-                )[0];
-                const submittedAt = new Date(latest.feedback.submittedAt);
-                const now = new Date();
-                const diffMs = now.getTime() - submittedAt.getTime();
-                const diffMins = Math.floor(diffMs / 60000);
-                const diffHours = Math.floor(diffMins / 60);
-                const diffDays = Math.floor(diffHours / 24);
-                const timeAgo = diffDays > 0
-                  ? `${diffDays}d ago`
-                  : diffHours > 0
-                  ? `${diffHours}h ago`
-                  : diffMins > 0
-                  ? `${diffMins}m ago`
-                  : "Just now";
-                return (
-                  <div className="mt-3 pt-2 border-t border-slate-100">
-                    <span className="text-[9px] text-[#98A2B3] uppercase tracking-widest font-semibold block mb-0.5">Last logged</span>
-                    <span className="text-[11px] text-[#101828] font-semibold block truncate" title={latest.exercise.title}>
-                      {latest.exercise.title}
-                    </span>
-                    <span className="text-[10px] text-[#667085]">{timeAgo} · {submittedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
+          {(viewMode === "historical" || activeStats.total > 0) && (
+            <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
                 {viewMode === "historical" ? "Average Pain Index" : "Latest Pain Level"}
@@ -1424,6 +1427,7 @@ export default function PhysioClientDetail() {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Pain Trend Card */}
