@@ -3,7 +3,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic } from "./vite";
+import { serveStatic } from "./static";
 
 export async function createApp() {
   const app = express();
