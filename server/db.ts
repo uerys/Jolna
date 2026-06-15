@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import {
   assignments,
   auditLogs,
@@ -23,6 +24,7 @@ import {
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: mysql.Pool | null = null;
 
 export async function getDb() {
   if (!_db) {
@@ -31,9 +33,13 @@ export async function getDb() {
       throw new Error("DATABASE_URL environment variable is missing. Please set it in your Vercel settings.");
     }
     try {
-      _db = drizzle(url);
+      // Use a connection pool for serverless environments
+      if (!_pool) {
+        _pool = mysql.createPool(url);
+      }
+      _db = drizzle(_pool);
     } catch (error) {
-      console.error("[Database] Failed to initialize Drizzle:", error);
+      console.error("[Database] Failed to initialize Drizzle with Pool:", error);
       throw error;
     }
   }
