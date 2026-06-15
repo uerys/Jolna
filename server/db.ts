@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
   assignments,
@@ -23,7 +23,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: MySql2Database<Record<string, unknown>> | null = null;
 let _pool: mysql.Pool | null = null;
 
 export async function getDb() {
@@ -443,6 +443,7 @@ export async function updateAssignment(
   patch: Partial<InsertAssignment>
 ) {
   const db = await getDb();
+  if (!db) throw new Error("Database not available");
   await db.update(assignments).set(patch).where(eq(assignments.id, id));
 }
 

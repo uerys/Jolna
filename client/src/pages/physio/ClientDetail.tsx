@@ -927,8 +927,8 @@ export default function PhysioClientDetail() {
         dailyFrequency: parseInt(editDailyFrequency),
         startDate: editStartDate,
         endDate: editEndDate,
-        injuryType: editInjuryType,
-        exerciseType: editExerciseType,
+        injuryType: editInjuryType as InjuryType,
+        exerciseType: editExerciseType as ExerciseType,
       },
     });
   };
