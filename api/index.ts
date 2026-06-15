@@ -1,26 +1,30 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createApp } from "../server/_core/app";
+import express from "express";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { appRouter } from "../server/routers";
+import { createContext } from "../server/_core/context";
 
-let app: unknown;
+const app = express();
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+app.use(
+  "/api/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    if (!app) {
-      app = await createApp();
-    }
-    
-    if (typeof app === "function") {
-      return app(req, res);
-    }
-    
-    throw new Error("Express app failed to initialize correctly.");
+    return app(req, res);
   } catch (error: unknown) {
     console.error("Vercel API Error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    
     res.status(500).json({
       error: "Internal Server Error",
-      message: message,
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
