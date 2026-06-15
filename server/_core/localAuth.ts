@@ -1,5 +1,5 @@
-import { COOKIE_NAME, ONE_YEAR_MS, UNAUTHED_ERR_MSG } from "@shared/const";
-import { ForbiddenError } from "@shared/_core/errors";
+import { COOKIE_NAME, ONE_YEAR_MS, UNAUTHED_ERR_MSG } from "../../shared/const";
+import { ForbiddenError } from "../../shared/_core/errors";
 import { parse as parseCookieHeader } from "cookie";
 import crypto from "node:crypto";
 import type { Request } from "express";
