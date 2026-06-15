@@ -115,7 +115,7 @@ export default function PhysioDashboard() {
             value="configuration"
             className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
           >
-            Configuration
+            Categories
           </TabsTrigger>
         </TabsList>
 
