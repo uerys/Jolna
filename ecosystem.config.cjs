@@ -27,6 +27,7 @@ module.exports = {
         APP_NAME: process.env.APP_NAME || "jolna",
         RUN_MIGRATIONS: process.env.RUN_MIGRATIONS || "1",
         RUN_SEED: process.env.RUN_SEED || "0",
+        NPM_INSTALL_COMMAND: process.env.NPM_INSTALL_COMMAND || "npm install",
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
         TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
         TELEGRAM_THREAD_ID: process.env.TELEGRAM_THREAD_ID,

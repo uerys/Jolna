@@ -6,6 +6,7 @@ APP_NAME="${APP_NAME:-jolna}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-1}"
 RUN_SEED="${RUN_SEED:-0}"
+NPM_INSTALL_COMMAND="${NPM_INSTALL_COMMAND:-npm install}"
 
 cd "$APP_DIR"
 
@@ -30,7 +31,8 @@ echo "[deploy] app=${APP_NAME} branch=${DEPLOY_BRANCH} dir=${APP_DIR}"
 git fetch --prune origin "$DEPLOY_BRANCH"
 git reset --hard "origin/${DEPLOY_BRANCH}"
 
-npm ci
+echo "[deploy] install=${NPM_INSTALL_COMMAND}"
+bash -lc "$NPM_INSTALL_COMMAND"
 
 if [[ "$RUN_MIGRATIONS" == "1" ]]; then
   npm run db:push
