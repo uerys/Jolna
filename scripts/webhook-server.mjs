@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -84,31 +84,34 @@ async function sendTelegram(text) {
     return;
   }
 
-  const basePayload = {
-    chat_id: TELEGRAM_CHAT_ID,
-    disable_web_page_preview: true,
-  };
-
-  if (TELEGRAM_THREAD_ID) {
-    basePayload.message_thread_id = Number.parseInt(TELEGRAM_THREAD_ID, 10);
-  }
-
   for (const chunk of telegramChunks(text)) {
-    try {
-      const response = await fetch(
-        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...basePayload, text: chunk }),
-        }
-      );
+    const args = [
+      "-fsS",
+      "-X",
+      "POST",
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      "-d",
+      `chat_id=${TELEGRAM_CHAT_ID}`,
+      "-d",
+      `text=${chunk}`,
+      "-d",
+      "disable_web_page_preview=true",
+    ];
 
-      if (!response.ok) {
-        console.error("[webhook] Telegram notification failed", await response.text());
-      }
-    } catch (error) {
-      console.error("[webhook] Telegram notification failed", error);
+    if (TELEGRAM_THREAD_ID) {
+      args.push("-d", `message_thread_id=${TELEGRAM_THREAD_ID}`);
+    }
+
+    const result = spawnSync("curl", args, {
+      encoding: "utf8",
+      timeout: 30000,
+    });
+
+    if (result.status !== 0) {
+      console.error(
+        "[webhook] Telegram notification failed",
+        result.stderr || result.stdout || result.error
+      );
     }
   }
 }
