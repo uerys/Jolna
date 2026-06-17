@@ -373,6 +373,7 @@ function ExerciseCard({
   language: "en" | "kh";
   todayLogCount?: number;
 }) {
+  const intl = useIntl();
   const { dailyFrequency } = assignment;
   const progressPercent = Math.min(
     100,
@@ -528,11 +529,10 @@ function ExerciseCard({
           className="flex items-center gap-1 text-xs text-primary hover:underline"
         >
           {expanded ? (
-            <ChevronUp className="size-3" />
+            <FormattedMessage id="client.today.hideDetails" />
           ) : (
-            <ChevronDown className="size-3" />
+            <FormattedMessage id="client.today.viewDetails" />
           )}
-          {expanded ? "Hide assignment details" : "View assignment details"}
         </button>
         {expanded && (
           <div className="bg-muted/30 rounded-lg p-4 space-y-4 text-sm mt-4">
@@ -609,18 +609,18 @@ function ExerciseCard({
               disabled
               className="w-full h-10 sm:h-9 text-base sm:text-sm font-bold shadow-sm bg-emerald-600 opacity-100 cursor-default"
             >
-              Target reached for today
+              <FormattedMessage id="client.today.targetReached" />
             </Button>
             <Button
               onClick={() => {
-                if (confirm("Would you like to redo your session or rewrite your progress data?")) {
+                if (confirm(intl.formatMessage({ id: "client.today.redoConfirm" }))) {
                   setOpen(true);
                 }
               }}
               variant="outline"
               className="w-full h-10 sm:h-9 text-base sm:text-sm font-bold border-[#534AB7] text-[#534AB7] hover:bg-[#EEEDFE] hover:text-[#534AB7] shadow-sm transition-all"
             >
-              Resubmit progress
+              <FormattedMessage id="client.today.resubmitProgress" />
             </Button>
           </div>
         ) : (
