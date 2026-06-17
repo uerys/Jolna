@@ -183,7 +183,7 @@ export default function RegisterPage({
           <button
             type="submit"
             disabled={loading || passwordsDoNotMatch}
-            className="w-full rounded-xl bg-blue-600 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            className="w-full rounded-xl bg-[#534AB7] py-3 text-base font-semibold text-white transition hover:bg-[#534AB7]/90 disabled:opacity-60"
           >
             {loading ? "Creating account..." : "Sign Up"}
           </button>

@@ -5,8 +5,9 @@ import {
   createFeedback,
   createNotification,
   getAssignmentById,
-  getAssignmentCompletionStats,
+  getAssignmentLogCountForDay,
   getExerciseById,
+  getAssignmentCompletionStats,
   getClientCompletionStats,
   listAllAssignmentsForClient,
   listAssignmentsForClient,
@@ -78,14 +79,24 @@ export const clientRouter = router({
 
   listTodayAssignments: clientProcedure
     .input(z.object({ clientDate: dateString.optional() }).optional())
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       // TIMEZONE FIX: Trust the client date if provided, otherwise fallback to server UTC
       const today = input?.clientDate ?? new Date().toISOString().slice(0, 10);
       
-      return listAssignmentsForClient(ctx.user.id, {
+      const assignments = await listAssignmentsForClient(ctx.user.id, {
         activeOn: today,
         status: "active",
       });
+
+      return Promise.all(
+        assignments.map(async (row) => {
+          const todayLogCount = await getAssignmentLogCountForDay(row.assignment.id, today);
+          return {
+            ...row,
+            todayLogCount,
+          };
+        })
+      );
     }),
 
   listMyAssignments: clientProcedure

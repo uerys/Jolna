@@ -308,6 +308,7 @@ export async function listAssignmentsForClient(
         id: assignments.id,
         reps: assignments.reps,
         sets: assignments.sets,
+        dailyFrequency: assignments.dailyFrequency,
         startDate: assignments.startDate,
         endDate: assignments.endDate,
         status: assignments.status,
@@ -358,6 +359,7 @@ export async function listAllAssignmentsForClient(clientId: number) {
         id: assignments.id,
         reps: assignments.reps,
         sets: assignments.sets,
+        dailyFrequency: assignments.dailyFrequency,
         startDate: assignments.startDate,
         endDate: assignments.endDate,
         status: assignments.status,
@@ -603,6 +605,24 @@ export async function getAssignmentCompletionStats(assignmentId: number) {
     total: Number(row.total ?? 0),
     completed: Number(row.completed ?? 0),
   };
+}
+
+export async function getAssignmentLogCountForDay(assignmentId: number, day: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  // MySQL timestamp comparison with date string
+  const r = await db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(feedbackLogs)
+    .where(
+      and(
+        eq(feedbackLogs.assignmentId, assignmentId),
+        sql`DATE(${feedbackLogs.submittedAt}) = ${day}`
+      )
+    );
+  return Number(r[0]?.count ?? 0);
 }
 
 export async function getClientCompletionStats(clientId: number) {

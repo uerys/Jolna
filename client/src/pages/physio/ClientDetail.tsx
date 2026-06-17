@@ -1040,14 +1040,14 @@ export default function PhysioClientDetail() {
                   </h1>
                   <Badge className={
                     client.data?.status === "active"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50/80 border font-semibold"
+                      ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50/80 border font-semibold"
                       : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100/80 border font-semibold"
                   }>
                     {client.data?.status === "active" ? "Undercare" : client.data?.status ? "Suspended" : "—"}
                   </Badge>
                 </div>
                 <p className="text-xs text-[#98A2B3] font-medium">
-                  ID: #{clientId} · Patient Record
+                  Patient ID: #{clientId}
                 </p>
               </div>
             </div>
@@ -1180,7 +1180,7 @@ export default function PhysioClientDetail() {
                       onClick={() => {
                         toast.success("Filters applied");
                       }}
-                      className="h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium px-4"
+                      className="h-9 text-xs bg-[#534AB7] hover:bg-[#534AB7]/90 text-white rounded-lg font-medium px-4"
                     >
                       Apply
                     </Button>
@@ -1753,16 +1753,16 @@ export default function PhysioClientDetail() {
                       const isCancelled = a.assignment.status === "cancelled";
                       const statusBadgeClass = 
                         isFinished
-                          ? "bg-indigo-50 text-indigo-800 border-indigo-200 border hover:bg-indigo-50"
-                          : isCancelled
                           ? "bg-slate-50 text-slate-600 border-slate-200 border hover:bg-slate-50"
-                          : "bg-emerald-50 text-emerald-800 border-emerald-200 border hover:bg-emerald-50";
+                          : isCancelled
+                          ? "bg-amber-50 text-amber-700 border-amber-200 border hover:bg-amber-50"
+                          : "bg-indigo-50 text-indigo-700 border-indigo-200 border hover:bg-indigo-50";
                       const statusLabel = 
                         isFinished 
                           ? "completed" 
                           : isCancelled 
                           ? "discontinued" 
-                          : "active";
+                          : "Active Exercise";
 
                       return (
                         <TableRow key={a.assignment.id} className="border-b border-slate-100 hover:bg-slate-50/40">
@@ -1872,10 +1872,10 @@ export default function PhysioClientDetail() {
                             {daysLeftBadge}
                             <Badge className={
                               isFinished
-                                ? "bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-50 border font-medium text-[10px]"
+                                ? "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-50 border font-medium text-[10px]"
                                 : isCancelled
-                                ? "bg-slate-800 text-slate-800 border-slate-200 hover:bg-slate-50 border font-medium text-[10px]"
-                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50 border font-medium text-[10px]"
+                                ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-medium text-[10px]"
+                                : "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 border font-medium text-[10px]"
                             }>
                               {isFinished ? "completed" : isCancelled ? "paused" : "active"}
                             </Badge>
@@ -2471,7 +2471,7 @@ export default function PhysioClientDetail() {
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setIsVisitOpen(false)} className="border-slate-200">Cancel</Button>
-              <Button onClick={handleVisitSubmit} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">Save Schedule</Button>
+              <Button onClick={handleVisitSubmit} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold focus-visible:ring-[#534AB7]">Save Schedule</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -2568,7 +2568,7 @@ export default function PhysioClientDetail() {
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setIsDiagnosisOpen(false)} className="border-slate-200">Cancel</Button>
-              <Button onClick={handleDiagnosisSubmit} disabled={updateDiagnosisMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+              <Button onClick={handleDiagnosisSubmit} disabled={updateDiagnosisMutation.isPending} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold focus-visible:ring-[#534AB7]">
                 {updateDiagnosisMutation.isPending ? "Saving..." : "Save Diagnosis"}
               </Button>
             </DialogFooter>

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -34,20 +35,53 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  Mail,
+  Phone,
+  MoreVertical,
+  Calendar as CalendarIcon,
+  Dumbbell,
 } from "lucide-react";
 
 /** Format injury type enum to human-readable label */
 function formatInjuryType(type: string | null | undefined): string {
   if (!type) return "—";
-  return type
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /** Format exercise type enum to human-readable label */
 function formatExerciseType(type: string | null | undefined): string {
   if (!type) return "—";
   return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+/** Format clinic visit string */
+function formatClinicVisit(visitStr: string | null | undefined): string {
+  if (!visitStr) return "Not scheduled";
+  try {
+    const d = new Date(visitStr);
+    if (isNaN(d.getTime())) {
+      const fallbackDate = new Date(visitStr + "T00:00:00");
+      if (isNaN(fallbackDate.getTime())) return visitStr;
+      return fallbackDate.toLocaleDateString(undefined, {
+        day: "numeric",
+        month: "short",
+      });
+    }
+    const datePart = d.toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+    });
+    const timePart = d
+      .toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase();
+    return `${datePart} at ${timePart}`;
+  } catch {
+    return visitStr;
+  }
 }
 
 /** Format date string to short display */
@@ -68,12 +102,12 @@ export default function ClientExercises() {
 
   // TIMEZONE FIX: 2. Pass it forcefully into the backend queries
   const today = trpc.clientApp.listTodayAssignments.useQuery(
-    { clientDate: localToday }, 
+    { clientDate: localToday },
     { enabled: !loading && isClient }
   );
 
   const rehabSummary = trpc.clientApp.getRehabSummary.useQuery(
-    { clientDate: localToday }, 
+    { clientDate: localToday },
     { enabled: !loading && isClient }
   );
 
@@ -91,8 +125,12 @@ export default function ClientExercises() {
       <AppShell>
         <Card>
           <CardHeader>
-            <CardTitle><FormattedMessage id="common.notAuthorised" /></CardTitle>
-            <CardDescription><FormattedMessage id="client.today.onlyClient" /></CardDescription>
+            <CardTitle>
+              <FormattedMessage id="common.notAuthorised" />
+            </CardTitle>
+            <CardDescription>
+              <FormattedMessage id="client.today.onlyClient" />
+            </CardDescription>
           </CardHeader>
         </Card>
       </AppShell>
@@ -101,58 +139,103 @@ export default function ClientExercises() {
 
   return (
     <AppShell>
-      {/* Rehabilitation Summary */}
+      {/* Rehabilitation Summary Header (Redesigned) */}
       {rehabSummary.data && (
-        <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Activity className="size-5 text-primary" />
-              <CardTitle className="text-lg">Rehabilitation Summary</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3">
-                <User className="size-4 text-muted-foreground shrink-0" />
+        <Card className="mb-6 border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 border border-slate-200 shadow-sm flex items-center justify-center bg-indigo-50 text-indigo-700 rounded-full">
+                  <AvatarFallback className="text-xl font-bold bg-indigo-50 text-indigo-700">
+                    {rehabSummary.data.clientName
+                      .split(" ")
+                      .map(n => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <p className="text-xs text-muted-foreground">Client</p>
-                  <p className="text-sm font-medium">{rehabSummary.data.clientName}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Stethoscope className="size-4 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Physiotherapist</p>
-                  <p className="text-sm font-medium">
-                    {rehabSummary.data.physiotherapistName ?? "Not assigned"}
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h1 className="text-xl font-bold text-[#101828] tracking-tight">
+                      {rehabSummary.data.clientName}
+                    </h1>
+                    <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold shadow-sm">
+                      Undercare
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[#98A2B3] font-medium">
+                    Patient ID: #{user?.id}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Activity className="size-4 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Injury Type</p>
-                  <p className="text-sm font-medium">
+            </div>
+
+            {/* Patient Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6 pt-6 border-t border-slate-100 text-sm">
+              <div className="flex items-center gap-3 text-slate-700">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <Mail className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
+                    Email Address
+                  </p>
+                  <p className="font-semibold text-[#101828] truncate text-sm">
+                    {user?.email ?? "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-slate-700">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <Phone className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
+                    Phone Number
+                  </p>
+                  <p className="font-semibold text-[#101828] truncate text-sm">
+                    {user?.phoneNumber ?? "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-slate-700">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <Activity className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
+                    Primary Diagnosis
+                  </p>
+                  <p className="font-semibold text-[#101828] truncate text-sm">
                     {formatInjuryType(rehabSummary.data.injuryType)}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <CalendarDays className="size-4 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Next Clinic Visit</p>
-                  <p className="text-sm font-medium">
-                    {rehabSummary.data.nextClinicVisit
-                      ? formatDateShort(rehabSummary.data.nextClinicVisit)
-                      : "Not scheduled"}
+              <div className="flex items-center gap-3 text-slate-700">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <CalendarIcon className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
+                    Next Clinic Visit
+                  </p>
+                  <p className="font-semibold text-[#101828] truncate text-sm">
+                    {formatClinicVisit(rehabSummary.data.nextClinicVisit)}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <CalendarDays className="size-4 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Active Assignments</p>
-                  <p className="text-sm font-medium">{rehabSummary.data.activeAssignmentCount}</p>
+              <div className="flex items-center gap-3 text-slate-700">
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <Dumbbell className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
+                    Active Exercises
+                  </p>
+                  <p className="font-semibold text-[#101828] truncate text-sm">
+                    {rehabSummary.data.activeAssignmentCount}
+                  </p>
                 </div>
               </div>
             </div>
@@ -173,7 +256,11 @@ export default function ClientExercises() {
             </p>
           </div>
         </div>
-        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+        <Button
+          asChild
+          variant="outline"
+          className="w-full sm:w-auto border-[#534AB7] text-[#534AB7] hover:bg-[#534AB7] hover:text-white font-bold transition-all"
+        >
           <Link href="/client/history">
             <History className="size-4 mr-1" />
             History & Progress
@@ -183,42 +270,58 @@ export default function ClientExercises() {
 
       {/* Exercise Cards */}
       <div className="mt-6 space-y-4">
-        {today.isLoading && <div className="text-muted-foreground"><FormattedMessage id="common.loading" /></div>}
-        {!today.isLoading && (today.data?.length ?? 0) === 0 && (
-          <Card><CardContent className="pt-6 text-muted-foreground"><FormattedMessage id="client.today.noAssignments" /></CardContent></Card>
+        {today.isLoading && (
+          <div className="text-muted-foreground">
+            <FormattedMessage id="common.loading" />
+          </div>
         )}
-        {today.data?.map((row) => (
+        {!today.isLoading && (today.data?.length ?? 0) === 0 && (
+          <Card>
+            <CardContent className="pt-6 text-muted-foreground">
+              <FormattedMessage id="client.today.noAssignments" />
+            </CardContent>
+          </Card>
+        )}
+        {today.data?.map(row => (
           <ExerciseCard
             key={row.assignment.id}
             language={language}
             assignment={row.assignment}
             exercise={row.exercise}
             physiotherapist={row.physiotherapist}
+            todayLogCount={row.todayLogCount}
           />
         ))}
       </div>
 
-      {/* Data Transparency Notice */}
-      <Card className="mt-8 border-muted">
-        <CardContent className="pt-4 pb-4">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong>Data Transparency:</strong> Your pain scores, completion status, and notes can be viewed by your assigned physiotherapist for rehabilitation monitoring. Your phone number may be visible to authorized clinic staff for contact purposes. Telegram is used only as an external contact link — messages are not stored inside JOLNA.
-          </p>
-        </CardContent>
-      </Card>
     </AppShell>
   );
 }
 
 /** Duration bar visualization */
-function DurationBar({ startDate, endDate }: { startDate: string; endDate: string }) {
+function DurationBar({
+  startDate,
+  endDate,
+}: {
+  startDate: string;
+  endDate: string;
+}) {
   // TIMEZONE FIX: Use local date string instead of UTC toISOString()
   const today = new Date().toLocaleDateString("en-CA");
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
   const now = new Date(today + "T00:00:00");
-  const totalDays = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  const elapsed = Math.max(0, Math.min(totalDays, (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const totalDays = Math.max(
+    1,
+    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const elapsed = Math.max(
+    0,
+    Math.min(
+      totalDays,
+      (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    )
+  );
   const progress = Math.round((elapsed / totalDays) * 100);
 
   return (
@@ -243,11 +346,13 @@ function ExerciseCard({
   exercise,
   physiotherapist,
   language,
+  todayLogCount,
 }: {
   assignment: {
     id: number;
     reps: number;
     sets: number;
+    dailyFrequency: number;
     startDate: string;
     endDate: string;
     status: string;
@@ -266,16 +371,29 @@ function ExerciseCard({
   };
   physiotherapist: { name: string | null; email: string | null };
   language: "en" | "kh";
+  todayLogCount?: number;
 }) {
-  const instructions = language === "kh" ? exercise.instructionsKh : exercise.instructionsEn;
+  const { dailyFrequency } = assignment;
+  const progressPercent = Math.min(
+    100,
+    Math.round(((todayLogCount ?? 0) / dailyFrequency) * 100)
+  );
+  const isDoneToday = (todayLogCount ?? 0) >= dailyFrequency;
+
+  const instructions =
+    language === "kh" ? exercise.instructionsKh : exercise.instructionsEn;
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const { embedSrc, watchUrl, thumbnail } = useMemo(() => {
-    if (!exercise.videoUrl) return { embedSrc: null, watchUrl: null, thumbnail: null };
+    if (!exercise.videoUrl)
+      return { embedSrc: null, watchUrl: null, thumbnail: null };
     try {
       const u = new URL(exercise.videoUrl);
-      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/embed/")) {
+      if (
+        u.hostname.includes("youtube.com") &&
+        u.pathname.startsWith("/embed/")
+      ) {
         const id = u.pathname.split("/embed/")[1];
         return {
           embedSrc: `https://www.youtube.com/embed/${id}`,
@@ -299,65 +417,82 @@ function ExerciseCard({
           thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
         };
       }
-      if (exercise.videoUrl.includes("embed")) {
-        return { embedSrc: exercise.videoUrl, watchUrl: exercise.videoUrl, thumbnail: null };
-      }
+      return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
     } catch (e) {
-      const m = exercise.videoUrl.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
-      if (m && m[1]) {
-        const id = m[1];
-        return {
-          embedSrc: `https://www.youtube.com/embed/${id}`,
-          watchUrl: `https://www.youtube.com/watch?v=${id}`,
-          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-        };
-      }
+      return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
     }
-    return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
   }, [exercise.videoUrl]);
 
-  const statusColor = assignment.status === "active"
-    ? "bg-emerald-100 text-emerald-800"
-    : assignment.status === "completed"
-    ? "bg-blue-100 text-blue-800"
-    : "bg-gray-100 text-gray-800";
+  const statusColor =
+    assignment.status === "active"
+      ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+      : assignment.status === "completed"
+        ? "bg-slate-100 text-slate-600 border-slate-200"
+        : "bg-gray-100 text-gray-800";
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
-      <CardHeader className="pb-3 sm:pb-4">
-        {/* Compact card header with transparency info */}
-        <div className="space-y-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base sm:text-lg leading-tight pr-2">{exercise.title}</CardTitle>
-            <Badge className={statusColor}>{assignment.status}</Badge>
-          </div>
-          {/* Compact info line: Injury • Exercise Type • Status */}
-          <p className="text-sm text-muted-foreground">
-            {formatInjuryType(assignment.injuryType)} • {formatExerciseType(assignment.exerciseType)}
-          </p>
-          {/* Sets and reps */}
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {assignment.sets} sets × {assignment.reps} reps
+      <CardHeader className="pb-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg leading-tight">{exercise.title}</CardTitle>
+              <p className="text-sm font-medium text-muted-foreground mt-1.5">
+                {assignment.sets} sets × {assignment.reps} reps • {assignment.dailyFrequency} times/day
+              </p>
+            </div>
+            <Badge className={statusColor}>
+              {assignment.status === "active" ? "Active Exercise" : assignment.status}
             </Badge>
           </div>
-          {/* Duration bar */}
-          <DurationBar startDate={assignment.startDate} endDate={assignment.endDate} />
-          {/* Assigned by */}
-          <p className="text-xs text-muted-foreground">
-            Assigned by PT. {physiotherapist.name ?? physiotherapist.email ?? "Unknown"}
-          </p>
+
+          {/* Daily Progress */}
+          <div className="space-y-1.5 pt-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-semibold text-slate-700">Today's Progress</span>
+              <span
+                className={
+                  isDoneToday
+                    ? "text-emerald-600 font-bold"
+                    : "text-slate-600 font-medium"
+                }
+              >
+                {todayLogCount ?? 0} / {dailyFrequency} sessions
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2">
+              <div
+                className={`${isDoneToday ? "bg-emerald-500" : "bg-[#534AB7]"} h-2 rounded-full transition-all`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pb-4">
         {/* Video Container */}
         <div className="aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border/50 flex items-center justify-center">
           {thumbnail ? (
-            <a href={watchUrl ?? exercise.videoUrl} target="_blank" rel="noreferrer" className="block w-full h-full relative">
-              <img src={thumbnail} alt={`Video thumbnail for ${exercise.title}`} className="w-full h-full object-cover" />
+            <a
+              href={watchUrl ?? exercise.videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full h-full relative"
+            >
+              <img
+                src={thumbnail}
+                alt={`Video thumbnail for ${exercise.title}`}
+                className="w-full h-full object-cover"
+              />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="rounded-full bg-white/90 p-3 shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#ff0000">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="28"
+                    height="28"
+                    fill="#ff0000"
+                  >
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </div>
@@ -365,8 +500,17 @@ function ExerciseCard({
             </a>
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-6">
-              <p className="mb-2 text-sm text-muted-foreground">Video will open in a new tab.</p>
-              <a href={watchUrl ?? exercise.videoUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">Open video</a>
+              <p className="mb-2 text-sm text-muted-foreground">
+                Video will open in a new tab.
+              </p>
+              <a
+                href={watchUrl ?? exercise.videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Open video
+              </a>
             </div>
           )}
         </div>
@@ -383,43 +527,76 @@ function ExerciseCard({
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-1 text-xs text-primary hover:underline"
         >
-          {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+          {expanded ? (
+            <ChevronUp className="size-3" />
+          ) : (
+            <ChevronDown className="size-3" />
+          )}
           {expanded ? "Hide assignment details" : "View assignment details"}
         </button>
         {expanded && (
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2 text-sm">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="bg-muted/30 rounded-lg p-4 space-y-4 text-sm mt-4">
+            <DurationBar startDate={assignment.startDate} endDate={assignment.endDate} />
+            
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2 pt-2 border-t border-slate-200/60">
               <div>
-                <span className="text-muted-foreground text-xs">Assigned Physiotherapist</span>
-                <p className="font-medium">{physiotherapist.name ?? physiotherapist.email ?? "—"}</p>
+                <span className="text-muted-foreground text-xs">
+                  Assigned Physiotherapist
+                </span>
+                <p className="font-medium">
+                  {physiotherapist.name ?? physiotherapist.email ?? "—"}
+                </p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Injury Type</span>
-                <p className="font-medium">{formatInjuryType(assignment.injuryType)}</p>
+                <span className="text-muted-foreground text-xs">
+                  Injury Type
+                </span>
+                <p className="font-medium">
+                  {formatInjuryType(assignment.injuryType)}
+                </p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Exercise Type</span>
-                <p className="font-medium">{formatExerciseType(assignment.exerciseType)}</p>
+                <span className="text-muted-foreground text-xs">
+                  Exercise Type
+                </span>
+                <p className="font-medium">
+                  {formatExerciseType(assignment.exerciseType)}
+                </p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Sets & Reps</span>
-                <p className="font-medium">{assignment.sets} × {assignment.reps}</p>
+                <span className="text-muted-foreground text-xs">
+                  Sets & Reps
+                </span>
+                <p className="font-medium">
+                  {assignment.sets} × {assignment.reps} (
+                  {assignment.dailyFrequency}x daily)
+                </p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Start Date</span>
-                <p className="font-medium">{formatDateShort(assignment.startDate)}</p>
+                <span className="text-muted-foreground text-xs">
+                  Start Date
+                </span>
+                <p className="font-medium">
+                  {formatDateShort(assignment.startDate)}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">End Date</span>
-                <p className="font-medium">{formatDateShort(assignment.endDate)}</p>
+                <p className="font-medium">
+                  {formatDateShort(assignment.endDate)}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">Status</span>
                 <p className="font-medium capitalize">{assignment.status}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-xs">Assigned Date</span>
-                <p className="font-medium">{new Date(assignment.createdAt).toLocaleDateString()}</p>
+                <span className="text-muted-foreground text-xs">
+                  Assigned Date
+                </span>
+                <p className="font-medium">
+                  {new Date(assignment.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
           </div>
@@ -427,28 +604,60 @@ function ExerciseCard({
 
         {/* Action Button */}
         <Button
-          onClick={() => setOpen(true)}
-          className="w-full h-10 sm:h-9 text-base sm:text-sm"
+          onClick={() => {
+            if (isDoneToday) {
+              if (confirm("You have already reached your target for today. Do you want to log another session?")) {
+                setOpen(true);
+              }
+            } else {
+              setOpen(true);
+            }
+          }}
+          className={`w-full h-10 sm:h-9 text-base sm:text-sm font-bold shadow-sm transition-all ${
+            isDoneToday 
+              ? "bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-600" 
+              : "bg-[#534AB7] hover:bg-[#534AB7]/90 focus-visible:ring-[#534AB7]"
+          }`}
         >
-          <FormattedMessage id="client.today.logFeedback" />
+          {isDoneToday ? (
+            "Target reached for today"
+          ) : (
+            <FormattedMessage id="client.today.logFeedback" />
+          )}
         </Button>
       </CardContent>
       <FeedbackDialog
         assignmentId={assignment.id}
         open={open}
         onClose={() => setOpen(false)}
+        dailyFrequency={dailyFrequency}
+        todayLogCount={todayLogCount}
       />
     </Card>
   );
 }
 
-function FeedbackDialog({ assignmentId, open, onClose }: { assignmentId: number; open: boolean; onClose: () => void }) {
+function FeedbackDialog({
+  assignmentId,
+  open,
+  onClose,
+  dailyFrequency,
+  todayLogCount = 0,
+}: {
+  assignmentId: number;
+  open: boolean;
+  onClose: () => void;
+  dailyFrequency: number;
+  todayLogCount?: number;
+}) {
   const intl = useIntl();
   const utils = trpc.useUtils();
   const submit = trpc.clientApp.submitFeedback.useMutation({
     onSuccess: async () => {
       await utils.clientApp.listMyFeedback.invalidate();
       await utils.clientApp.listMyFeedbackEnriched.invalidate();
+      await utils.clientApp.listTodayAssignments.invalidate();
+      await utils.clientApp.getRehabSummary.invalidate();
       toast.success(intl.formatMessage({ id: "client.feedback.submitted" }));
       onClose();
     },
@@ -465,23 +674,33 @@ function FeedbackDialog({ assignmentId, open, onClose }: { assignmentId: number;
   }, [painScore]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={o => !o && onClose()}>
       <DialogContent className="w-full max-w-sm sm:max-w-md mx-4">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl"><FormattedMessage id="client.today.logFeedback" /></DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">
+            <FormattedMessage id="client.today.logFeedback" />
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Logging session {Math.min(dailyFrequency, todayLogCount + 1)} of{" "}
+            {dailyFrequency} for today
+          </p>
         </DialogHeader>
         <div className="space-y-5">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-base"><FormattedMessage id="client.feedback.painScore" /></Label>
-              <span className={`text-2xl font-bold ${painColor}`}>{painScore}</span>
+              <Label className="text-base">
+                <FormattedMessage id="client.feedback.painScore" />
+              </Label>
+              <span className={`text-2xl font-bold ${painColor}`}>
+                {painScore}
+              </span>
             </div>
             <Slider
               min={0}
               max={10}
               step={1}
               value={[painScore]}
-              onValueChange={(v) => setPainScore(v[0] ?? 0)}
+              onValueChange={v => setPainScore(v[0] ?? 0)}
               className="py-2"
             />
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -490,16 +709,20 @@ function FeedbackDialog({ assignmentId, open, onClose }: { assignmentId: number;
           </div>
 
           <div className="flex items-center justify-between border rounded-lg p-4 bg-muted/40">
-            <Label className="cursor-pointer text-sm"><FormattedMessage id="client.feedback.completed" /></Label>
+            <Label className="cursor-pointer text-sm">
+              <FormattedMessage id="client.feedback.completed" />
+            </Label>
             <Switch checked={completed} onCheckedChange={setCompleted} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-base"><FormattedMessage id="client.feedback.notes" /></Label>
+            <Label className="text-base">
+              <FormattedMessage id="client.feedback.notes" />
+            </Label>
             <Textarea
               rows={3}
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={e => setNotes(e.target.value)}
               placeholder="Add any notes..."
               className="text-sm"
             />
@@ -522,10 +745,14 @@ function FeedbackDialog({ assignmentId, open, onClose }: { assignmentId: number;
                 notes: notes || undefined,
               })
             }
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 font-bold shadow-sm focus-visible:ring-[#534AB7]"
             disabled={submit.isPending}
           >
-            {submit.isPending ? "..." : <FormattedMessage id="client.feedback.submit" />}
+            {submit.isPending ? (
+              "..."
+            ) : (
+              <FormattedMessage id="client.feedback.submit" />
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

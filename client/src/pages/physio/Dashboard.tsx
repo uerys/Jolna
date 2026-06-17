@@ -95,25 +95,25 @@ export default function PhysioDashboard() {
         <TabsList className="bg-slate-100/80 p-1 border border-slate-200/50 rounded-xl mb-4 h-10 w-fit">
           <TabsTrigger
             value="clients"
-            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#534AB7] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-[#534AB7] font-semibold px-4 rounded-lg text-sm h-full"
           >
             <FormattedMessage id="physio.tab.clients" />
           </TabsTrigger>
           <TabsTrigger
             value="exercises"
-            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#534AB7] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-[#534AB7] font-semibold px-4 rounded-lg text-sm h-full"
           >
             <FormattedMessage id="physio.tab.exercises" />
           </TabsTrigger>
           <TabsTrigger
             value="assignments"
-            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#534AB7] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-[#534AB7] font-semibold px-4 rounded-lg text-sm h-full"
           >
             <FormattedMessage id="physio.tab.assignments" />
           </TabsTrigger>
           <TabsTrigger
             value="configuration"
-            className="data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-indigo-600 font-semibold px-4 rounded-lg text-sm h-full"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#534AB7] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-[#534AB7] font-semibold px-4 rounded-lg text-sm h-full"
           >
             Categories
           </TabsTrigger>
@@ -977,11 +977,11 @@ function AssignmentsTab() {
                     variant="outline"
                     className={
                       row.assignment.status === "active"
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-50/80 border font-semibold text-[10px] rounded-full"
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50/80 border font-semibold text-[10px] rounded-full"
                         : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100 border font-semibold text-[10px] rounded-full"
                     }
                   >
-                    {row.assignment.status}
+                    {row.assignment.status === "active" ? "Active Exercise" : row.assignment.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="w-[4%] text-right">

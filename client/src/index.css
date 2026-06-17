@@ -46,15 +46,15 @@
 
 :root {
   /* Accent: premium indigo-violet */
-  --primary: #6366F1;
+  --primary: #534AB7;
   --primary-foreground: #ffffff;
-  --sidebar-primary: #6366F1;
+  --sidebar-primary: #534AB7;
   --sidebar-primary-foreground: #ffffff;
 
   /* Chart colors aligned with indigo */
   --chart-1: #a5b4fc;
   --chart-2: #818cf8;
-  --chart-3: #6366F1;
+  --chart-3: #534AB7;
   --chart-4: #4F46E5;
   --chart-5: #4338CA;
 
@@ -76,13 +76,13 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: #E4E7EC;
   --input: #E4E7EC;
-  --ring: #6366F1;
+  --ring: #534AB7;
   --sidebar: #ffffff;
   --sidebar-foreground: #101828;
   --sidebar-accent: #F2F4F7;
   --sidebar-accent-foreground: #101828;
   --sidebar-border: #E4E7EC;
-  --sidebar-ring: #6366F1;
+  --sidebar-ring: #534AB7;
 }
 
 .dark {
