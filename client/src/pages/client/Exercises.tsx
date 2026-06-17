@@ -664,8 +664,17 @@ function FeedbackDialog({
   });
 
   const [painScore, setPainScore] = useState<number>(3);
-  const [completed, setCompleted] = useState<boolean>(true);
+  const [completed, setCompleted] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>("");
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setPainScore(3);
+      setCompleted(false);
+      setNotes("");
+    }
+  }, [open]);
 
   const painColor = useMemo(() => {
     if (painScore >= 7) return "text-destructive";
@@ -746,7 +755,7 @@ function FeedbackDialog({
               })
             }
             className="w-full sm:w-auto bg-[#534AB7] hover:bg-[#534AB7]/90 font-bold shadow-sm focus-visible:ring-[#534AB7]"
-            disabled={submit.isPending}
+            disabled={submit.isPending || !completed}
           >
             {submit.isPending ? (
               "..."
