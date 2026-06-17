@@ -603,28 +603,34 @@ function ExerciseCard({
         )}
 
         {/* Action Button */}
-        <Button
-          onClick={() => {
-            if (isDoneToday) {
-              if (confirm("You have already reached your target for today. Do you want to log another session?")) {
-                setOpen(true);
-              }
-            } else {
-              setOpen(true);
-            }
-          }}
-          className={`w-full h-10 sm:h-9 text-base sm:text-sm font-bold shadow-sm transition-all ${
-            isDoneToday 
-              ? "bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-600" 
-              : "bg-[#534AB7] hover:bg-[#534AB7]/90 focus-visible:ring-[#534AB7]"
-          }`}
-        >
-          {isDoneToday ? (
-            "Target reached for today"
-          ) : (
+        {isDoneToday ? (
+          <div className="space-y-2">
+            <Button
+              disabled
+              className="w-full h-10 sm:h-9 text-base sm:text-sm font-bold shadow-sm bg-emerald-600 opacity-100 cursor-default"
+            >
+              Target reached for today
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirm("Would you like to redo your session or rewrite your progress data?")) {
+                  setOpen(true);
+                }
+              }}
+              variant="outline"
+              className="w-full h-10 sm:h-9 text-base sm:text-sm font-bold border-[#534AB7] text-[#534AB7] hover:bg-[#EEEDFE] hover:text-[#534AB7] shadow-sm transition-all"
+            >
+              Resubmit progress
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={() => setOpen(true)}
+            className="w-full h-10 sm:h-9 text-base sm:text-sm font-bold shadow-sm bg-[#534AB7] hover:bg-[#534AB7]/90 focus-visible:ring-[#534AB7] transition-all"
+          >
             <FormattedMessage id="client.today.logFeedback" />
-          )}
-        </Button>
+          </Button>
+        )}
       </CardContent>
       <FeedbackDialog
         assignmentId={assignment.id}
