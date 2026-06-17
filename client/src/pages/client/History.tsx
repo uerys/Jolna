@@ -167,17 +167,108 @@ export default function ClientHistory() {
 
   const historyRecords = useMemo(() => {
     const todayStr = new Date().toLocaleDateString("en-CA");
-    let list = feedbackEnriched.data ?? [];
-    if (highPainOnly) list = list.filter(f => f.feedback.painScore >= 7);
-    if (viewMode === "active") {
-      list = list.filter(f => f.assignment.status === "active" && f.assignment.endDate >= todayStr);
-    } else if (viewMode === "historical") {
-      list = list.filter(f => f.assignment.status === "completed" || f.assignment.endDate < todayStr);
+    const assignmentsList = allAssignments.data ?? [];
+    const logsList = feedbackEnriched.data ?? [];
+
+    const missedLogs: {
+      feedback: {
+        id: string;
+        painScore: number | null;
+        notes: string;
+        submittedAt: string;
+        createdAt: Date;
+        completed: boolean;
+        isMissed: boolean;
+      };
+      exercise: {
+        id: number;
+        title: string;
+      };
+      assignment: {
+        id: number;
+        startDate: string;
+        endDate: string;
+        status: string;
+      };
+    }[] = [];
+
+    if (showMissedDays) {
+      assignmentsList.forEach((a) => {
+        const isCurrentActive = a.assignment.status === "active" && a.assignment.endDate >= todayStr;
+        if (viewMode === "active" && !isCurrentActive) return;
+        if (viewMode === "historical" && isCurrentActive) return;
+
+        const start = new Date(a.assignment.startDate + "T00:00:00");
+        const end = new Date(a.assignment.endDate + "T00:00:00");
+        const today = new Date(todayStr + "T00:00:00");
+
+        const current = new Date(start);
+        while (current <= end) {
+          if (current >= today) {
+            break;
+          }
+
+          const currentDateStr = current.toLocaleDateString("en-CA");
+          
+          const logExists = logsList.some((l) => {
+            const logDateStr = new Date(l.feedback.submittedAt).toLocaleDateString("en-CA");
+            return l.assignment.id === a.assignment.id && logDateStr === currentDateStr;
+          });
+
+          if (!logExists) {
+            missedLogs.push({
+              feedback: {
+                id: `missed-${a.assignment.id}-${currentDateStr}`,
+                painScore: null,
+                notes: "No log submitted",
+                submittedAt: currentDateStr,
+                createdAt: new Date(current),
+                completed: false,
+                isMissed: true,
+              },
+              exercise: {
+                id: a.exercise.id,
+                title: a.exercise.title,
+              },
+              assignment: {
+                id: a.assignment.id,
+                startDate: a.assignment.startDate,
+                endDate: a.assignment.endDate,
+                status: a.assignment.status,
+              },
+            });
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      });
     }
-    return [...list].sort((a, b) => 
+
+    let combined = [
+      ...(feedbackEnriched.data ?? []).map((f) => ({
+        feedback: {
+          ...f.feedback,
+          isMissed: false,
+        },
+        exercise: f.exercise,
+        assignment: f.assignment,
+      })),
+      ...missedLogs,
+    ];
+
+    if (highPainOnly) {
+      combined = combined.filter(f => f.feedback.painScore !== null && f.feedback.painScore >= 7);
+    }
+
+    if (viewMode === "active") {
+      combined = combined.filter(f => f.assignment.status === "active" && f.assignment.endDate >= todayStr);
+    } else if (viewMode === "historical") {
+      combined = combined.filter(f => f.assignment.status === "completed" || f.assignment.endDate < todayStr);
+    }
+
+    return [...combined].sort((a, b) => 
       new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime()
     );
-  }, [feedbackEnriched.data, highPainOnly, viewMode]);
+  }, [feedbackEnriched.data, allAssignments.data, highPainOnly, showMissedDays, viewMode]);
 
   if (!loading && !isClient) return <div className="p-8 text-center font-medium">Not authorized</div>;
 
@@ -572,7 +663,27 @@ export default function ClientHistory() {
                 </TableHeader>
                 <TableBody>
                   {historyRecords.map((f) => {
-                    const painConfig = PAIN_SCORE_CLASSES[Math.round(f.feedback.painScore)] || { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200", dot: "bg-slate-400" };
+                    const isMissed = "isMissed" in f.feedback && (f.feedback as { isMissed: unknown }).isMissed === true;
+                    if (isMissed) {
+                      return (
+                        <TableRow key={f.feedback.id} className="border-b border-slate-100 bg-rose-50/5 hover:bg-rose-50/10 transition-colors">
+                          <TableCell className="font-semibold text-slate-800 text-sm">{f.exercise.title}</TableCell>
+                          <TableCell className="text-slate-400 text-xs font-semibold font-mono">
+                            {format(new Date(f.feedback.submittedAt + "T00:00:00"), "MM/dd/yy")}
+                          </TableCell>
+                          <TableCell className="text-slate-400 font-semibold">—</TableCell>
+                          <TableCell>
+                            <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50 border-rose-200 border font-bold text-xs w-fit">
+                              Missed
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-400 italic font-normal min-w-[300px] whitespace-pre-wrap">
+                            No log submitted
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    const painConfig = PAIN_SCORE_CLASSES[Math.round(f.feedback.painScore ?? 0)] || { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200", dot: "bg-slate-400" };
                     return (
                       <TableRow key={f.feedback.id} className="border-b border-slate-100 hover:bg-slate-50/40 transition-colors">
                         <TableCell className="font-semibold text-slate-800 text-sm">{f.exercise.title}</TableCell>
@@ -596,6 +707,7 @@ export default function ClientHistory() {
                       </TableRow>
                     );
                   })}
+
                 </TableBody>
               </Table>
             </div>
