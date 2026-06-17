@@ -170,7 +170,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
 
               <Link
                 href="/profile"
-                className="hidden sm:flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/70"
+                className="flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-muted/70"
               >
                 <Avatar className="h-9 w-9 border shrink-0">
                   <AvatarImage
@@ -184,7 +184,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col text-left leading-tight">
+                <div className="hidden sm:flex flex-col text-left leading-tight">
                   <span className="text-sm font-medium">
                     {user?.name ?? user?.email ?? "—"}
                   </span>
@@ -195,10 +195,12 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
               </Link>
               <Button
                 onClick={handleSignOutClick}
-                className="h-8 px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition flex items-center gap-1.5 shadow-sm border-none"
+                className="h-8 px-3 sm:px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition flex items-center gap-1.5 shadow-sm border-none"
               >
                 <LogOut className="size-3.5 text-white" />
-                <FormattedMessage id="nav.signOut" />
+                <span className="hidden sm:inline">
+                  <FormattedMessage id="nav.signOut" />
+                </span>
               </Button>
             </>
           ) : (
