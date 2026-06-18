@@ -294,9 +294,11 @@ function EditUserDialog({
       onClose();
     },
   });
+  const resetPassword = trpc.admin.resetPassword.useMutation();
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [newPassword, setNewPassword] = useState("");
   const [role, setRole] = useState<Role>((user?.role as Role) ?? "client");
   const [status, setStatus] = useState<Status>((user?.status as Status) ?? "active");
   const [physioId, setPhysioId] = useState<string>(
@@ -308,6 +310,7 @@ function EditUserDialog({
     if (user) {
       setName(user.name ?? "");
       setEmail(user.email ?? "");
+      setNewPassword("");
       setRole(user.role as Role);
       setStatus(user.status as Status);
       setPhysioId(user.physiotherapistId ? String(user.physiotherapistId) : "__none");
@@ -330,6 +333,15 @@ function EditUserDialog({
           <div className="space-y-1.5">
             <Label><FormattedMessage id="admin.edit.email" /></Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>New Password (optional)</Label>
+            <Input
+              type="password"
+              placeholder="Min 8 characters to reset password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -389,24 +401,37 @@ function EditUserDialog({
             <FormattedMessage id="admin.edit.cancel" />
           </Button>
           <Button
-            onClick={() =>
-              user &&
-              update.mutate({
-                id: user.id,
-                patch: {
-                  name: name || null,
-                  email: email || null,
-                  role,
-                  status,
-                  physiotherapistId:
-                    role === "client"
-                      ? physioId === "__none"
-                        ? null
-                        : Number(physioId)
-                      : null,
-                },
-              })
-            }
+            disabled={update.isPending || resetPassword.isPending}
+            onClick={async () => {
+              if (!user) return;
+              try {
+                await update.mutateAsync({
+                  id: user.id,
+                  patch: {
+                    name: name || null,
+                    email: email || null,
+                    role,
+                    status,
+                    physiotherapistId:
+                      role === "client"
+                        ? physioId === "__none"
+                          ? null
+                          : Number(physioId)
+                        : null,
+                  },
+                });
+
+                if (newPassword.trim().length >= 8) {
+                  await resetPassword.mutateAsync({
+                    id: user.id,
+                    password: newPassword.trim(),
+                  });
+                }
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : "Failed to save changes.";
+                toast.error(msg);
+              }
+            }}
           >
             <FormattedMessage id="admin.edit.save" />
           </Button>

@@ -57,6 +57,9 @@ class LocalAuthService {
     return crypto.timingSafeEqual(actual, expected);
   }
 
+  public checkPassword(password: string, storedHash: string): boolean {
+    return this.verifyPassword(password, storedHash);
+  }
   async createSessionToken(
     openId: string,
     options: { expiresInMs?: number; name?: string } = {},
@@ -168,6 +171,10 @@ class LocalAuthService {
     return { user, sessionToken };
   }
 
+  async resetPassword(userId: number, newPassword: string) {
+    const passwordHash = this.hashPassword(newPassword);
+    await db.updateUserFields(userId, { passwordHash });
+  }
   async authenticateRequest(req: Request): Promise<User> {
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);

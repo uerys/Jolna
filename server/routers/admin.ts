@@ -105,6 +105,26 @@ export const adminRouter = router({
       return { success: true };
     }),
 
+  resetPassword: adminProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        password: z.string().min(8),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      await sdk.resetPassword(input.id, input.password);
+
+      await createAuditLog({
+        actorId: ctx.originalUser?.id ?? ctx.user.id,
+        action: "password_reset",
+        targetType: "user",
+        targetId: input.id,
+        description: `Reset password for user #${input.id}`,
+      });
+
+      return { success: true };
+    }),
   assignClientToPhysio: adminProcedure
     .input(
       z.object({

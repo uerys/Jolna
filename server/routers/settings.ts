@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getUserById, listUsers, setLanguagePreference, updateUserFields } from "../db";
 import { LANGUAGES } from "../../drizzle/schema";
-
+import { sdk } from "../_core/localAuth";
 /**
  * Per-user preferences available to any authenticated role.
  * Language preference is persisted in users.languagePreference.
@@ -75,6 +76,33 @@ export const settingsRouter = router({
     .input(z.object({ language: z.enum(LANGUAGES) }))
     .mutation(async ({ ctx, input }) => {
       await setLanguagePreference(ctx.user.id, input.language);
+      return { success: true };
+    }),
+
+  updatePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8).max(128),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await getUserById(ctx.user.id);
+      if (!user || !user.passwordHash) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "User not found or has no password hash set.",
+        });
+      }
+
+      if (!sdk.checkPassword(input.currentPassword, user.passwordHash)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Incorrect current password.",
+        });
+      }
+
+      await sdk.resetPassword(ctx.user.id, input.newPassword);
       return { success: true };
     }),
 });

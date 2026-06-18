@@ -23,30 +23,6 @@ function makeInitials(name: string | null | undefined, email: string | null | un
   );
 }
 
-function openTelegramWithFallback(phoneNumber: string | null | undefined) {
-  let digits = phoneNumber?.replace(/\D/g, "");
-  if (!digits) return;
-  // If number is in local format starting with 0, replace leading 0 with Cambodia country code 855
-  if (digits.startsWith("0")) {
-    digits = `855${digits.slice(1)}`;
-  }
-  const tg = `tg://resolve?phone=${digits}`;
-  const web = `https://t.me/+${digits}`;
-
-  // Try opening the native app first. If it doesn't open, fallback to web after delay.
-  // Use a small timeout to allow the protocol handler to run.
-  const fallback = () => window.open(web, "_blank");
-  const timer = window.setTimeout(fallback, 700);
-
-  try {
-    // attempt to open native handler
-    window.location.href = tg;
-  } catch (err) {
-    // if navigation fails, immediately fallback
-    window.clearTimeout(timer);
-    fallback();
-  }
-}
 
 export default function Profile() {
   const intl = useIntl();
@@ -66,6 +42,22 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const updatePassword = trpc.settings.updatePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update password");
+    }
+  });
   useEffect(() => {
     if (!profile.data) return;
     setName(profile.data.user.name ?? "");
@@ -173,65 +165,133 @@ export default function Profile() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr] mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Details</CardTitle>
-            <CardDescription>Basic profile settings for your account.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex flex-col sm:flex-row gap-5 sm:items-center">
-              <Avatar className="h-24 w-24 border">
-                <AvatarImage src={avatarPreview ?? undefined} alt={profile.data?.user.name ?? profile.data?.user.email ?? "Profile"} />
-                <AvatarFallback className="text-2xl font-semibold">{userInitials}</AvatarFallback>
-              </Avatar>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Details</CardTitle>
+              <CardDescription>Basic profile settings for your account.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex flex-col sm:flex-row gap-5 sm:items-center">
+                <Avatar className="h-24 w-24 border">
+                  <AvatarImage src={avatarPreview ?? undefined} alt={profile.data?.user.name ?? profile.data?.user.email ?? "Profile"} />
+                  <AvatarFallback className="text-2xl font-semibold">{userInitials}</AvatarFallback>
+                </Avatar>
+
+                <div className="space-y-2">
+                  <Label htmlFor="avatarUpload">Profile picture</Label>
+                  <Input id="avatarUpload" type="file" accept="image/*" onChange={onFileChange} />
+                  <p className="text-xs text-muted-foreground">
+                    Upload a PNG, JPG, or WEBP image under 1.5 MB.
+                  </p>
+                </div>
+              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="avatarUpload">Profile picture</Label>
-                <Input id="avatarUpload" type="file" accept="image/*" onChange={onFileChange} />
-                <p className="text-xs text-muted-foreground">
-                  Upload a PNG, JPG, or WEBP image under 1.5 MB.
-                </p>
+                <Label htmlFor="displayName">Display name</Label>
+                <Input
+                  id="displayName"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Your full name"
+                />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display name</Label>
-              <Input
-                id="displayName"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your full name"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone number</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(event) => setPhoneNumber(event.target.value)}
+                  placeholder="Your phone number"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value)}
-                placeholder="Your phone number"
-              />
-            </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => void onSave()} disabled={updateProfile.isPending}>
+                  {updateProfile.isPending ? "Saving..." : "Save profile"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAvatarUrl(null);
+                    setAvatarPreview(null);
+                  }}
+                  disabled={updateProfile.isPending}
+                >
+                  Remove picture
+                </Button>
+              </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void onSave()} disabled={updateProfile.isPending}>
-                {updateProfile.isPending ? "Saving..." : "Save profile"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAvatarUrl(null);
-                  setAvatarPreview(null);
-                }}
-                disabled={updateProfile.isPending}
-              >
-                Remove picture
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="border-t border-slate-100 my-6 pt-6 space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">Change Password</h3>
+                  <p className="text-sm text-muted-foreground">Update your account password</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Current Password</Label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>New Password</Label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min 8 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Confirm New Password</Label>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min 8 characters"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPassword}
+                      onChange={(e) => setShowPassword(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    Show Passwords
+                  </label>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    if (!currentPassword.trim()) {
+                      toast.error("Current password is required.");
+                      return;
+                    }
+                    if (newPassword.length < 8) {
+                      toast.error("New password must be at least 8 characters.");
+                      return;
+                    }
+                    if (newPassword !== confirmPassword) {
+                      toast.error("Passwords do not match.");
+                      return;
+                    }
+                    updatePassword.mutate({ currentPassword, newPassword });
+                  }}
+                  disabled={updatePassword.isPending}
+                >
+                  {updatePassword.isPending ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-4">
           <Card>
@@ -281,16 +341,6 @@ export default function Profile() {
                       {profile.data.physiotherapist.phoneNumber ? (
                         <div className="mt-1">
                           <div className="text-sm font-medium">{profile.data.physiotherapist.phoneNumber}</div>
-                          <a
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openTelegramWithFallback(profile.data?.physiotherapist?.phoneNumber);
-                            }}
-                            className="text-xs text-blue-600 hover:underline mt-1"
-                          >
-                            Telegram Contact Link
-                          </a>
                         </div>
                       ) : null}
                     </div>
@@ -306,7 +356,7 @@ export default function Profile() {
             <Card>
               <CardHeader>
                 <CardTitle>Contact Admin</CardTitle>
-                <CardDescription>If you need help, contact your clinic administrator via Telegram Contact Link.</CardDescription>
+                <CardDescription>If you need help, contact your clinic administrator.</CardDescription>
               </CardHeader>
               <CardContent>
                 {admins.isLoading && <p className="text-sm text-muted-foreground">Loading admins…</p>}
@@ -322,18 +372,6 @@ export default function Profile() {
                           <div className="text-sm text-muted-foreground">{a.email ?? ""}</div>
                           <div className="text-sm text-muted-foreground">{a.phoneNumber ?? "No phone"}</div>
                         </div>
-                        {a.phoneNumber ? (
-                          <Button
-                            variant="outline"
-                            size={"sm" as any}
-                            onClick={() => openTelegramWithFallback(a.phoneNumber)}
-                            className="text-xs"
-                          >
-                            Telegram Contact Link
-                          </Button>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No phone</span>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -342,14 +380,6 @@ export default function Profile() {
             </Card>
           )}
 
-          {/* Data Transparency Notice */}
-          <Card className="border-muted">
-            <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                <strong>Data Transparency:</strong> Your pain scores, completion status, and notes can be viewed by your assigned physiotherapist for rehabilitation monitoring. Your phone number may be visible to authorized clinic staff for contact purposes. Telegram is used only as an external contact link — messages are not stored inside JOLNA.
-              </p>
-            </CardContent>
-          </Card>
 
           {role === "physiotherapist" && (
             <Card>
@@ -376,16 +406,6 @@ export default function Profile() {
                           {client.phoneNumber ? (
                             <div className="mt-1">
                               <div className="text-sm font-medium">{client.phoneNumber}</div>
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openTelegramWithFallback(client.phoneNumber);
-                                }}
-                                className="text-xs text-blue-600 hover:underline mt-1"
-                              >
-                                Telegram Contact Link
-                              </a>
                             </div>
                           ) : null}
                         </div>

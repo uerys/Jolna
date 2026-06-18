@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -147,6 +147,7 @@ export default function ClientExercises() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border border-slate-200 shadow-sm flex items-center justify-center bg-indigo-50 text-indigo-700 rounded-full">
+                  <AvatarImage src={user?.avatarUrl ?? undefined} alt={rehabSummary.data.clientName} />
                   <AvatarFallback className="text-xl font-bold bg-indigo-50 text-indigo-700">
                     {rehabSummary.data.clientName
                       .split(" ")

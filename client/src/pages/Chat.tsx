@@ -234,24 +234,46 @@ export default function Chat() {
                       key={msg.id}
                       className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                     >
-                      <div className="max-w-[70%]">
+                      <div className="max-w-[75%]">
+                        {/* Bubble Content */}
                         <div
-                          className={`rounded-2xl px-4 py-2 text-sm leading-relaxed border ${
+                          className={`rounded-2xl px-3 py-1.5 text-sm leading-relaxed relative ${
                             isOwnMessage
-                              ? "bg-[#eeffde] text-[#1a1a1a] border-[#d4f0b8] rounded-tr-none font-medium"
-                              : "bg-white text-slate-800 border-slate-100 rounded-tl-none font-normal"
+                              ? "bg-[#eeffde] text-[#1a1a1a] rounded-br-none font-medium mr-[7px]"
+                              : "bg-white text-slate-800 rounded-bl-none font-normal ml-[7px]"
                           }`}
                         >
-                          <p className="break-words">{msg.text}</p>
+                          <div className="break-words">
+                            <span>{msg.text}</span>
+                            <span
+                              className={`inline-flex items-center gap-0.5 text-[9px] select-none float-right mt-1.5 ml-2 ${
+                                isOwnMessage ? "text-[#8a997d]" : "text-muted-foreground"
+                              }`}
+                            >
+                              <span>
+                                {msg.createdAt
+                                  ? msg.createdAt.toDate().toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: true
+                                    })
+                                  : "Sending..."}
+                              </span>
+                            </span>
+                            <div className="clear-both" />
+                          </div>
+
+                          {/* Telegram Custom Bubble Tail (Inside relative container) */}
+                          {isOwnMessage ? (
+                            <svg className="absolute bottom-0 -right-[6px] w-[9px] h-[16px] text-[#eeffde] fill-current" viewBox="0 0 9 16">
+                              <path d="M0 16h9V0C9 0 7.5 12 0 16z" />
+                            </svg>
+                          ) : (
+                            <svg className="absolute bottom-0 -left-[6px] w-[9px] h-[16px] text-white fill-current filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.02)]" viewBox="0 0 9 16">
+                              <path d="M9 16H0V0C0 0 1.5 12 9 16z" />
+                            </svg>
+                          )}
                         </div>
-                        <span className="text-[9px] text-muted-foreground block mt-1 px-1">
-                          {msg.createdAt
-                            ? msg.createdAt.toDate().toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })
-                            : "Sending..."}
-                        </span>
                       </div>
                     </div>
                   );
