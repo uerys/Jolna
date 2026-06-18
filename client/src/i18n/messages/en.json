@@ -22,6 +22,7 @@
 
   "status.active": "Active",
   "status.inactive": "Inactive",
+  "status.suspended": "Suspended",
 
   "home.heroTitle": "Rehabilitate effectively with {accent} recovery plans and clinical tracking.",
   "home.heroSubtitle": "Jolna is a digital physiotherapy platform designed for a Cambodian clinic. We empower physiotherapists to assign custom protocols and track recovery indices while providing patients with daily guided routines.",
@@ -75,6 +76,7 @@
   "physio.tab.exercises": "Exercise templates",
   "physio.tab.assignments": "Assignments",
   "physio.tab.monitoring": "Monitoring",
+  "physio.tab.categories": "Categories",
 
   "physio.clients.empty": "No clients have been assigned to you yet.",
   "physio.clients.activeSection": "Active clients",

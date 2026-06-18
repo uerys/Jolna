@@ -1,19 +1,11 @@
-import { useLocation } from "wouter";
-import LoginPage from "../../../components/LoginPage";
-import { trpc } from "@/lib/trpc";
+import { LoginForm } from "@/components/login-form";
 
 export default function Login() {
-  const utils = trpc.useUtils();
-  const [, navigate] = useLocation();
-  const loginMutation = trpc.auth.login.useMutation();
-
   return (
-    <LoginPage
-      onLogin={async (email, password) => {
-        await loginMutation.mutateAsync({ email, password });
-        await utils.auth.me.invalidate();
-        navigate("/");
-      }}
-    />
+    <div className="flex min-h-svh flex-col items-center justify-center bg-slate-50 p-6 md:p-10 font-sans">
+      <div className="w-full max-w-md border border-gray-200/80 rounded-2xl bg-white shadow-sm p-6 md:p-10 lg:p-12">
+        <LoginForm />
+      </div>
+    </div>
   );
 }

@@ -118,3 +118,6 @@ temp/
 *.sqlite
 *.sqlite3
 client/public/__manus__/version.json
+
+# Firebase keys
+firebase-service-account.json

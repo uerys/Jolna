@@ -60,8 +60,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.originalUser && ctx.originalUser.id === input.id && input.patch.role && input.patch.role !== ctx.originalUser.role) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own role" });
+      if (ctx.originalUser && ctx.originalUser.id === input.id) {
+        if (input.patch.role && input.patch.role !== ctx.originalUser.role) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own role" });
+        }
+        if (input.patch.status && input.patch.status !== ctx.originalUser.status) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own status" });
+        }
       }
       const result = await updateUserFields(input.id, input.patch);
       await createAuditLog({
@@ -87,12 +92,15 @@ export const adminRouter = router({
       if (ctx.originalUser && ctx.originalUser.id === input.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot suspend your own account" });
       }
-      return updateUserFields(input.id, { status: "inactive" });
+      return updateUserFields(input.id, { status: "suspended" });
     }),
 
   deleteUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.originalUser && ctx.originalUser.id === input.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete your own account" });
+      }
       await deleteUser(input.id);
       return { success: true };
     }),

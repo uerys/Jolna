@@ -48,7 +48,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { EXERCISE_TYPES, INJURY_TYPES } from "../../../../drizzle/schema";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle, Users } from "lucide-react";
+import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle, Users, MessageSquare } from "lucide-react";
 
 export default function PhysioDashboard() {
   const { user, loading } = useAuth();
@@ -115,7 +115,7 @@ export default function PhysioDashboard() {
             value="configuration"
             className="data-[state=active]:bg-white data-[state=active]:text-[#534AB7] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-b-[#534AB7] font-semibold px-4 rounded-lg text-sm h-full"
           >
-            Categories
+            <FormattedMessage id="physio.tab.categories" />
           </TabsTrigger>
         </TabsList>
 
@@ -131,13 +131,15 @@ export default function PhysioDashboard() {
 /* ---------- Clients tab ---------- */
 
 function ClientsTab() {
-  const clients = trpc.physio.listMyClients.useQuery();
+  const clients = trpc.physio.listMyClients.useQuery(undefined, {
+    refetchInterval: 5000,
+  });
   const assignments = trpc.physio.listMyAssignments.useQuery();
   const feedback = trpc.physio.listAllMyFeedback.useQuery();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [triageFilter, setTriageFilter] = useState<"all" | "urgent">("all");
-  const [clientStatusFilter, setClientStatusFilter] = useState<"active" | "suspended" | "all">("active");
+  const [clientStatusFilter, setClientStatusFilter] = useState<"active" | "suspended" | "inactive" | "all">("active");
 
   const isLoading = clients.isLoading || assignments.isLoading || feedback.isLoading;
 
@@ -219,6 +221,7 @@ function ClientsTab() {
         category,
         isUrgent,
         isOnTrack,
+        unreadChatCount: c.unreadChatCount ?? 0,
       };
     });
   }, [clients.data, assignments.data, feedback.data]);
@@ -236,11 +239,13 @@ function ClientsTab() {
   const filteredClients = useMemo(() => {
     let list = [...clientDataList];
 
-    // 1. Client Status filter (Active by default, can select Suspended or All)
+    // 1. Client Status filter (Active by default, can select Suspended, Pending or All)
     if (clientStatusFilter === "active") {
       list = list.filter((c) => c.client.status === "active");
+    } else if (clientStatusFilter === "inactive") {
+      list = list.filter((c) => c.client.status === "inactive");
     } else if (clientStatusFilter === "suspended") {
-      list = list.filter((c) => c.client.status !== "active");
+      list = list.filter((c) => c.client.status === "suspended");
     }
 
     // 2. Triage summary filter
@@ -343,6 +348,7 @@ function ClientsTab() {
             </SelectTrigger>
             <SelectContent className="bg-white border border-[#E4E7EC] text-xs shadow-lg rounded-xl">
               <SelectItem value="active">Undercare</SelectItem>
+              <SelectItem value="inactive">Pending</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
               <SelectItem value="all">All clients</SelectItem>
             </SelectContent>
@@ -356,7 +362,7 @@ function ClientsTab() {
           <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active filters:</span>
           {clientStatusFilter !== "active" && (
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
-              Status: {clientStatusFilter === "all" ? "All" : "Suspended"}
+              Status: {clientStatusFilter === "all" ? "All" : clientStatusFilter === "inactive" ? "Pending" : "Suspended"}
               <button onClick={() => setClientStatusFilter("active")} className="hover:text-indigo-900 font-bold leading-none ml-0.5">×</button>
             </span>
           )}
@@ -387,9 +393,11 @@ function ClientsTab() {
           </div>
         ) : (
           filteredClients.map((data, idx) => {
-            const isSuspended = data.client.status !== "active";
+            const isSuspended = data.client.status === "suspended";
+            const isPending = data.client.status === "inactive";
+            const isInactive = isSuspended || isPending;
 
-            const painBg = isSuspended || data.latestPain === null
+            const painBg = isInactive || data.latestPain === null
               ? "bg-[#F2F4F7] text-[#98A2B3] border-[#E4E7EC]"
               : data.latestPain >= 7
               ? "bg-rose-50 text-rose-600 border-rose-200"
@@ -411,7 +419,7 @@ function ClientsTab() {
               <div
                 key={data.client.id}
                 className={`client-card-enter bg-white border border-[#E4E7EC] border-l-[3px] ${cardAccent} rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 group cursor-pointer ${
-                  isSuspended ? "opacity-80" : ""
+                  isInactive ? "opacity-80" : ""
                 }`}
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
@@ -421,16 +429,26 @@ function ClientsTab() {
 
                       {/* ── Col 1: Identity ── */}
                       <div className="flex-1 min-w-0 md:max-w-[220px]">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="font-semibold text-[#101828] text-[15px] leading-snug tracking-tight truncate">
                             {data.client.name ?? `Patient #${data.client.id}`}
                           </span>
+                          {data.unreadChatCount > 0 && (
+                            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                              <MessageSquare className="size-3" />
+                              <span>{data.unreadChatCount}</span>
+                            </span>
+                          )}
                           {isSuspended ? (
                             <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#F2F4F7] text-[#667085] border border-[#E4E7EC]">
                               Suspended
                             </span>
+                          ) : isPending ? (
+                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                              Pending
+                            </span>
                           ) : (
-                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
                               Undercare
                             </span>
                           )}

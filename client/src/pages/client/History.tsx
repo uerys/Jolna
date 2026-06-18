@@ -48,7 +48,8 @@ import {
   ClipboardCopy,
   Activity,
   Check,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  MessageSquare
 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

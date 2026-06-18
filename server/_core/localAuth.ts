@@ -145,8 +145,11 @@ class LocalAuthService {
     }
 
     // Prevent login for inactive/suspended accounts
-    if (user.status !== "active") {
-      throw ForbiddenError("Account is inactive. Contact your administrator.");
+    if (user.status === "inactive") {
+      throw ForbiddenError("Your account is pending administrator approval.");
+    }
+    if (user.status === "suspended") {
+      throw ForbiddenError("Your account has been suspended. Contact your administrator.");
     }
 
     if (!this.verifyPassword(input.password, user.passwordHash)) {

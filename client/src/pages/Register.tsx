@@ -1,38 +1,11 @@
-import { useLocation } from "wouter";
-import RegisterPage from "../../../components/RegisterPage";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import AppShell from "@/components/AppShell";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignupForm } from "@/components/signup-form";
 
 export default function Register() {
-  const utils = trpc.useUtils();
-  const [, navigate] = useLocation();
-  const { user, loading } = useAuth();
-  const createUserMutation = trpc.admin.createUser.useMutation();
-
-  if (!loading && user?.role !== "admin") {
-    return (
-      <AppShell>
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>Only administrators can create user accounts.</CardDescription>
-          </CardHeader>
-        </Card>
-      </AppShell>
-    );
-  }
-
   return (
-    <RegisterPage
-      onRegister={async (name, email, phoneNumber, password) => {
-        await createUserMutation.mutateAsync({ name, email, phoneNumber, password, role: "client", status: "active" });
-        await utils.admin.listUsers.invalidate();
-        navigate("/admin/users");
-      }}
-      pageTitle="Create New Account"
-      pageSubtitle="Create a new user account for your clinic"
-    />
+    <div className="flex min-h-svh flex-col items-center justify-center bg-slate-50 p-6 md:p-10 font-sans">
+      <div className="w-full max-w-md border border-gray-200/80 rounded-2xl bg-white shadow-sm p-6 md:p-10 lg:p-12">
+        <SignupForm />
+      </div>
+    </div>
   );
 }

@@ -39,6 +39,7 @@ export const NOTIFICATION_TYPES = [
   "assignment_created",
   "assignment_status_updated",
   "feedback_submitted",
+  "new_message",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

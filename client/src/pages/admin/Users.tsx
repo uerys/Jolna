@@ -41,7 +41,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { UserCog } from "lucide-react";
 
 type Role = "user" | "admin" | "client" | "physiotherapist";
-type Status = "active" | "inactive";
+type Status = "active" | "inactive" | "suspended";
 
 function roleLabel(role: string | null | undefined) {
   switch (role) {
@@ -61,6 +61,8 @@ function statusVariant(status: string | null | undefined) {
     case "active":
       return "default";
     case "inactive":
+      return "secondary";
+    case "suspended":
       return "destructive";
     default:
       return "outline";
@@ -185,6 +187,9 @@ export default function AdminUsers() {
                 <SelectItem value="inactive">
                   {intl.formatMessage({ id: "status.inactive" })}
                 </SelectItem>
+                <SelectItem value="suspended">
+                  {intl.formatMessage({ id: "status.suspended" })}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -250,6 +255,7 @@ export default function AdminUsers() {
                     <Button
                       size="sm"
                       variant="destructive"
+                      disabled={u.id === user?.id}
                       onClick={() => {
                         if (confirm(intl.formatMessage({ id: "admin.confirm.delete" }))) del.mutate({ id: u.id });
                       }}
@@ -346,13 +352,21 @@ function EditUserDialog({
             </div>
             <div className="space-y-1.5">
               <Label><FormattedMessage id="admin.edit.status" /></Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">{intl.formatMessage({ id: "status.active" })}</SelectItem>
-                  <SelectItem value="inactive">{intl.formatMessage({ id: "status.inactive" })}</SelectItem>
-                </SelectContent>
-              </Select>
+              {currentUser && currentUser.id === user?.id ? (
+                <div className="text-sm text-muted-foreground">
+                  {intl.formatMessage({ id: `status.${status}` })}
+                  <div className="text-xs text-muted-foreground">(Cannot change your own status)</div>
+                </div>
+              ) : (
+                <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{intl.formatMessage({ id: "status.active" })}</SelectItem>
+                    <SelectItem value="inactive">{intl.formatMessage({ id: "status.inactive" })}</SelectItem>
+                    <SelectItem value="suspended">{intl.formatMessage({ id: "status.suspended" })}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           {role === "client" && (

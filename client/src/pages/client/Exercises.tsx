@@ -40,6 +40,7 @@ import {
   MoreVertical,
   Calendar as CalendarIcon,
   Dumbbell,
+  MessageSquare,
 } from "lucide-react";
 
 /** Format injury type enum to human-readable label */
@@ -160,8 +161,20 @@ export default function ClientExercises() {
                     <h1 className="text-xl font-bold text-[#101828] tracking-tight">
                       {rehabSummary.data.clientName}
                     </h1>
-                    <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold shadow-sm">
-                      Undercare
+                    <Badge className={
+                      user?.status === "active"
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold shadow-sm"
+                        : user?.status === "inactive"
+                        ? "bg-amber-50 text-amber-800 border-amber-200 font-semibold shadow-sm"
+                        : "bg-red-50 text-red-800 border-red-200 font-semibold shadow-sm"
+                    }>
+                      {user?.status === "active"
+                        ? "Undercare"
+                        : user?.status === "inactive"
+                        ? "Pending"
+                        : user?.status === "suspended"
+                        ? "Suspended"
+                        : "—"}
                     </Badge>
                   </div>
                   <p className="text-xs text-[#98A2B3] font-medium">
@@ -256,16 +269,28 @@ export default function ClientExercises() {
             </p>
           </div>
         </div>
-        <Button
-          asChild
-          variant="outline"
-          className="w-full sm:w-auto border-[#534AB7] text-[#534AB7] hover:bg-[#534AB7] hover:text-white font-bold transition-all"
-        >
-          <Link href="/client/history">
-            <History className="size-4 mr-1" />
-            History & Progress
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            className="w-full sm:w-auto border-[#534AB7] text-[#534AB7] hover:bg-[#534AB7] hover:text-white font-bold transition-all"
+          >
+            <Link href="/chat">
+              <MessageSquare className="size-4 mr-1.5" />
+              Chat with Physio
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full sm:w-auto border-[#534AB7] text-[#534AB7] hover:bg-[#534AB7] hover:text-white font-bold transition-all"
+          >
+            <Link href="/client/history">
+              <History className="size-4 mr-1" />
+              History & Progress
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Exercise Cards */}

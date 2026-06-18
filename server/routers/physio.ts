@@ -33,7 +33,9 @@ import {
   deleteCustomExerciseType,
   deleteCustomInjuryType,
 } from "../db";
-import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES } from "../../drizzle/schema";
+import { getDb } from "../db";
+import { eq, and, sql } from "drizzle-orm";
+import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES, notifications } from "../../drizzle/schema";
 
 const AssignmentStatusEnum = z.enum(ASSIGNMENT_STATUSES);
 const InjuryTypeEnum = z.enum(INJURY_TYPES);
@@ -141,24 +143,61 @@ export const physioRouter = router({
     }),
 
   /* Clients & Assignments */
-  listMyClients: physioProcedure.query(async ({ ctx }) =>
-    listUsers({ role: "client", physiotherapistId: ctx.user.id })
-  ),
+  listMyClients: physioProcedure.query(async ({ ctx }) => {
+    const clients = await listUsers({ role: "client", physiotherapistId: ctx.user.id });
+    const dbInstance = await getDb();
+    if (!dbInstance) return clients.map((c) => ({ ...c, unreadChatCount: 0 }));
 
-  /**
-   * Get detailed client info with ownership check.
-   * Physiotherapists can only view clients assigned to them.
-   */
+    const enriched = await Promise.all(
+      clients.map(async (client) => {
+        const rows = await dbInstance
+          .select({
+            total: sql<number>`count(*)`
+          })
+          .from(notifications)
+          .where(
+            and(
+              eq(notifications.recipientId, ctx.user.id),
+              eq(notifications.actorId, client.id),
+              eq(notifications.type, "new_message"),
+              sql`${notifications.readAt} is null`
+            )
+          );
+        const unreadChatCount = Number(rows[0]?.total ?? 0);
+        return { ...client, unreadChatCount };
+      })
+    );
+    return enriched;
+  }),
+
   getClientDetail: physioProcedure
     .input(z.object({ clientId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const client = await getUserById(input.clientId);
       if (!client) throw new TRPCError({ code: "NOT_FOUND" });
-      // Ownership check: physio can only view their own clients
       if (client.physiotherapistId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Not your client" });
       }
-      return client;
+
+      const dbInstance = await getDb();
+      let unreadChatCount = 0;
+      if (dbInstance) {
+        const rows = await dbInstance
+          .select({
+            total: sql<number>`count(*)`
+          })
+          .from(notifications)
+          .where(
+            and(
+              eq(notifications.recipientId, ctx.user.id),
+              eq(notifications.actorId, client.id),
+              eq(notifications.type, "new_message"),
+              sql`${notifications.readAt} is null`
+            )
+          );
+        unreadChatCount = Number(rows[0]?.total ?? 0);
+      }
+      return { ...client, unreadChatCount };
     }),
 
   /**

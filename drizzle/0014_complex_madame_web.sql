@@ -1,0 +1,1 @@
+ALTER TABLE `notifications` MODIFY COLUMN `type` enum('assignment_created','assignment_status_updated','feedback_submitted','new_message') NOT NULL;

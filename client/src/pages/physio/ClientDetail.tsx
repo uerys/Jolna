@@ -95,6 +95,7 @@ import {
   SlidersHorizontal,
   X,
   Pencil,
+  MessageSquare,
 } from "lucide-react";
 
 // Types matching the schema structures
@@ -1041,9 +1042,17 @@ export default function PhysioClientDetail() {
                   <Badge className={
                     client.data?.status === "active"
                       ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50/80 border font-semibold"
+                      : client.data?.status === "inactive"
+                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50/80 border font-semibold"
                       : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100/80 border font-semibold"
                   }>
-                    {client.data?.status === "active" ? "Undercare" : client.data?.status ? "Suspended" : "—"}
+                    {client.data?.status === "active"
+                      ? "Undercare"
+                      : client.data?.status === "inactive"
+                      ? "Pending"
+                      : client.data?.status === "suspended"
+                      ? "Suspended"
+                      : "—"}
                   </Badge>
                 </div>
                 <p className="text-xs text-[#98A2B3] font-medium">
@@ -1053,6 +1062,16 @@ export default function PhysioClientDetail() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold shadow-sm flex items-center gap-2 py-2 px-4 rounded-lg transition-all"
+              >
+                <Link href={`/chat/${clientId}`}>
+                  <MessageSquare className="size-4 text-slate-500 mr-1" />
+                  <span>Chat with Client</span>
+                </Link>
+              </Button>
               {viewMode === "historical" ? (
                 <Button
                   onClick={handleCopyContact}

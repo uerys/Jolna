@@ -15,6 +15,7 @@ import PhysioClientDetail from "./pages/physio/ClientDetail";
 import Profile from "./pages/Profile";
 import ClientExercises from "./pages/client/Exercises";
 import ClientHistory from "./pages/client/History";
+import Chat from "./pages/Chat";
 
 function Router() {
   return (
@@ -23,6 +24,8 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/profile"} component={Profile} />
+      <Route path={"/chat"} component={Chat} />
+      <Route path={"/chat/:clientId"} component={Chat} />
 
       {/* Admin */}
       <Route path={"/admin/users"} component={AdminUsers} />

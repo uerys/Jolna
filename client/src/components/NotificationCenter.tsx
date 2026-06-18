@@ -26,11 +26,11 @@ export function NotificationCenter(props: Props) {
 
   const notificationsQuery = trpc.notifications.listMine.useQuery(undefined, {
     enabled,
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
   const unreadCountQuery = trpc.notifications.unreadCount.useQuery(undefined, {
     enabled,
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const markRead = trpc.notifications.markRead.useMutation({
@@ -82,7 +82,7 @@ export function NotificationCenter(props: Props) {
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={12} className="w-96 p-0">
+      <PopoverContent align="end" sideOffset={12} className="w-96 p-0 overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <div className="font-medium">
@@ -106,7 +106,7 @@ export function NotificationCenter(props: Props) {
           </Button>
         </div>
 
-        <ScrollArea className="max-h-96">
+        <ScrollArea className="max-h-96 overflow-hidden">
           <div className="p-2">
             {notifications.length === 0 ? (
               <div className="px-3 py-6 text-sm text-muted-foreground">
