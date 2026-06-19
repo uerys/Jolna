@@ -182,6 +182,7 @@ export async function updateUserFields(
       | "physiotherapistId"
       | "injuryType"
       | "nextClinicVisit"
+      | "passwordHash"
     >
   >
 ) {

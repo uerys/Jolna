@@ -15,6 +15,7 @@ import {
 } from "../../drizzle/schema";
 import { createAuditLog } from "../db";
 import { sdk } from "../_core/localAuth";
+import { sendEmail } from "../_core/mailer";
 
 const RoleEnum = z.enum(ROLES);
 const StatusEnum = z.enum(ACCOUNT_STATUSES);
@@ -163,5 +164,35 @@ export const adminRouter = router({
         result.user.status = input.status;
       }
       return result.user;
+    }),
+
+  sendTestEmail: adminProcedure
+    .input(z.object({ to: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const emailContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e4e7ec; border-radius: 12px;">
+          <h2 style="color: #534AB7;">Jolna SMTP Test Email</h2>
+          <p>Hello,</p>
+          <p>This is a test email sent from the JOLNA platform to verify SMTP configuration settings.</p>
+          <p>If you received this message, the email configuration is working successfully!</p>
+          <hr style="border: none; border-top: 1px solid #e4e7ec; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #667085;">Sent at: ${new Date().toISOString()}</p>
+        </div>
+      `;
+
+      const result = await sendEmail(
+        input.to,
+        "Jolna SMTP Test Email",
+        emailContent
+      );
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send test email: ${result.error}`,
+        });
+      }
+
+      return { success: true };
     }),
 });

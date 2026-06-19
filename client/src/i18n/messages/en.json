@@ -154,5 +154,11 @@
   "form.invalidUrl": "Enter a valid URL.",
   "common.loading": "Loading…",
   "common.cancel": "Cancel",
-  "common.save": "Save"
+  "common.save": "Save",
+  "admin.emailTest.title": "SMTP Email Test",
+  "admin.emailTest.description": "Send a test email to verify the clinic's SMTP configuration settings.",
+  "admin.emailTest.recipient": "Recipient Email Address",
+  "admin.emailTest.placeholder": "e.g., admin@example.com",
+  "admin.emailTest.send": "Send Test Email",
+  "admin.emailTest.sending": "Sending..."
 }

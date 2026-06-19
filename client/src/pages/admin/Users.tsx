@@ -123,6 +123,16 @@ export default function AdminUsers() {
   });
 
   const [editing, setEditing] = useState<null | NonNullable<typeof users.data>[number]>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const sendTestEmail = trpc.admin.sendTestEmail.useMutation({
+    onSuccess: () => {
+      toast.success("Test email sent successfully!");
+      setTestEmail("");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to send test email.");
+    },
+  });
 
   if (!loading && user?.role !== "admin") {
     return (
@@ -299,6 +309,49 @@ export default function AdminUsers() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>
+            <FormattedMessage id="admin.emailTest.title" />
+          </CardTitle>
+          <CardDescription>
+            <FormattedMessage id="admin.emailTest.description" />
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-1.5 max-w-md">
+            <Label htmlFor="test-email">
+              <FormattedMessage id="admin.emailTest.recipient" />
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="test-email"
+                type="email"
+                placeholder={intl.formatMessage({ id: "admin.emailTest.placeholder" })}
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
+              <Button
+                onClick={() => {
+                  if (!testEmail.trim()) {
+                    toast.error("Recipient email is required.");
+                    return;
+                  }
+                  sendTestEmail.mutate({ to: testEmail.trim() });
+                }}
+                disabled={sendTestEmail.isPending}
+              >
+                {sendTestEmail.isPending ? (
+                  <FormattedMessage id="admin.emailTest.sending" />
+                ) : (
+                  <FormattedMessage id="admin.emailTest.send" />
+                )}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

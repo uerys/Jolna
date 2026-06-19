@@ -152,5 +152,11 @@
   "form.invalidUrl": "សូមបញ្ចូល URL ត្រឹមត្រូវ។",
   "common.loading": "កំពុងផ្ទុក…",
   "common.cancel": "បោះបង់",
-  "common.save": "រក្សាទុក"
+  "common.save": "រក្សាទុក",
+  "admin.emailTest.title": "សាកល្បងអ៊ីមែល SMTP",
+  "admin.emailTest.description": "ផ្ញើអ៊ីមែលសាកល្បងដើម្បីផ្ទៀងផ្ទាត់ការកំណត់រចនាសម្ព័ន្ធ SMTP របស់គ្លីនិក។",
+  "admin.emailTest.recipient": "អាសយដ្ឋានអ៊ីមែលអ្នកទទួល",
+  "admin.emailTest.placeholder": "ឧ. admin@example.com",
+  "admin.emailTest.send": "ផ្ញើអ៊ីមែលសាកល្បង",
+  "admin.emailTest.sending": "កំពុងផ្ញើ..."
 }

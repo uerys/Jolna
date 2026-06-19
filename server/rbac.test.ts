@@ -1,4 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./_core/mailer", () => ({
+  sendEmail: vi.fn().mockImplementation(async (to: string) => {
+    if (to === "fail@example.com") {
+      return { success: false, error: "SMTP connect error" };
+    }
+    return { success: true, messageId: "test-id" };
+  }),
+}));
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
@@ -127,5 +136,26 @@ describe("impersonation safety", () => {
   it("blocks non-admins from touching the dev router", async () => {
     const caller = appRouter.createCaller(makeCtx("physiotherapist"));
     await expect(caller.dev.listImpersonationTargets()).rejects.toThrow();
+  });
+});
+
+describe("sendTestEmail", () => {
+  it("blocks non-admins from sending test emails", async () => {
+    const clientCaller = appRouter.createCaller(makeCtx("client"));
+    await expect(clientCaller.admin.sendTestEmail({ to: "test@example.com" })).rejects.toThrow();
+
+    const physioCaller = appRouter.createCaller(makeCtx("physiotherapist"));
+    await expect(physioCaller.admin.sendTestEmail({ to: "test@example.com" })).rejects.toThrow();
+  });
+
+  it("allows admins to send test emails successfully", async () => {
+    const adminCaller = appRouter.createCaller(makeCtx("admin"));
+    const result = await adminCaller.admin.sendTestEmail({ to: "test@example.com" });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("handles email sending failure", async () => {
+    const adminCaller = appRouter.createCaller(makeCtx("admin"));
+    await expect(adminCaller.admin.sendTestEmail({ to: "fail@example.com" })).rejects.toThrow("Failed to send test email");
   });
 });
