@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getUserById, listUsers, setLanguagePreference, updateUserFields } from "../db";
+import { getUserById, listUsers, setLanguagePreference, updateUserFields, createNotification } from "../db";
 import { LANGUAGES } from "../../drizzle/schema";
 import { sdk } from "../_core/localAuth";
+import { sendEmail } from "../_core/mailer";
 /**
  * Per-user preferences available to any authenticated role.
  * Language preference is persisted in users.languagePreference.
@@ -105,4 +106,78 @@ export const settingsRouter = router({
       await sdk.resetPassword(ctx.user.id, input.newPassword);
       return { success: true };
     }),
+
+  requestPasswordReset: protectedProcedure.mutation(async ({ ctx }) => {
+    const admins = await listUsers({ role: "admin", status: "active" });
+    if (admins.length === 0) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "No active administrator contact found.",
+      });
+    }
+
+    const requesterName = ctx.user.name ?? ctx.user.email ?? "A client";
+    const requesterEmail = ctx.user.email;
+
+    let emailSent = false;
+    for (const admin of admins) {
+      if (!admin.email) continue;
+      
+      const emailContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e4e7ec; border-radius: 12px;">
+          <h2 style="color: #534AB7;">Password Reset Request</h2>
+          <p>Dear <strong>${admin.name ?? "Administrator"}</strong>,</p>
+          <p>A user has requested a password reset on JOLNA:</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; width: 120px;">Name:</td>
+              <td style="padding: 6px 0;">${requesterName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold;">Email:</td>
+              <td style="padding: 6px 0;">${requesterEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold;">User ID:</td>
+              <td style="padding: 6px 0;">#${ctx.user.id}</td>
+            </tr>
+          </table>
+          <p>Please log in to your Admin Panel to reset their password:</p>
+          <div style="margin: 20px 0;">
+            <a href="http://localhost:3000/admin/users" style="background-color: #534AB7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Go to User Management</a>
+          </div>
+        </div>
+      `;
+
+      const result = await sendEmail(
+        admin.email,
+        `Password Reset Request - ${requesterName}`,
+        emailContent
+      );
+      if (result.success) {
+        emailSent = true;
+      }
+    }
+
+    if (!emailSent) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to deliver the reset request email to administrators.",
+      });
+    }
+
+    // Create in-app notifications for all admins
+    for (const admin of admins) {
+      await createNotification({
+        recipientId: admin.id,
+        actorId: ctx.user.id,
+        type: "password_reset_requested",
+        title: "Password Reset Request",
+        content: `${requesterName} is requesting a password reset.`,
+        href: "/admin/users",
+      });
+    }
+
+    return { success: true };
+  }),
 });

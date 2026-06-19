@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { UserCog } from "lucide-react";
+import { UserCog, Search } from "lucide-react";
 
 type Role = "user" | "admin" | "client" | "physiotherapist";
 type Status = "active" | "inactive" | "suspended";
@@ -75,6 +75,7 @@ export default function AdminUsers() {
   const [, navigate] = useLocation();
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Only admins reach this page meaningfully; others see an empty table (server enforces).
   const filter = useMemo(
@@ -87,6 +88,19 @@ export default function AdminUsers() {
   const users = trpc.admin.listUsers.useQuery(filter, {
     enabled: !loading && user?.role === "admin",
   });
+
+  const filteredUsers = useMemo(() => {
+    if (!users.data) return [];
+    return users.data.filter((u) => {
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase().trim();
+        const nameMatch = u.name?.toLowerCase().includes(query) ?? false;
+        const emailMatch = u.email?.toLowerCase().includes(query) ?? false;
+        return nameMatch || emailMatch;
+      }
+      return true;
+    });
+  }, [users.data, searchQuery]);
   const utils = trpc.useUtils();
 
   const reactivate = trpc.admin.approveUser.useMutation({
@@ -147,7 +161,17 @@ export default function AdminUsers() {
 
       <Card className="mt-6">
         <CardContent className="pt-6">
-          <div className="flex items-center gap-3 pb-4">
+          <div className="flex flex-wrap items-center gap-3 pb-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 border rounded-xl text-sm"
+              />
+            </div>
             <Label className="text-sm">
               <FormattedMessage id="admin.filter.role" />:
             </Label>
@@ -221,7 +245,7 @@ export default function AdminUsers() {
                   </TableCell>
                 </TableRow>
               )}
-              {users.data?.map((u) => (
+              {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.name ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{u.email ?? "—"}</TableCell>
@@ -229,14 +253,22 @@ export default function AdminUsers() {
                     <FormattedMessage id={roleLabel(u.role)} />
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant(u.status) as any}>
+                    <Badge
+                      className={
+                        u.status === "active"
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 border font-semibold"
+                          : u.status === "inactive"
+                          ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold"
+                      }
+                    >
                       <FormattedMessage id={`status.${u.status}`} />
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     {u.status !== "active" && (
                       <Button size="sm" variant="outline" onClick={() => reactivate.mutate({ id: u.id })}>
-                        <FormattedMessage id="admin.action.reactivate" />
+                        <FormattedMessage id={u.status === "inactive" ? "admin.action.approve" : "admin.action.reactivate"} />
                       </Button>
                     )}
                     {u.status === "active" && (

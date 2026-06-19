@@ -20,8 +20,8 @@
   "role.client": "Client",
   "role.user": "Client",
 
-  "status.active": "Active",
-  "status.inactive": "Inactive",
+  "status.active": "Undercare",
+  "status.inactive": "Pending",
   "status.suspended": "Suspended",
 
   "home.heroTitle": "Rehabilitate effectively with {accent} recovery plans and clinical tracking.",

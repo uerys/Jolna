@@ -13,7 +13,7 @@ import {
 
 export const notificationsRouter = router({
   listMine: anyRoleProcedure.query(({ ctx }) =>
-    listNotificationsForUser(ctx.user.id, { limit: 10 })
+    listNotificationsForUser(ctx.user.id, { limit: 50 })
   ),
 
   unreadCount: anyRoleProcedure.query(({ ctx }) =>

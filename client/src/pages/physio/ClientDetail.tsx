@@ -1251,6 +1251,7 @@ export default function PhysioClientDetail() {
                           mode="single"
                           selected={filterDateFrom}
                           onSelect={setFilterDateFrom}
+                          disabled={(date) => (filterDateTo ? date > filterDateTo : false)}
                           initialFocus
                         />
                       </PopoverContent>
@@ -1276,6 +1277,7 @@ export default function PhysioClientDetail() {
                           mode="single"
                           selected={filterDateTo}
                           onSelect={setFilterDateTo}
+                          disabled={(date) => (filterDateFrom ? date < filterDateFrom : false)}
                           initialFocus
                         />
                       </PopoverContent>

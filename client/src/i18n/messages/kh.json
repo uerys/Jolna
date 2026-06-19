@@ -20,8 +20,8 @@
   "role.client": "អ្នកជំងឺ",
   "role.user": "អ្នកជំងឺ",
 
-  "status.active": "សកម្ម",
-  "status.inactive": "អសកម្ម",
+  "status.active": "កំពុងថែទាំ",
+  "status.inactive": "រង់ចាំការអនុម័ត",
   "status.suspended": "ផ្អាក",
 
   "home.heroTitle": "ស្តារនីតិសម្បទាប្រកបដោយប្រសិទ្ធភាព ជាមួយផែនការស្តារឡើងវិញ {accent} និងការតាមដានគ្លីនិក។",

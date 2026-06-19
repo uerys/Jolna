@@ -387,7 +387,13 @@ export default function ClientHistory() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-white border border-slate-200 shadow-md rounded-lg" align="start">
-                      <Calendar mode="single" selected={filterDateFrom} onSelect={setFilterDateFrom} initialFocus />
+                      <Calendar
+                        mode="single"
+                        selected={filterDateFrom}
+                        onSelect={setFilterDateFrom}
+                        disabled={(date) => (filterDateTo ? date > filterDateTo : false)}
+                        initialFocus
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -407,7 +413,13 @@ export default function ClientHistory() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-white border border-[#E4E7EC] shadow-md rounded-lg" align="start">
-                      <Calendar mode="single" selected={filterDateTo} onSelect={setFilterDateTo} initialFocus />
+                      <Calendar
+                        mode="single"
+                        selected={filterDateTo}
+                        onSelect={setFilterDateTo}
+                        disabled={(date) => (filterDateFrom ? date < filterDateFrom : false)}
+                        initialFocus
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>

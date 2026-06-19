@@ -226,6 +226,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
           <div className="container py-6">{children}</div>
         </main>
       </div>
+
     </div>
   );
 }

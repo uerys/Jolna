@@ -106,7 +106,7 @@ export function NotificationCenter(props: Props) {
           </Button>
         </div>
 
-        <ScrollArea className="max-h-96 overflow-hidden">
+        <ScrollArea className="h-[300px]">
           <div className="p-2">
             {notifications.length === 0 ? (
               <div className="px-3 py-6 text-sm text-muted-foreground">

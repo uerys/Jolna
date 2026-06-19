@@ -484,7 +484,7 @@ function ExerciseCard({
                     : "text-slate-600 font-medium"
                 }
               >
-                {todayLogCount ?? 0} / {dailyFrequency} sessions
+                {Math.min(todayLogCount ?? 0, dailyFrequency)} / {dailyFrequency} sessions
               </span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2">

@@ -106,6 +106,13 @@
       "when": 1781772693579,
       "tag": "0014_complex_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1781858479677,
+      "tag": "0015_foamy_vermin",
+      "breakpoints": true
     }
   ]
 }

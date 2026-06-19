@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { UserCog } from "lucide-react";
+import { UserCog, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 function makeInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -26,6 +27,7 @@ function makeInitials(name: string | null | undefined, email: string | null | un
 
 export default function Profile() {
   const intl = useIntl();
+  const [, navigate] = useLocation();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const utils = trpc.useUtils();
 
@@ -79,6 +81,14 @@ export default function Profile() {
     onError: () => {
       toast.error("Profile was not saved. Please try again.");
     },
+  });
+  const requestReset = trpc.settings.requestPasswordReset.useMutation({
+    onSuccess: () => {
+      toast.success("Password reset request sent to administrators.");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to send reset request.");
+    }
   });
 
   const userInitials = useMemo(
@@ -150,8 +160,26 @@ export default function Profile() {
     phoneNumber?: string | null;
   }>;
 
+  const goBackPath = role === "admin"
+    ? "/admin/users"
+    : role === "physiotherapist"
+    ? "/physio"
+    : "/client/exercises";
+
   return (
     <AppShell>
+      <div className="mb-4">
+        <Button
+          onClick={() => navigate(goBackPath)}
+          variant="ghost"
+          size="sm"
+          className="text-slate-500 hover:text-[#534AB7] hover:bg-indigo-50/50 transition-colors"
+        >
+          <ArrowLeft className="size-4 mr-1" />
+          Back
+        </Button>
+      </div>
+
       <div className="flex items-center gap-3">
         <UserCog className="size-6 text-primary" />
         <div>
@@ -303,16 +331,22 @@ export default function Profile() {
                 <span className="text-sm text-muted-foreground">Role</span>
                 <Badge variant="secondary"><FormattedMessage id={roleLabel} /></Badge>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge className={`border-transparent text-white ${
-                  profile.data?.user.status === "active" ? "bg-emerald-600 hover:bg-emerald-700" :
-                  profile.data?.user.status === "suspended" ? "bg-red-600 hover:bg-red-700" :
-                  "bg-gray-500 hover:bg-gray-600"
-                }`}>
-                  {profile.data?.user.status ? profile.data.user.status.charAt(0).toUpperCase() + profile.data.user.status.slice(1) : "Active"}
-                </Badge>
-              </div>
+              {role === "client" && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <Badge
+                    className={
+                      profile.data?.user.status === "active"
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 border font-semibold shadow-none"
+                        : profile.data?.user.status === "inactive"
+                        ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold shadow-none"
+                        : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold shadow-none"
+                    }
+                  >
+                    <FormattedMessage id={`status.${profile.data?.user.status}`} />
+                  </Badge>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Phone Number</span>
                 <span className="text-sm font-medium">{profile.data?.user.phoneNumber ?? "—"}</span>
@@ -358,7 +392,7 @@ export default function Profile() {
                 <CardTitle>Contact Admin</CardTitle>
                 <CardDescription>If you need help, contact your clinic administrator.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 {admins.isLoading && <p className="text-sm text-muted-foreground">Loading admins…</p>}
                 {!admins.isLoading && (!admins.data || admins.data.length === 0) && (
                   <p className="text-sm text-muted-foreground">No admin contact available.</p>
@@ -376,51 +410,22 @@ export default function Profile() {
                     ))}
                   </div>
                 )}
+
+                <div className="border-t border-slate-100 pt-4 mt-2">
+                  <Button
+                    onClick={() => requestReset.mutate()}
+                    disabled={requestReset.isPending}
+                    variant="outline"
+                    className="w-full text-xs font-semibold"
+                  >
+                    {requestReset.isPending ? "Sending Request..." : "Request Password Reset"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
 
 
-          {role === "physiotherapist" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Assigned Clients</CardTitle>
-                <CardDescription>
-                  Active clients currently assigned to your care.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {assignedClients.length > 0 ? (
-                  assignedClients.map((client) => (
-                    <div key={client.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="h-10 w-10 border">
-                          <AvatarImage src={client.avatarUrl ?? undefined} alt={client.name ?? client.email ?? "Client"} />
-                          <AvatarFallback className="text-xs font-medium">
-                            {makeInitials(client.name, client.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{client.name ?? client.email ?? `#${client.id}`}</div>
-                          <div className="text-sm text-muted-foreground truncate">{client.email ?? ""}</div>
-                          {client.phoneNumber ? (
-                            <div className="mt-1">
-                              <div className="text-sm font-medium">{client.phoneNumber}</div>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                      <Badge className="border-transparent bg-emerald-600 text-white hover:bg-emerald-700">
-                        Active
-                      </Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No active clients assigned yet.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </AppShell>

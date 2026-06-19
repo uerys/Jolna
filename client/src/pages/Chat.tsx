@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -11,6 +11,9 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  doc,
+  deleteDoc,
+  updateDoc,
   type DocumentData
 } from "firebase/firestore";
 import {
@@ -18,7 +21,10 @@ import {
   Loader2,
   MessageSquare,
   ArrowLeft,
-  User
+  User,
+  Pencil,
+  Trash2,
+  X
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +35,7 @@ interface Message {
   senderName: string;
   text: string;
   createdAt: { toDate: () => Date } | null;
+  editedAt?: { toDate: () => Date } | null;
 }
 
 export default function Chat() {
@@ -60,6 +67,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // 2. Resolve target counterpart and chat room ID
@@ -104,7 +112,8 @@ export default function Chat() {
           senderId: String(data.senderId),
           senderName: String(data.senderName),
           text: String(data.text),
-          createdAt: data.createdAt as { toDate: () => Date } | null
+          createdAt: data.createdAt as { toDate: () => Date } | null,
+          editedAt: data.editedAt as { toDate: () => Date } | null | undefined
         });
       });
       setMessages(msgs);
@@ -123,7 +132,7 @@ export default function Chat() {
     }
   }, [targetUser?.id, messages.length]);
 
-  // 5. Send message handler
+  // 5. Send or Edit message handler
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !roomId || !user) return;
@@ -133,26 +142,146 @@ export default function Chat() {
       const tempText = inputText;
       setInputText("");
 
-      await addDoc(collection(db, "chats", roomId, "messages"), {
-        senderId: String(user.id),
-        senderName: user.name ?? user.email ?? "User",
-        text: tempText.trim(),
-        createdAt: serverTimestamp()
-      });
-
-      if (targetUser) {
-        await sendChat.mutateAsync({
-          recipientId: targetUser.id,
-          text: tempText
+      if (editingMessageId) {
+        await updateDoc(doc(db, "chats", roomId, "messages", editingMessageId), {
+          text: tempText.trim(),
+          editedAt: serverTimestamp()
         });
+        setEditingMessageId(null);
+      } else {
+        await addDoc(collection(db, "chats", roomId, "messages"), {
+          senderId: String(user.id),
+          senderName: user.name ?? user.email ?? "User",
+          text: tempText.trim(),
+          createdAt: serverTimestamp()
+        });
+
+        if (targetUser) {
+          await sendChat.mutateAsync({
+            recipientId: targetUser.id,
+            text: tempText
+          });
+        }
       }
     } catch (err) {
-      console.error("[Chat] Failed to send message:", err);
+      console.error("[Chat] Failed to send/edit message:", err);
     } finally {
       setSending(false);
     }
   };
 
+  const handleEditMessage = (msgId: string, text: string) => {
+    setEditingMessageId(msgId);
+    setInputText(text);
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!roomId) return;
+    if (!window.confirm("Are you sure you want to delete this message?")) return;
+
+    try {
+      await deleteDoc(doc(db, "chats", roomId, "messages", msgId));
+    } catch (err) {
+      console.error("[Chat] Failed to delete message:", err);
+    }
+  };
+  const renderedMessages = useMemo(() => {
+    const elements: React.ReactNode[] = [];
+    let lastDateStr = "";
+
+    messages.forEach((msg) => {
+      if (msg.createdAt) {
+        const msgDate = msg.createdAt.toDate();
+        const formattedDate = msgDate.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+        if (formattedDate !== lastDateStr) {
+          lastDateStr = formattedDate;
+          elements.push(
+            <div key={`date_${msg.id}`} className="flex justify-center my-4 select-none">
+              <span className="bg-slate-800/10 text-slate-500 text-[10px] font-bold px-3.5 py-1 rounded-full uppercase tracking-wider">
+                {formattedDate}
+              </span>
+            </div>
+          );
+        }
+      }
+
+      const isOwnMessage = msg.senderId === String(user?.id);
+      elements.push(
+        <div
+          key={msg.id}
+          className={`flex items-center gap-2 group relative mb-2 ${
+            isOwnMessage ? "justify-end" : "justify-start"
+          }`}
+        >
+          {isOwnMessage && (
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 mr-1 select-none shrink-0">
+              <button
+                type="button"
+                onClick={() => handleEditMessage(msg.id, msg.text)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+                title="Edit message"
+              >
+                <Pencil className="size-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteMessage(msg.id)}
+                className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                title="Delete message"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </div>
+          )}
+
+          <div className="max-w-[75%]">
+            {/* Bubble Content */}
+            <div
+              className={`rounded-2xl px-3 py-1.5 text-sm leading-relaxed border relative ${
+                isOwnMessage
+                  ? "bg-[#eeffde] text-[#1a1a1a] border-[#d4f0b8] rounded-br-none font-medium mr-[7px]"
+                  : "bg-white text-slate-800 border-slate-100 rounded-bl-none font-normal ml-[7px]"
+              }`}
+            >
+              <div className="break-words">
+                <span>{msg.text}</span>
+                <span
+                  className={`inline-flex items-center gap-0.5 text-[9px] select-none float-right mt-1.5 ml-2 ${
+                    isOwnMessage ? "text-[#8a997d]" : "text-muted-foreground"
+                  }`}
+                >
+                  {msg.editedAt && <span className="text-[8px] opacity-75 mr-1 font-normal">edited</span>}
+                  <span>
+                    {msg.createdAt
+                      ? msg.createdAt.toDate().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true
+                        })
+                      : "Sending..."}
+                  </span>
+                </span>
+                <div className="clear-both" />
+              </div>
+
+              {/* Telegram Custom Bubble Tail */}
+              {isOwnMessage ? (
+                <svg className="absolute bottom-0 -right-[6px] w-[9px] h-[16px] text-[#eeffde] fill-current" viewBox="0 0 9 16">
+                  <path d="M0 16h9V0C9 0 7.5 12 0 16z" />
+                </svg>
+              ) : (
+                <svg className="absolute bottom-0 -left-[6px] w-[9px] h-[16px] text-white fill-current filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.02)]" viewBox="0 0 9 16">
+                  <path d="M9 16H0V0C0 0 1.5 12 9 16z" />
+                </svg>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    });
+
+    return elements;
+  }, [messages, user?.id, editingMessageId]);
   const isLoading = authLoading || (isPhysio ? clientDetail.isLoading : physioProfile.isLoading);
 
   return (
@@ -227,62 +356,31 @@ export default function Chat() {
                   <p className="text-xs text-slate-400 mt-0.5">Send a message to start the conversation.</p>
                 </div>
               ) : (
-                messages.map((msg) => {
-                  const isOwnMessage = msg.senderId === String(user?.id);
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className="max-w-[75%]">
-                        {/* Bubble Content */}
-                        <div
-                          className={`rounded-2xl px-3 py-1.5 text-sm leading-relaxed relative ${
-                            isOwnMessage
-                              ? "bg-[#eeffde] text-[#1a1a1a] rounded-br-none font-medium mr-[7px]"
-                              : "bg-white text-slate-800 rounded-bl-none font-normal ml-[7px]"
-                          }`}
-                        >
-                          <div className="break-words">
-                            <span>{msg.text}</span>
-                            <span
-                              className={`inline-flex items-center gap-0.5 text-[9px] select-none float-right mt-1.5 ml-2 ${
-                                isOwnMessage ? "text-[#8a997d]" : "text-muted-foreground"
-                              }`}
-                            >
-                              <span>
-                                {msg.createdAt
-                                  ? msg.createdAt.toDate().toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: true
-                                    })
-                                  : "Sending..."}
-                              </span>
-                            </span>
-                            <div className="clear-both" />
-                          </div>
-
-                          {/* Telegram Custom Bubble Tail (Inside relative container) */}
-                          {isOwnMessage ? (
-                            <svg className="absolute bottom-0 -right-[6px] w-[9px] h-[16px] text-[#eeffde] fill-current" viewBox="0 0 9 16">
-                              <path d="M0 16h9V0C9 0 7.5 12 0 16z" />
-                            </svg>
-                          ) : (
-                            <svg className="absolute bottom-0 -left-[6px] w-[9px] h-[16px] text-white fill-current filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.02)]" viewBox="0 0 9 16">
-                              <path d="M9 16H0V0C0 0 1.5 12 9 16z" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                renderedMessages
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input Form */}
+            {editingMessageId && (
+              <div className="px-6 py-2 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-500 select-none">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Pencil className="size-3 text-[#534AB7]" />
+                  Editing message
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingMessageId(null);
+                    setInputText("");
+                  }}
+                  className="text-[#534AB7] hover:underline flex items-center gap-0.5"
+                >
+                  <X className="size-3" />
+                  Cancel
+                </button>
+              </div>
+            )}
             <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2.5 bg-white">
               <input
                 type="text"
