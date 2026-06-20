@@ -190,6 +190,7 @@ try {
     role: "client",
     physiotherapistId: physioId,
     password: "Password1!",
+    languagePreference: "kh",
   });
 
   console.log(

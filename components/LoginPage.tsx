@@ -60,9 +60,11 @@ export default function LoginPage({ onLogin, onLoginWithGoogle }: Readonly<Login
         <div className="flex w-full lg:w-1/2 flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Top logo */}
           <div className="flex items-center select-none mb-8 lg:mb-0">
-            <div className="w-8 h-8 bg-[#534AB7] rounded-[8px] flex items-center justify-center text-white font-extrabold text-sm shadow-sm">
-              J
-            </div>
+            <img
+              src="/logo.png"
+              alt="JOLNA Logo"
+              className="w-8 h-8 object-contain"
+            />
           </div>
 
           {/* Center content container */}

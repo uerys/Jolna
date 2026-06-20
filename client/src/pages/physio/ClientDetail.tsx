@@ -854,12 +854,12 @@ export default function PhysioClientDetail() {
 
   const clientInfoFields = useMemo(() => {
     return [
-      { icon: Mail, label: "Email Address", value: client.data?.email ?? "—" },
-      { icon: Phone, label: "Phone Number", value: client.data?.phoneNumber ?? "—" },
-      { icon: Activity, label: "Primary Diagnosis", value: formatInjuryType(client.data?.injuryType) },
-      { icon: CalendarDays, label: "Next Clinic Visit", value: formatClinicVisit(client.data?.nextClinicVisit) }
+      { icon: Mail, label: intl.formatMessage({ id: "physio.detail.emailAddress" }), value: client.data?.email ?? "—" },
+      { icon: Phone, label: intl.formatMessage({ id: "physio.detail.phoneNumber" }), value: client.data?.phoneNumber ?? "—" },
+      { icon: Activity, label: intl.formatMessage({ id: "physio.detail.primaryDiagnosis" }), value: formatInjuryType(client.data?.injuryType) },
+      { icon: CalendarDays, label: intl.formatMessage({ id: "physio.detail.nextClinicVisit" }), value: formatClinicVisit(client.data?.nextClinicVisit) }
     ];
-  }, [client.data]);
+  }, [client.data, intl]);
 
   const sortedData = useMemo(() => {
     return [...chartData].sort(
@@ -884,6 +884,10 @@ export default function PhysioClientDetail() {
   const handleAssignSubmit = () => {
     if (!newExerciseId || !newStartDate || !newEndDate) {
       toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (new Date(newEndDate) < new Date(newStartDate)) {
+      toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
       return;
     }
     assignMutation.mutate({
@@ -920,6 +924,10 @@ export default function PhysioClientDetail() {
 
   const handleEditSubmit = () => {
     if (!editAssignmentId) return;
+    if (new Date(editEndDate) < new Date(editStartDate)) {
+      toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
+      return;
+    }
     updateAssignmentMutation.mutate({
       id: editAssignmentId,
       patch: {
@@ -1056,7 +1064,7 @@ export default function PhysioClientDetail() {
                   </Badge>
                 </div>
                 <p className="text-xs text-[#98A2B3] font-medium">
-                  Patient ID: #{clientId}
+                  {intl.formatMessage({ id: "physio.detail.patientId" }, { id: clientId })}
                 </p>
               </div>
             </div>
@@ -1355,7 +1363,9 @@ export default function PhysioClientDetail() {
             <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
               <CardHeader className="pb-2">
                 <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">
-                  {viewMode === "historical" ? "Total Assigned Exercises" : "Active Exercises"}
+                  {viewMode === "historical"
+                    ? intl.formatMessage({ id: "physio.detail.totalAssignedExercises" })
+                    : intl.formatMessage({ id: "physio.detail.activeExercises" })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -2289,6 +2299,7 @@ export default function PhysioClientDetail() {
                     className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                     value={newEndDate}
                     onChange={(e) => setNewEndDate(e.target.value)}
+                    min={newStartDate}
                   />
                 </div>
               </div>
@@ -2400,6 +2411,7 @@ export default function PhysioClientDetail() {
                     className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                     value={editEndDate}
                     onChange={(e) => setEditEndDate(e.target.value)}
+                    min={editStartDate}
                   />
                 </div>
               </div>

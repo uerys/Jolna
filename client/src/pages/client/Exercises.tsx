@@ -56,45 +56,53 @@ function formatExerciseType(type: string | null | undefined): string {
 }
 
 /** Format clinic visit string */
-function formatClinicVisit(visitStr: string | null | undefined): string {
-  if (!visitStr) return "Not scheduled";
+function formatClinicVisit(visitStr: string | null | undefined, intl: any): string {
+  if (!visitStr) {
+    return intl.formatMessage({ id: "client.today.nextClinicVisit.notScheduled", defaultMessage: "Not scheduled" });
+  }
   try {
     const d = new Date(visitStr);
+    const locale = intl.locale === "kh" ? "km-KH" : intl.locale;
     if (isNaN(d.getTime())) {
       const fallbackDate = new Date(visitStr + "T00:00:00");
       if (isNaN(fallbackDate.getTime())) return visitStr;
-      return fallbackDate.toLocaleDateString(undefined, {
+      return fallbackDate.toLocaleDateString(locale, {
         day: "numeric",
         month: "short",
       });
     }
-    const datePart = d.toLocaleDateString(undefined, {
+    const datePart = d.toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
     });
     const timePart = d
-      .toLocaleTimeString(undefined, {
+      .toLocaleTimeString(locale, {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       })
       .toLowerCase();
-    return `${datePart} at ${timePart}`;
+    return intl.formatMessage(
+      { id: "client.today.nextClinicVisit.format", defaultMessage: "{datePart} at {timePart}" },
+      { datePart, timePart }
+    );
   } catch {
     return visitStr;
   }
 }
 
 /** Format date string to short display */
-function formatDateShort(dateStr: string): string {
+function formatDateShort(dateStr: string, intl: any): string {
   const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  const locale = intl.locale === "kh" ? "km-KH" : intl.locale;
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 export default function ClientExercises() {
   const { user, loading } = useAuth();
   const { language } = useI18n();
   const [, navigate] = useLocation();
+  const intl = useIntl();
 
   const isClient = !!user && (user.role === "client" || user.role === "user");
 
@@ -170,16 +178,16 @@ export default function ClientExercises() {
                         : "bg-red-50 text-red-800 border-red-200 font-semibold shadow-sm"
                     }>
                       {user?.status === "active"
-                        ? "Undercare"
+                        ? intl.formatMessage({ id: "status.active" })
                         : user?.status === "inactive"
-                        ? "Pending"
+                        ? intl.formatMessage({ id: "status.inactive" })
                         : user?.status === "suspended"
-                        ? "Suspended"
+                        ? intl.formatMessage({ id: "status.suspended" })
                         : "—"}
                     </Badge>
                   </div>
                   <p className="text-xs text-[#98A2B3] font-medium">
-                    Patient ID: #{user?.id}
+                    {intl.formatMessage({ id: "physio.detail.patientId" }, { id: user?.id })}
                   </p>
                 </div>
               </div>
@@ -193,7 +201,7 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    Email Address
+                    {intl.formatMessage({ id: "physio.detail.emailAddress" })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {user?.email ?? "—"}
@@ -206,7 +214,7 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    Phone Number
+                    {intl.formatMessage({ id: "physio.detail.phoneNumber" })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {user?.phoneNumber ?? "—"}
@@ -219,7 +227,7 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    Primary Diagnosis
+                    {intl.formatMessage({ id: "physio.detail.primaryDiagnosis" })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {formatInjuryType(rehabSummary.data.injuryType)}
@@ -232,10 +240,10 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    Next Clinic Visit
+                    {intl.formatMessage({ id: "physio.detail.nextClinicVisit" })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
-                    {formatClinicVisit(rehabSummary.data.nextClinicVisit)}
+                    {formatClinicVisit(rehabSummary.data.nextClinicVisit, intl)}
                   </p>
                 </div>
               </div>
@@ -245,7 +253,7 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    Active Exercises
+                    {intl.formatMessage({ id: "physio.detail.activeExercises" })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {rehabSummary.data.activeAssignmentCount}
@@ -278,7 +286,7 @@ export default function ClientExercises() {
           >
             <Link href="/chat">
               <MessageSquare className="size-4 mr-1.5" />
-              Chat with Physio
+              <FormattedMessage id="client.today.chatWithPhysio" />
             </Link>
           </Button>
           <Button
@@ -288,7 +296,7 @@ export default function ClientExercises() {
           >
             <Link href="/client/history">
               <History className="size-4 mr-1" />
-              History & Progress
+              <FormattedMessage id="client.today.historyProgress" />
             </Link>
           </Button>
         </div>
@@ -332,6 +340,7 @@ function DurationBar({
   startDate: string;
   endDate: string;
 }) {
+  const intl = useIntl();
   // TIMEZONE FIX: Use local date string instead of UTC toISOString()
   const today = new Date().toLocaleDateString("en-CA");
   const start = new Date(startDate + "T00:00:00");
@@ -353,8 +362,8 @@ function DurationBar({
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{formatDateShort(startDate)}</span>
-        <span>{formatDateShort(endDate)}</span>
+        <span>{formatDateShort(startDate, intl)}</span>
+        <span>{formatDateShort(endDate, intl)}</span>
       </div>
       <div className="w-full bg-muted rounded-full h-2">
         <div
@@ -362,7 +371,9 @@ function DurationBar({
           style={{ width: `${progress}%` }}
         />
       </div>
-      <p className="text-[10px] text-emerald-600 font-medium">Active period</p>
+      <p className="text-[10px] text-emerald-600 font-medium">
+        <FormattedMessage id="client.today.activePeriod" />
+      </p>
     </div>
   );
 }
@@ -465,18 +476,27 @@ function ExerciseCard({
             <div>
               <CardTitle className="text-lg leading-tight">{exercise.title}</CardTitle>
               <p className="text-sm font-medium text-muted-foreground mt-1.5">
-                {assignment.sets} sets × {assignment.reps} reps • {assignment.dailyFrequency} times/day
+                {intl.formatMessage(
+                  { id: "client.today.prescription" },
+                  { sets: assignment.sets, reps: assignment.reps, dailyFrequency: assignment.dailyFrequency }
+                )}
               </p>
             </div>
             <Badge className={statusColor}>
-              {assignment.status === "active" ? "Active Exercise" : assignment.status}
+              {assignment.status === "active"
+                ? intl.formatMessage({ id: "client.today.activeExercise" })
+                : assignment.status === "completed"
+                ? intl.formatMessage({ id: "client.history.completed" })
+                : assignment.status}
             </Badge>
           </div>
 
           {/* Daily Progress */}
           <div className="space-y-1.5 pt-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="font-semibold text-slate-700">Today's Progress</span>
+              <span className="font-semibold text-slate-700">
+                <FormattedMessage id="client.today.progress" />
+              </span>
               <span
                 className={
                   isDoneToday
@@ -484,7 +504,10 @@ function ExerciseCard({
                     : "text-slate-600 font-medium"
                 }
               >
-                {Math.min(todayLogCount ?? 0, dailyFrequency)} / {dailyFrequency} sessions
+                {intl.formatMessage(
+                  { id: "client.today.sessions" },
+                  { current: Math.min(todayLogCount ?? 0, dailyFrequency), total: dailyFrequency }
+                )}
               </span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2">
@@ -567,7 +590,7 @@ function ExerciseCard({
             <div className="grid grid-cols-2 gap-y-3 gap-x-2 pt-2 border-t border-slate-200/60">
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Assigned Physiotherapist
+                  <FormattedMessage id="client.today.detail.physio" />
                 </span>
                 <p className="font-medium">
                   {physiotherapist.name ?? physiotherapist.email ?? "—"}
@@ -575,7 +598,7 @@ function ExerciseCard({
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Injury Type
+                  <FormattedMessage id="client.today.detail.injuryType" />
                 </span>
                 <p className="font-medium">
                   {formatInjuryType(assignment.injuryType)}
@@ -583,7 +606,7 @@ function ExerciseCard({
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Exercise Type
+                  <FormattedMessage id="client.today.detail.exerciseType" />
                 </span>
                 <p className="font-medium">
                   {formatExerciseType(assignment.exerciseType)}
@@ -591,37 +614,52 @@ function ExerciseCard({
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Sets & Reps
+                  <FormattedMessage id="client.today.detail.setsReps" />
                 </span>
                 <p className="font-medium">
                   {assignment.sets} × {assignment.reps} (
-                  {assignment.dailyFrequency}x daily)
+                  {intl.formatMessage(
+                    { id: "client.today.detail.dailyTarget" },
+                    { dailyFrequency: assignment.dailyFrequency }
+                  )})
                 </p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Start Date
+                  <FormattedMessage id="client.today.detail.startDate" />
                 </span>
                 <p className="font-medium">
-                  {formatDateShort(assignment.startDate)}
+                  {formatDateShort(assignment.startDate, intl)}
                 </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">End Date</span>
-                <p className="font-medium">
-                  {formatDateShort(assignment.endDate)}
-                </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">Status</span>
-                <p className="font-medium capitalize">{assignment.status}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  Assigned Date
+                  <FormattedMessage id="client.today.detail.endDate" />
                 </span>
                 <p className="font-medium">
-                  {new Date(assignment.createdAt).toLocaleDateString()}
+                  {formatDateShort(assignment.endDate, intl)}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">
+                  <FormattedMessage id="client.today.detail.status" />
+                </span>
+                <p className="font-medium">
+                  {assignment.status === "active"
+                    ? intl.formatMessage({ id: "client.today.activeExercise" })
+                    : assignment.status === "completed"
+                    ? intl.formatMessage({ id: "client.history.completed" })
+                    : assignment.status}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">
+                  <FormattedMessage id="client.today.detail.assignedDate" />
+                </span>
+                <p className="font-medium">
+                  {new Date(assignment.createdAt).toLocaleDateString(
+                    intl.locale === "kh" ? "km-KH" : intl.locale
+                  )}
                 </p>
               </div>
             </div>

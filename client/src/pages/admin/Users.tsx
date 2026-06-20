@@ -83,7 +83,7 @@ export default function AdminUsers() {
       ...(roleFilter === "all" ? {} : { role: roleFilter as Role }),
       ...(statusFilter === "all" ? {} : { status: statusFilter as Status }),
     }),
-    [roleFilter, statusFilter],
+    [roleFilter, statusFilter]
   );
   const users = trpc.admin.listUsers.useQuery(filter, {
     enabled: !loading && user?.role === "admin",
@@ -91,7 +91,7 @@ export default function AdminUsers() {
 
   const filteredUsers = useMemo(() => {
     if (!users.data) return [];
-    return users.data.filter((u) => {
+    return users.data.filter(u => {
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase().trim();
         const nameMatch = u.name?.toLowerCase().includes(query) ?? false;
@@ -122,15 +122,21 @@ export default function AdminUsers() {
     },
   });
 
-  const [editing, setEditing] = useState<null | NonNullable<typeof users.data>[number]>(null);
+  const [editing, setEditing] = useState<
+    null | NonNullable<typeof users.data>[number]
+  >(null);
 
   if (!loading && user?.role !== "admin") {
     return (
       <AppShell>
         <Card>
           <CardHeader>
-            <CardTitle><FormattedMessage id="common.notAuthorised" /></CardTitle>
-            <CardDescription><FormattedMessage id="admin.onlyAdmin" /></CardDescription>
+            <CardTitle>
+              <FormattedMessage id="common.notAuthorised" />
+            </CardTitle>
+            <CardDescription>
+              <FormattedMessage id="admin.onlyAdmin" />
+            </CardDescription>
           </CardHeader>
         </Card>
       </AppShell>
@@ -151,7 +157,7 @@ export default function AdminUsers() {
             </p>
           </div>
         </div>
-        <Button 
+        <Button
           onClick={() => navigate("/register")}
           className="w-full md:w-auto"
         >
@@ -168,14 +174,17 @@ export default function AdminUsers() {
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-9 h-10 border rounded-xl text-sm"
               />
             </div>
             <Label className="text-sm">
               <FormattedMessage id="admin.filter.role" />:
             </Label>
-            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as Role | "all")}>
+            <Select
+              value={roleFilter}
+              onValueChange={v => setRoleFilter(v as Role | "all")}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
@@ -197,7 +206,10 @@ export default function AdminUsers() {
             <Label className="text-sm ml-4">
               <FormattedMessage id="admin.filter.status" />:
             </Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as Status | "all")}>
+            <Select
+              value={statusFilter}
+              onValueChange={v => setStatusFilter(v as Status | "all")}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
@@ -206,7 +218,14 @@ export default function AdminUsers() {
                   {intl.formatMessage({ id: "admin.filter.all" })}
                 </SelectItem>
                 <SelectItem value="active">
-                  {intl.formatMessage({ id: "status.active" })}
+                  {intl.formatMessage({
+                    id:
+                      roleFilter === "all"
+                        ? "status.active.all"
+                        : roleFilter === "admin" || roleFilter === "physiotherapist"
+                          ? "status.active.staff"
+                          : "status.active",
+                  })}
                 </SelectItem>
                 <SelectItem value="inactive">
                   {intl.formatMessage({ id: "status.inactive" })}
@@ -221,10 +240,18 @@ export default function AdminUsers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><FormattedMessage id="admin.column.name" /></TableHead>
-                <TableHead><FormattedMessage id="admin.column.email" /></TableHead>
-                <TableHead><FormattedMessage id="admin.column.role" /></TableHead>
-                <TableHead><FormattedMessage id="admin.column.status" /></TableHead>
+                <TableHead>
+                  <FormattedMessage id="admin.column.name" />
+                </TableHead>
+                <TableHead>
+                  <FormattedMessage id="admin.column.email" />
+                </TableHead>
+                <TableHead>
+                  <FormattedMessage id="admin.column.role" />
+                </TableHead>
+                <TableHead>
+                  <FormattedMessage id="admin.column.status" />
+                </TableHead>
                 <TableHead className="text-right">
                   <FormattedMessage id="admin.column.actions" />
                 </TableHead>
@@ -233,22 +260,30 @@ export default function AdminUsers() {
             <TableBody>
               {users.isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     <FormattedMessage id="common.loading" />
                   </TableCell>
                 </TableRow>
               )}
               {!users.isLoading && (users.data?.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     <FormattedMessage id="admin.empty" />
                   </TableCell>
                 </TableRow>
               )}
-              {filteredUsers.map((u) => (
+              {filteredUsers.map(u => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.name ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{u.email ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.email ?? "—"}
+                  </TableCell>
                   <TableCell>
                     <FormattedMessage id={roleLabel(u.role)} />
                   </TableCell>
@@ -258,17 +293,34 @@ export default function AdminUsers() {
                         u.status === "active"
                           ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 border font-semibold"
                           : u.status === "inactive"
-                          ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold"
-                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold"
+                            ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold"
+                            : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold"
                       }
                     >
-                      <FormattedMessage id={`status.${u.status}`} />
+                      <FormattedMessage
+                        id={
+                          u.status === "active" &&
+                          (u.role === "admin" || u.role === "physiotherapist")
+                            ? "status.active.staff"
+                            : `status.${u.status}`
+                        }
+                      />
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     {u.status !== "active" && (
-                      <Button size="sm" variant="outline" onClick={() => reactivate.mutate({ id: u.id })}>
-                        <FormattedMessage id={u.status === "inactive" ? "admin.action.approve" : "admin.action.reactivate"} />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => reactivate.mutate({ id: u.id })}
+                      >
+                        <FormattedMessage
+                          id={
+                            u.status === "inactive"
+                              ? "admin.action.approve"
+                              : "admin.action.reactivate"
+                          }
+                        />
                       </Button>
                     )}
                     {u.status === "active" && (
@@ -281,7 +333,11 @@ export default function AdminUsers() {
                         <FormattedMessage id="admin.action.suspend" />
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditing(u)}
+                    >
                       <FormattedMessage id="admin.action.edit" />
                     </Button>
                     <Button
@@ -289,7 +345,12 @@ export default function AdminUsers() {
                       variant="destructive"
                       disabled={u.id === user?.id}
                       onClick={() => {
-                        if (confirm(intl.formatMessage({ id: "admin.confirm.delete" }))) del.mutate({ id: u.id });
+                        if (
+                          confirm(
+                            intl.formatMessage({ id: "admin.confirm.delete" })
+                          )
+                        )
+                          del.mutate({ id: u.id });
                       }}
                     >
                       <FormattedMessage id="admin.action.delete" />
@@ -302,8 +363,11 @@ export default function AdminUsers() {
         </CardContent>
       </Card>
 
-
-      <EditUserDialog user={editing} onClose={() => setEditing(null)} physios={users.data?.filter((u) => u.role === "physiotherapist") ?? []} />
+      <EditUserDialog
+        user={editing}
+        onClose={() => setEditing(null)}
+        physios={users.data?.filter(u => u.role === "physiotherapist") ?? []}
+      />
     </AppShell>
   );
 }
@@ -313,7 +377,14 @@ function EditUserDialog({
   physios,
   onClose,
 }: {
-  user: { id: number; name: string | null; email: string | null; role: string; status: string; physiotherapistId: number | null } | null;
+  user: {
+    id: number;
+    name: string | null;
+    email: string | null;
+    role: string;
+    status: string;
+    physiotherapistId: number | null;
+  } | null;
   physios: Array<{ id: number; name: string | null }>;
   onClose: () => void;
 }) {
@@ -333,9 +404,11 @@ function EditUserDialog({
   const [email, setEmail] = useState(user?.email ?? "");
   const [newPassword, setNewPassword] = useState("");
   const [role, setRole] = useState<Role>((user?.role as Role) ?? "client");
-  const [status, setStatus] = useState<Status>((user?.status as Status) ?? "active");
+  const [status, setStatus] = useState<Status>(
+    (user?.status as Status) ?? "active"
+  );
   const [physioId, setPhysioId] = useState<string>(
-    user?.physiotherapistId ? String(user.physiotherapistId) : "__none",
+    user?.physiotherapistId ? String(user.physiotherapistId) : "__none"
   );
 
   // Reset local state when a new user is loaded into the dialog
@@ -346,12 +419,14 @@ function EditUserDialog({
       setNewPassword("");
       setRole(user.role as Role);
       setStatus(user.status as Status);
-      setPhysioId(user.physiotherapistId ? String(user.physiotherapistId) : "__none");
+      setPhysioId(
+        user.physiotherapistId ? String(user.physiotherapistId) : "__none"
+      );
     }
   }, [user?.id]);
 
   return (
-    <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!user} onOpenChange={o => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -360,12 +435,16 @@ function EditUserDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label><FormattedMessage id="admin.edit.name" /></Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Label>
+              <FormattedMessage id="admin.edit.name" />
+            </Label>
+            <Input value={name} onChange={e => setName(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label><FormattedMessage id="admin.edit.email" /></Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Label>
+              <FormattedMessage id="admin.edit.email" />
+            </Label>
+            <Input value={email} onChange={e => setEmail(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label>New Password (optional)</Label>
@@ -373,42 +452,80 @@ function EditUserDialog({
               type="password"
               placeholder="Min 8 characters to reset password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={e => setNewPassword(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label><FormattedMessage id="admin.edit.role" /></Label>
+              <Label>
+                <FormattedMessage id="admin.edit.role" />
+              </Label>
               {currentUser && currentUser.id === user?.id ? (
                 <div className="text-sm text-muted-foreground">
                   <FormattedMessage id={roleLabel(role)} />
-                  <div className="text-xs text-muted-foreground">(Cannot change your own role)</div>
+                  <div className="text-xs text-muted-foreground">
+                    (Cannot change your own role)
+                  </div>
                 </div>
               ) : (
-                <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={role} onValueChange={v => setRole(v as Role)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">{intl.formatMessage({ id: "role.admin" })}</SelectItem>
-                    <SelectItem value="physiotherapist">{intl.formatMessage({ id: "role.physiotherapist" })}</SelectItem>
-                    <SelectItem value="client">{intl.formatMessage({ id: "role.client" })}</SelectItem>
+                    <SelectItem value="admin">
+                      {intl.formatMessage({ id: "role.admin" })}
+                    </SelectItem>
+                    <SelectItem value="physiotherapist">
+                      {intl.formatMessage({ id: "role.physiotherapist" })}
+                    </SelectItem>
+                    <SelectItem value="client">
+                      {intl.formatMessage({ id: "role.client" })}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label><FormattedMessage id="admin.edit.status" /></Label>
+              <Label>
+                <FormattedMessage id="admin.edit.status" />
+              </Label>
               {currentUser && currentUser.id === user?.id ? (
                 <div className="text-sm text-muted-foreground">
-                  {intl.formatMessage({ id: `status.${status}` })}
-                  <div className="text-xs text-muted-foreground">(Cannot change your own status)</div>
+                  {intl.formatMessage({
+                    id:
+                      status === "active" &&
+                      (role === "admin" || role === "physiotherapist")
+                        ? "status.active.staff"
+                        : `status.${status}`,
+                  })}
+                  <div className="text-xs text-muted-foreground">
+                    (Cannot change your own status)
+                  </div>
                 </div>
               ) : (
-                <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={status}
+                  onValueChange={v => setStatus(v as Status)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">{intl.formatMessage({ id: "status.active" })}</SelectItem>
-                    <SelectItem value="inactive">{intl.formatMessage({ id: "status.inactive" })}</SelectItem>
-                    <SelectItem value="suspended">{intl.formatMessage({ id: "status.suspended" })}</SelectItem>
+                    <SelectItem value="active">
+                      {intl.formatMessage({
+                        id:
+                          role === "admin" || role === "physiotherapist"
+                            ? "status.active.staff"
+                            : "status.active",
+                      })}
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      {intl.formatMessage({ id: "status.inactive" })}
+                    </SelectItem>
+                    <SelectItem value="suspended">
+                      {intl.formatMessage({ id: "status.suspended" })}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -416,13 +533,19 @@ function EditUserDialog({
           </div>
           {role === "client" && (
             <div className="space-y-1.5">
-              <Label><FormattedMessage id="admin.edit.physio" /></Label>
+              <Label>
+                <FormattedMessage id="admin.edit.physio" />
+              </Label>
               <Select value={physioId} onValueChange={setPhysioId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">—</SelectItem>
-                  {physios.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name ?? `#${p.id}`}</SelectItem>
+                  {physios.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name ?? `#${p.id}`}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -461,7 +584,10 @@ function EditUserDialog({
                   });
                 }
               } catch (err) {
-                const msg = err instanceof Error ? err.message : "Failed to save changes.";
+                const msg =
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to save changes.";
                 toast.error(msg);
               }
             }}

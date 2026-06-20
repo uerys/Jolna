@@ -39,9 +39,11 @@ export default function Home() {
       {/* Sticky Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b-[0.5px] border-slate-200/80 px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2 select-none">
-          <div className="w-8 h-8 bg-[#534AB7] rounded-[8px] flex items-center justify-center text-white font-extrabold text-sm shadow-sm">
-            J
-          </div>
+          <img
+            src="/logo.png"
+            alt="JOLNA Logo"
+            className="w-8 h-8 object-contain"
+          />
           <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">JOLNA</span>
         </div>
 

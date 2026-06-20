@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,21 @@ const PAIN_SCORE_CLASSES: Record<
   10: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200/60", label: "Severe Pain", dot: "bg-rose-500" },
 };
 
+function getPainLabel(label: string, intl: any): string {
+  switch (label) {
+    case "No Pain":
+      return intl.formatMessage({ id: "pain.noPain", defaultMessage: "No Pain" });
+    case "Mild Pain":
+      return intl.formatMessage({ id: "pain.mildPain", defaultMessage: "Mild Pain" });
+    case "Moderate Pain":
+      return intl.formatMessage({ id: "pain.moderatePain", defaultMessage: "Moderate Pain" });
+    case "Severe Pain":
+      return intl.formatMessage({ id: "pain.severePain", defaultMessage: "Severe Pain" });
+    default:
+      return label;
+  }
+}
+
 function ChartTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string } }) {
   if (typeof x !== "number" || typeof y !== "number" || !payload?.value) return null;
   const date = new Date(payload.value);
@@ -109,6 +124,7 @@ const CustomizedActiveDot = ({ cx, cy, payload }: { cx: number; cy: number; payl
 export default function ClientHistory() {
   const { user, loading } = useAuth();
   const isClient = !!user && (user.role === "client" || user.role === "user");
+  const intl = useIntl();
 
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState<"active" | "historical">("active");
@@ -271,7 +287,7 @@ export default function ClientHistory() {
     );
   }, [feedbackEnriched.data, allAssignments.data, highPainOnly, showMissedDays, viewMode]);
 
-  if (!loading && !isClient) return <div className="p-8 text-center font-medium">Not authorized</div>;
+  if (!loading && !isClient) return <div className="p-8 text-center font-medium"><FormattedMessage id="common.notAuthorised" /></div>;
 
   return (
     <AppShell>
@@ -279,7 +295,7 @@ export default function ClientHistory() {
         <Button asChild variant="ghost" size="sm" className="w-full sm:w-auto text-slate-500 hover:text-[#534AB7] hover:bg-indigo-50/50 transition-colors justify-start">
           <Link href="/client/exercises">
             <ArrowLeft className="size-4 mr-1" />
-            Back to Exercises
+            <FormattedMessage id="client.history.backToExercises" />
           </Link>
         </Button>
         {/* Segmented View Toggle Control */}
@@ -296,7 +312,7 @@ export default function ClientHistory() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/30"
               }`}
             >
-              Active Exercise
+              <FormattedMessage id="client.history.activeExercise" />
             </button>
             <button
               onClick={() => {
@@ -309,7 +325,7 @@ export default function ClientHistory() {
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/30"
               }`}
             >
-              Completed Exercise
+              <FormattedMessage id="client.history.completedExercise" />
             </button>
           </div>
         </div>
@@ -324,10 +340,10 @@ export default function ClientHistory() {
           >
             <div className="flex items-center gap-2">
               <SlidersHorizontal className="size-4 text-slate-400" />
-              <CardTitle className="text-sm font-medium text-slate-900">Dashboard filters</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900"><FormattedMessage id="client.history.filters.dashboard" /></CardTitle>
               {(selectedAssignment !== "all" || filterDateFrom || filterDateTo) && (
                 <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-none font-bold text-[10px] py-0.5 px-2">
-                  Active
+                  <FormattedMessage id="status.active.staff" />
                 </Badge>
               )}
             </div>
@@ -336,7 +352,9 @@ export default function ClientHistory() {
               size="sm"
               className="text-slate-500 hover:text-[#534AB7] hover:bg-slate-50 font-semibold text-xs rounded-lg h-8 px-2.5"
             >
-              {showFilters ? "Collapse" : "Expand"}
+              {showFilters
+                ? intl.formatMessage({ id: "common.collapse" })
+                : intl.formatMessage({ id: "common.expand" })}
             </Button>
           </CardHeader>
           
@@ -346,14 +364,14 @@ export default function ClientHistory() {
                 <div className="flex-1 min-w-[200px]">
                   <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                     <ClipboardCopy className="size-3 text-slate-400" />
-                    <span>Assignment filter</span>
+                    <span><FormattedMessage id="client.history.assignmentFilter" /></span>
                   </Label>
                   <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
                     <SelectTrigger className="h-9 bg-white border-slate-200 focus:ring-[#534AB7] rounded-lg text-xs font-normal">
-                      <SelectValue placeholder="All assignments" />
+                      <SelectValue placeholder={intl.formatMessage({ id: "client.history.allAssignments" })} />
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
-                      <SelectItem value="all">All assignments</SelectItem>
+                      <SelectItem value="all"><FormattedMessage id="client.history.allAssignments" /></SelectItem>
                       {(allAssignments.data ?? [])
                         .filter((a) => {
                           const todayStr = new Date().toLocaleDateString("en-CA");
@@ -375,7 +393,7 @@ export default function ClientHistory() {
                 <div className="flex flex-col gap-1.5 w-full sm:w-44 shrink-0">
                   <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                     <CalendarDays className="size-3 text-slate-400" />
-                    <span>From</span>
+                    <span><FormattedMessage id="client.history.from" /></span>
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -383,7 +401,7 @@ export default function ClientHistory() {
                         variant="outline"
                         className="h-9 w-full bg-white border-slate-200 justify-start text-left font-semibold text-xs rounded-lg px-3 hover:bg-slate-50 text-slate-700"
                       >
-                        {filterDateFrom ? format(filterDateFrom, "MMM dd") : <span className="text-slate-400 font-normal">Pick month/day</span>}
+                        {filterDateFrom ? intl.formatDate(filterDateFrom, { month: "short", day: "numeric" }) : <span className="text-slate-400 font-normal"><FormattedMessage id="client.history.pickDate" /></span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-white border border-slate-200 shadow-md rounded-lg" align="start">
@@ -401,7 +419,7 @@ export default function ClientHistory() {
                 <div className="flex flex-col gap-1.5 w-full sm:w-44 shrink-0">
                   <Label className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 flex items-center gap-1.5 mb-1.5 font-sans">
                     <CalendarDays className="size-3 text-slate-400" />
-                    <span>To</span>
+                    <span><FormattedMessage id="client.history.to" /></span>
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -409,7 +427,7 @@ export default function ClientHistory() {
                         variant="outline"
                         className="h-9 w-full bg-white border-slate-200 justify-start text-left font-semibold text-xs rounded-lg px-3 hover:bg-slate-50 text-slate-700"
                       >
-                        {filterDateTo ? format(filterDateTo, "MMM dd") : <span className="text-slate-400 font-normal">Pick month/day</span>}
+                        {filterDateTo ? intl.formatDate(filterDateTo, { month: "short", day: "numeric" }) : <span className="text-slate-400 font-normal"><FormattedMessage id="client.history.pickDate" /></span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-white border border-[#E4E7EC] shadow-md rounded-lg" align="start">
@@ -435,10 +453,10 @@ export default function ClientHistory() {
                     }}
                     className="h-9 text-xs border-slate-200 rounded-lg font-medium px-4"
                   >
-                    Clear
+                    <FormattedMessage id="common.clear" />
                   </Button>
                   <Button className="h-9 text-xs bg-[#534AB7] hover:bg-[#534AB7]/90 text-white rounded-lg font-medium px-4">
-                    Apply
+                    <FormattedMessage id="common.apply" />
                   </Button>
                 </div>
               </div>
@@ -450,16 +468,16 @@ export default function ClientHistory() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">Active Exercises</CardTitle>
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest"><FormattedMessage id="physio.detail.activeExercises" /></CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-[#101828] mb-2 tabular-nums">{activeStats.total}</div>
-              <p className="text-[11px] text-[#667085] font-medium">{activeStats.total} active exercise{activeStats.total !== 1 ? "s" : ""}</p>
+              <p className="text-[11px] text-[#667085] font-medium">{intl.formatMessage({ id: "client.history.activeExercisesCount" }, { count: activeStats.total })}</p>
               {historyRecords.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-slate-100">
-                  <span className="text-[9px] text-[#98A2B3] uppercase tracking-widest font-semibold block mb-0.5">Last logged</span>
+                  <span className="text-[9px] text-[#98A2B3] uppercase tracking-widest font-semibold block mb-0.5"><FormattedMessage id="client.history.lastLogged" /></span>
                   <span className="text-[11px] text-[#101828] font-semibold block truncate">{historyRecords[0].exercise.title}</span>
-                  <span className="text-[10px] text-[#667085]">{format(new Date(historyRecords[0].feedback.submittedAt), "h:mm a · MMM d")}</span>
+                  <span className="text-[10px] text-[#667085]">{intl.formatDate(new Date(historyRecords[0].feedback.submittedAt), { hour: "numeric", minute: "2-digit", hour12: true, month: "short", day: "numeric" })}</span>
                 </div>
               )}
             </CardContent>
@@ -467,7 +485,7 @@ export default function ClientHistory() {
 
           <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest">Latest Pain Level</CardTitle>
+              <CardTitle className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest"><FormattedMessage id="client.history.latestPain" /></CardTitle>
             </CardHeader>
             <CardContent>
               {sortedData.length > 0 ? (() => {
@@ -479,16 +497,21 @@ export default function ClientHistory() {
                       <span className="text-3xl font-bold text-[#101828] tabular-nums">{painValue}/10</span>
                       <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border}`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
-                        <span>{config.label}</span>
+                        <span>{getPainLabel(config.label, intl)}</span>
                       </div>
                     </div>
-                    <p className="text-[11px] text-[#667085] font-medium">Reported on {format(new Date(sortedData[sortedData.length - 1].submittedAt), "MM/dd/yyyy")}</p>
+                    <p className="text-[11px] text-[#667085] font-medium">
+                      {intl.formatMessage(
+                        { id: "client.history.reportedOn" },
+                        { date: intl.formatDate(new Date(sortedData[sortedData.length - 1].submittedAt + "T00:00:00"), { month: "short", day: "numeric", year: "numeric" }) }
+                      )}
+                    </p>
                   </div>
                 );
               })() : (
                 <div>
                   <div className="text-3xl font-bold text-[#E4E7EC] mb-2">—</div>
-                  <p className="text-[11px] text-[#667085] font-medium">No reports logged yet</p>
+                  <p className="text-[11px] text-[#667085] font-medium"><FormattedMessage id="client.history.noReports" /></p>
                 </div>
               )}
             </CardContent>
@@ -499,12 +522,16 @@ export default function ClientHistory() {
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <CardTitle className="text-sm font-medium text-slate-900 font-sans">Pain Chart</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900 font-sans"><FormattedMessage id="client.history.painChart" /></CardTitle>
               <p className="text-xs text-slate-400 font-normal">
-                {sortedData.length > 0 ? `${format(new Date(sortedData[0].submittedAt), "MMM dd, yyyy")} — ${format(new Date(sortedData[sortedData.length - 1].submittedAt), "MMM dd, yyyy")}` : "No data range"}
+                {sortedData.length > 0 ? (
+                  `${intl.formatDate(new Date(sortedData[0].submittedAt + "T00:00:00"), { month: "short", day: "numeric", year: "numeric" })} — ${intl.formatDate(new Date(sortedData[sortedData.length - 1].submittedAt + "T00:00:00"), { month: "short", day: "numeric", year: "numeric" })}`
+                ) : (
+                  intl.formatMessage({ id: "client.history.noDataRange" })
+                )}
               </p>
             </div>
-            {sortedData.length > 0 && <span className="text-xs font-medium text-[#534AB7] bg-[#EEEDFE] border border-[#534AB7]/15 rounded-full px-2.5 py-0.5">Clinical overview</span>}
+            {sortedData.length > 0 && <span className="text-xs font-medium text-[#534AB7] bg-[#EEEDFE] border border-[#534AB7]/15 rounded-full px-2.5 py-0.5"><FormattedMessage id="client.history.clinicalOverview" /></span>}
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
             {sortedData.length > 0 && (() => {
@@ -517,15 +544,15 @@ export default function ClientHistory() {
               return (
                 <div className="flex flex-wrap gap-3 text-xs font-medium text-[#667085]">
                   <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
-                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">Latest reading</span>
+                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold"><FormattedMessage id="client.history.latestReading" /></span>
                     <span className="text-[#101828] text-sm font-semibold tabular-nums">{latestPain}/10</span>
                   </div>
                   <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
-                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">Peak value</span>
+                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold"><FormattedMessage id="client.history.peakValue" /></span>
                     <span className="text-[#101828] text-sm font-semibold tabular-nums">{peakValue}/10</span>
                   </div>
                   <div className="bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg px-3 py-1.5">
-                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold">3-day average</span>
+                    <span className="text-[#98A2B3] block text-[9px] uppercase tracking-widest font-semibold"><FormattedMessage id="client.history.threeDayAverage" /></span>
                     <span className="text-[#101828] text-sm font-semibold tabular-nums">{threeDayAvg}/10</span>
                   </div>
                 </div>
@@ -554,7 +581,7 @@ export default function ClientHistory() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "rgba(255,255,255,0.98)", border: "1px solid rgba(15,23,42,0.12)", borderRadius: 16, color: "#0f172a" }}
                       labelStyle={{ color: "#0f172a", fontWeight: 600 }} itemStyle={{ color: "#0f766e" }}
-                      labelFormatter={v => format(new Date(String(v)), "MMM d, h:mm a")} formatter={v => [`${v}/10`, "Pain"]}
+                      labelFormatter={v => intl.formatDate(new Date(String(v)), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })} formatter={v => [`${v}/10`, "Pain"]}
                     />
                     <Area type="monotone" dataKey="pain" stroke="url(#painStroke)" fill="url(#painFill)" strokeWidth={3} dot={<CustomizedDot cx={0} cy={0} payload={{ pain: 0 }} />} activeDot={<CustomizedActiveDot cx={0} cy={0} payload={{ pain: 0 }} />} />
                   </AreaChart>
@@ -574,9 +601,9 @@ export default function ClientHistory() {
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-semibold text-[#101828]">Assigned Exercises</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[#101828]"><FormattedMessage id="client.history.assignedExercises" /></CardTitle>
               <Badge className="bg-[#F2F4F7] text-[#667085] hover:bg-[#F2F4F7] border-none font-semibold text-[10px] py-0.5 px-2">
-                {assignmentRecords.length} assigned
+                {intl.formatMessage({ id: "client.history.assignedCount" }, { count: assignmentRecords.length })}
               </Badge>
             </div>
           </CardHeader>
@@ -601,21 +628,36 @@ export default function ClientHistory() {
                           ? "bg-indigo-50 text-indigo-700 border-indigo-200 border font-medium text-[10px]"
                           : "bg-slate-50 text-slate-500 border-slate-200 border font-medium text-[10px]"
                       }>
-                        {isActive ? "active" : "completed"}
+                        {isActive
+                          ? intl.formatMessage({ id: "client.history.activeExercise" })
+                          : intl.formatMessage({ id: "client.history.completed" })}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2.5 mb-2">
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Sets & Reps</span>
+                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                          <FormattedMessage id="client.today.detail.setsReps" />
+                        </span>
                         <p className="font-medium text-slate-800 text-sm mt-0.5">{a.assignment.sets} × {a.assignment.reps}</p>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Daily Target</span>
-                        <p className="font-medium text-slate-800 text-sm mt-0.5">{a.assignment.dailyFrequency}x per day</p>
+                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                          <FormattedMessage id="client.history.dailyTarget" />
+                        </span>
+                        <p className="font-medium text-slate-800 text-sm mt-0.5">
+                          {intl.formatMessage(
+                            { id: "client.history.dailyTargetValue" },
+                            { dailyFrequency: a.assignment.dailyFrequency }
+                          )}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Assigned</span>
-                        <p className="font-medium text-slate-800 text-sm mt-0.5">{format(new Date(a.assignment.createdAt), "MM/dd/yyyy")}</p>
+                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                          <FormattedMessage id="client.history.assigned" />
+                        </span>
+                        <p className="font-medium text-slate-800 text-sm mt-0.5">
+                          {intl.formatDate(new Date(a.assignment.createdAt), { month: "2-digit", day: "2-digit", year: "numeric" })}
+                        </p>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
@@ -626,13 +668,15 @@ export default function ClientHistory() {
                     </div>
                     <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-1.5">
                       <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span>Plan Duration</span><span>{percent}% Complete</span>
+                        <span><FormattedMessage id="client.history.planDuration" /></span>
+                        <span>{intl.formatMessage({ id: "client.history.completePercent" }, { percent })}</span>
                       </div>
                       <div className="w-full bg-slate-100 rounded-full h-1.5 relative overflow-hidden">
                         <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
                       </div>
                       <div className="flex justify-between items-center text-[9px] font-medium text-slate-400">
-                        <span>{format(start, "MMM dd")}</span><span>{format(end, "MMM dd")}</span>
+                        <span>{intl.formatDate(start, { month: "short", day: "numeric" })}</span>
+                        <span>{intl.formatDate(end, { month: "short", day: "numeric" })}</span>
                       </div>
                     </div>
                   </div>
@@ -645,20 +689,20 @@ export default function ClientHistory() {
         {/* Session History Table Section */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
           <CardHeader className="pb-3 border-b border-slate-100">
-            <CardTitle className="text-base font-bold text-slate-900">Session history</CardTitle>
+            <CardTitle className="text-base font-bold text-slate-900"><FormattedMessage id="client.history.sessionHistory" /></CardTitle>
             <CardDescription className="text-xs text-slate-500">
-              Detailed session feedback history ({historyRecords.length} logs matching filters)
+              {intl.formatMessage({ id: "client.history.sessionFeedbackDetailed" }, { count: historyRecords.length })}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-lg flex flex-col md:flex-row items-center justify-end gap-3 text-xs">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap text-[11px]">High Pain (≥7)</span>
+                  <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap text-[11px]"><FormattedMessage id="client.history.highPainFilter" /></span>
                   <Switch checked={highPainOnly} onCheckedChange={setHighPainOnly} />
                 </div>
                 <div className="flex items-center gap-3 border-l border-slate-200 pl-3">
-                  <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap text-[11px]">Show missed days</span>
+                  <span className="text-slate-600 font-bold tracking-tight whitespace-nowrap text-[11px]"><FormattedMessage id="client.history.showMissedDaysFilter" /></span>
                   <Switch checked={showMissedDays} onCheckedChange={setShowMissedDays} />
                 </div>
               </div>
@@ -667,11 +711,11 @@ export default function ClientHistory() {
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow className="border-b border-slate-200/60">
-                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Exercise Plan</TableHead>
-                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Logged Date</TableHead>
-                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Pain score</TableHead>
-                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Completion</TableHead>
-                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider">Patient Notes</TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider"><FormattedMessage id="client.history.table.exercisePlan" /></TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider"><FormattedMessage id="client.history.table.loggedDate" /></TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider"><FormattedMessage id="client.history.table.painScore" /></TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider"><FormattedMessage id="client.history.table.completion" /></TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider"><FormattedMessage id="client.history.table.patientNotes" /></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -682,16 +726,16 @@ export default function ClientHistory() {
                         <TableRow key={f.feedback.id} className="border-b border-slate-100 bg-rose-50/5 hover:bg-rose-50/10 transition-colors">
                           <TableCell className="font-semibold text-slate-800 text-sm">{f.exercise.title}</TableCell>
                           <TableCell className="text-slate-400 text-xs font-semibold font-mono">
-                            {format(new Date(f.feedback.submittedAt + "T00:00:00"), "MM/dd/yy")}
+                            {intl.formatDate(new Date(f.feedback.submittedAt + "T00:00:00"), { month: "2-digit", day: "2-digit", year: "2-digit" })}
                           </TableCell>
                           <TableCell className="text-slate-400 font-semibold">—</TableCell>
                           <TableCell>
                             <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50 border-rose-200 border font-bold text-xs w-fit">
-                              Missed
+                              <FormattedMessage id="client.history.missed" />
                             </Badge>
                           </TableCell>
                           <TableCell className="text-slate-400 italic font-normal min-w-[300px] whitespace-pre-wrap">
-                            No log submitted
+                            <FormattedMessage id="client.history.noLog" />
                           </TableCell>
                         </TableRow>
                       );
@@ -700,7 +744,7 @@ export default function ClientHistory() {
                     return (
                       <TableRow key={f.feedback.id} className="border-b border-slate-100 hover:bg-slate-50/40 transition-colors">
                         <TableCell className="font-semibold text-slate-800 text-sm">{f.exercise.title}</TableCell>
-                        <TableCell className="text-slate-400 text-xs font-semibold font-mono">{format(new Date(f.feedback.submittedAt), "MM/dd/yy, h:mm a")}</TableCell>
+                        <TableCell className="text-slate-400 text-xs font-semibold font-mono">{intl.formatDate(new Date(f.feedback.submittedAt), { month: "2-digit", day: "2-digit", year: "2-digit", hour: "numeric", minute: "2-digit", hour12: true })}</TableCell>
                         <TableCell>
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shadow-sm ${painConfig.bg} ${painConfig.text} ${painConfig.border}`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${painConfig.dot}`} />
@@ -710,13 +754,13 @@ export default function ClientHistory() {
                         <TableCell>
                           {f.feedback.completed ? (
                             <Badge className="bg-emerald-50 text-emerald-800 hover:bg-emerald-50 border-emerald-200 border font-bold text-xs flex items-center gap-1 w-fit">
-                              <Check className="size-3" /><span>Completed</span>
+                              <Check className="size-3" /><span><FormattedMessage id="client.history.completed" /></span>
                             </Badge>
                           ) : (
-                            <Badge className="bg-slate-50 text-slate-500 border-slate-200 border font-bold text-xs w-fit">Missed</Badge>
+                            <Badge className="bg-slate-50 text-slate-500 border-slate-200 border font-bold text-xs w-fit"><FormattedMessage id="client.history.missed" /></Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-slate-500 text-sm font-medium min-w-[300px] whitespace-pre-wrap">{f.feedback.notes ?? <span className="text-slate-300 font-normal">No notes logged</span>}</TableCell>
+                        <TableCell className="text-slate-500 text-sm font-medium min-w-[300px] whitespace-pre-wrap">{f.feedback.notes ?? <span className="text-slate-300 font-normal"><FormattedMessage id="client.history.noNotes" /></span>}</TableCell>
                       </TableRow>
                     );
                   })}

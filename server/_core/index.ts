@@ -3,6 +3,7 @@ import { createServer } from "http";
 import net from "net";
 import { createApp } from "./app";
 import { setupVite } from "./vite";
+import { startNotificationScheduler } from "./scheduler";
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -40,6 +41,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    startNotificationScheduler();
   });
 }
 

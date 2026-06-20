@@ -44,10 +44,14 @@ fi
 
 npm run build
 
-if pm2 describe "$APP_NAME" >/dev/null; then
-  pm2 reload "$APP_NAME" --update-env
+if [ -f ecosystem.config.cjs ]; then
+  pm2 reload ecosystem.config.cjs --update-env
 else
-  pm2 start npm --name "$APP_NAME" -- run start
+  if pm2 describe "$APP_NAME" >/dev/null; then
+    pm2 reload "$APP_NAME" --update-env
+  else
+    pm2 start npm --name "$APP_NAME" -- run start
+  fi
 fi
 
 pm2 save

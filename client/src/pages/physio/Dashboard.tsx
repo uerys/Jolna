@@ -900,6 +900,7 @@ function AssignmentsTab() {
                       className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700" 
                       value={endDate} 
                       onChange={(e) => setEndDate(e.target.value)} 
+                      min={startDate}
                     />
                   </div>
                 </div>
@@ -946,7 +947,11 @@ function AssignmentsTab() {
                   disabled={!clientId || !exerciseId}
                   size="sm"
                   className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
-                  onClick={() =>
+                  onClick={() => {
+                    if (new Date(endDate) < new Date(startDate)) {
+                      toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
+                      return;
+                    }
                     assign.mutate({
                       clientId: Number(clientId),
                       exerciseId: Number(exerciseId),
@@ -957,8 +962,8 @@ function AssignmentsTab() {
                       exerciseType: (exerciseType || undefined) as any,
                       startDate,
                       endDate,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <FormattedMessage id="physio.assign.submit" />
                 </Button>

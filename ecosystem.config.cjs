@@ -10,6 +10,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: process.env.PORT || "3000",
+        DISABLE_SCHEDULER: "true",
       },
     },
     {
@@ -31,6 +32,19 @@ module.exports = {
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
         TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
         TELEGRAM_THREAD_ID: process.env.TELEGRAM_THREAD_ID,
+      },
+    },
+    {
+      name: "jolna-reminders",
+      script: "dist/send-reminders.js",
+      cwd: __dirname,
+      interpreter: "node",
+      instances: 1,
+      exec_mode: "fork",
+      cron_restart: "0 18 * * *",
+      autorestart: false,
+      env: {
+        NODE_ENV: "production",
       },
     },
   ],
