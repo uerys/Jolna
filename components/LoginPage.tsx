@@ -71,7 +71,7 @@ export default function LoginPage({ onLogin, onLoginWithGoogle }: Readonly<Login
           <div className="mx-auto my-auto w-full max-w-[380px] space-y-6">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-                Sign in
+                Sign inn
               </h2>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed font-normal">
                 Log in to unlock tailored content and stay connected with your community.
