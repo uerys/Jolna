@@ -41,7 +41,7 @@ module.exports = {
       interpreter: "node",
       instances: 1,
       exec_mode: "fork",
-      cron_restart: "42 22 * * *",
+      cron_restart: "55 22 * * *",
       autorestart: false,
       env: {
         NODE_ENV: "production",

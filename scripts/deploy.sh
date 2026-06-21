@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 APP_NAME="${APP_NAME:-jolna}"
+REMINDER_APP_NAME="${REMINDER_APP_NAME:-${APP_NAME}-reminders}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-1}"
 RUN_SEED="${RUN_SEED:-0}"
@@ -45,7 +46,17 @@ fi
 npm run build
 
 if [ -f ecosystem.config.cjs ]; then
-  pm2 reload ecosystem.config.cjs --update-env
+  if pm2 describe "$APP_NAME" >/dev/null; then
+    pm2 reload ecosystem.config.cjs --only "$APP_NAME" --update-env
+  else
+    pm2 start ecosystem.config.cjs --only "$APP_NAME" --update-env
+  fi
+
+  if pm2 describe "$REMINDER_APP_NAME" >/dev/null; then
+    pm2 restart ecosystem.config.cjs --only "$REMINDER_APP_NAME" --update-env
+  else
+    pm2 start ecosystem.config.cjs --only "$REMINDER_APP_NAME" --update-env
+  fi
 else
   if pm2 describe "$APP_NAME" >/dev/null; then
     pm2 reload "$APP_NAME" --update-env
