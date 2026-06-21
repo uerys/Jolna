@@ -36,12 +36,12 @@ module.exports = {
     },
     {
       name: "jolna-reminders",
-      script: "bash",
-      args: "-lc 'node dist/send-reminders.js'",
+      script: "dist/send-reminders-run.js",
       cwd: __dirname,
+      interpreter: "node",
       instances: 1,
       exec_mode: "fork",
-      cron_restart: "35 22 * * *",
+      cron_restart: "42 22 * * *",
       autorestart: false,
       env: {
         NODE_ENV: "production",
