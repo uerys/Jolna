@@ -20,6 +20,8 @@
     "deploy": "bash scripts/deploy.sh",
     "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
+    "cron:install": "bash scripts/install-reminders-cron.sh",
+    "cron:print": "bash scripts/install-reminders-cron.sh --print",
     "postinstall": "patch-package"
   },
   "dependencies": {

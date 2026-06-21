@@ -34,18 +34,5 @@ module.exports = {
         TELEGRAM_THREAD_ID: process.env.TELEGRAM_THREAD_ID,
       },
     },
-    {
-      name: "jolna-reminders",
-      script: "dist/send-reminders-run.js",
-      cwd: __dirname,
-      interpreter: "node",
-      instances: 1,
-      exec_mode: "fork",
-      cron_restart: "55 22 * * *",
-      autorestart: false,
-      env: {
-        NODE_ENV: "production",
-      },
-    },
   ],
 };
