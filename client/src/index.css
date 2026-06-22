@@ -59,7 +59,7 @@
   --chart-5: #4338ca;
 
   /* Design tokens: premium neutral palette */
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   --background: #f8fafc;
   --foreground: #101828;
   --card: #ffffff;
@@ -276,7 +276,7 @@
     .container {
       padding-left: 2rem; /* 32px - desktop padding */
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1024px; /* Centered, tighter layout width similar to reference */
     }
   }
 

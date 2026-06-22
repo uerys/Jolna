@@ -42,7 +42,7 @@ export default function Home() {
         {/* Hero Section */}
         <section className="space-y-6 flex flex-col items-center sm:items-start text-center sm:text-left">
           {/* Pill Badge */}
-          <span className="inline-flex items-center bg-[#EEEDFE] text-[#534AB7] text-[10px] font-semibold px-2.5 py-0.5 rounded-[8px] border-[0.5px] border-[#534AB7]/10 uppercase tracking-wider">
+          <span className="inline-flex items-center bg-[#EEEDFE] text-[#534AB7] text-[10px] font-semibold px-2.5 py-0.5 rounded-lg border-[0.5px] border-[#534AB7]/10 uppercase tracking-wider">
             Bilingual · English & Khmer
           </span>
 
@@ -115,8 +115,8 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl">
             {/* Feature Card 1 */}
-            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-[12px] p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="w-10 h-10 rounded-[8px] bg-[#EEEDFE] text-[#534AB7] flex items-center justify-center shrink-0">
+            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="w-10 h-10 rounded-lg bg-[#EEEDFE] text-[#534AB7] flex items-center justify-center shrink-0">
                 <Users className="size-5" />
               </div>
               <div className="space-y-1.5">
@@ -130,8 +130,8 @@ export default function Home() {
             </div>
 
             {/* Feature Card 2 */}
-            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-[12px] p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="w-10 h-10 rounded-[8px] bg-emerald-50 text-[#0F6E56] flex items-center justify-center shrink-0">
+            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-[#0F6E56] flex items-center justify-center shrink-0">
                 <HeartPulse className="size-5" />
               </div>
               <div className="space-y-1.5">
@@ -145,8 +145,8 @@ export default function Home() {
             </div>
 
             {/* Feature Card 3 */}
-            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-[12px] p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="w-10 h-10 rounded-[8px] bg-blue-50 text-[#185FA5] flex items-center justify-center shrink-0">
+            <div className="bg-white border-[0.5px] border-slate-200/80 hover:border-[#534AB7] rounded-xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#185FA5] flex items-center justify-center shrink-0">
                 <BarChart3 className="size-5" />
               </div>
               <div className="space-y-1.5">
@@ -196,7 +196,7 @@ export default function Home() {
             </div>
 
             {/* Core Values / Stats */}
-            <div className="bg-white border-[0.5px] border-slate-200/80 rounded-[12px] p-6 space-y-5 shadow-sm">
+            <div className="bg-white border-[0.5px] border-slate-200/80 rounded-xl p-6 space-y-5 shadow-sm">
               <h3 className="font-semibold text-slate-900 text-sm font-sans mb-1">
                 <FormattedMessage
                   id="home.aboutValuesTitle"

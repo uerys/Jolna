@@ -114,7 +114,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
             className="h-8 border-[0.5px] border-slate-200 bg-white hover:bg-slate-50 px-3.5 rounded-full text-slate-600 font-semibold text-xs transition flex items-center gap-1.5 focus:outline-none"
             aria-label="Toggle language"
           >
-            <span>{language === "en" ? "EN" : "KH"}</span>
+            <span>{language === "en" ? "🇺🇸 EN" : "🇰🇭 KH"}</span>
           </button>
           {isAuthenticated && <NotificationCenter enabled={isAuthenticated} />}
 

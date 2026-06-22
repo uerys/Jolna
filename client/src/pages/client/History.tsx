@@ -59,6 +59,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { toast } from "sonner";
 
 const PAIN_SCORE_CLASSES: Record<
   number,
@@ -340,8 +341,14 @@ export default function ClientHistory() {
 
   const historyRecords = useMemo(() => {
     const todayStr = new Date().toLocaleDateString("en-CA");
-    const assignmentsList = allAssignments.data ?? [];
+    let assignmentsList = allAssignments.data ?? [];
     const logsList = feedbackEnriched.data ?? [];
+
+    if (selectedAssignment !== "all") {
+      assignmentsList = assignmentsList.filter(
+        a => a.assignment.id === Number(selectedAssignment)
+      );
+    }
 
     const missedLogs: {
       feedback: {
@@ -384,38 +391,51 @@ export default function ClientHistory() {
 
           const currentDateStr = current.toLocaleDateString("en-CA");
 
-          const logExists = logsList.some(l => {
-            const logDateStr = new Date(
-              l.feedback.submittedAt
-            ).toLocaleDateString("en-CA");
-            return (
-              l.assignment.id === a.assignment.id &&
-              logDateStr === currentDateStr
-            );
-          });
+          // Apply date filters if set
+          let inRange = true;
+          if (filterDateFrom) {
+            const fromStr = filterDateFrom.toLocaleDateString("en-CA");
+            if (currentDateStr < fromStr) inRange = false;
+          }
+          if (filterDateTo) {
+            const toStr = filterDateTo.toLocaleDateString("en-CA");
+            if (currentDateStr > toStr) inRange = false;
+          }
 
-          if (!logExists) {
-            missedLogs.push({
-              feedback: {
-                id: `missed-${a.assignment.id}-${currentDateStr}`,
-                painScore: null,
-                notes: "No log submitted",
-                submittedAt: currentDateStr,
-                createdAt: new Date(current),
-                completed: false,
-                isMissed: true,
-              },
-              exercise: {
-                id: a.exercise.id,
-                title: a.exercise.title,
-              },
-              assignment: {
-                id: a.assignment.id,
-                startDate: a.assignment.startDate,
-                endDate: a.assignment.endDate,
-                status: a.assignment.status,
-              },
+          if (inRange) {
+            const logExists = logsList.some(l => {
+              const logDateStr = new Date(
+                l.feedback.submittedAt
+              ).toLocaleDateString("en-CA");
+              return (
+                l.assignment.id === a.assignment.id &&
+                logDateStr === currentDateStr
+              );
             });
+
+            if (!logExists) {
+              missedLogs.push({
+                feedback: {
+                  id: `missed-${a.assignment.id}-${currentDateStr}`,
+                  painScore: null,
+                  notes: "No log submitted",
+                  submittedAt: currentDateStr,
+                  createdAt: new Date(current),
+                  completed: false,
+                  isMissed: true,
+                },
+                exercise: {
+                  id: a.exercise.id,
+                  title: a.exercise.title,
+                },
+                assignment: {
+                  id: a.assignment.id,
+                  startDate: a.assignment.startDate,
+                  endDate: a.assignment.endDate,
+                  status: a.assignment.status,
+                },
+              });
+            }
           }
           current.setDate(current.getDate() + 1);
         }
@@ -463,6 +483,9 @@ export default function ClientHistory() {
     highPainOnly,
     showMissedDays,
     viewMode,
+    selectedAssignment,
+    filterDateFrom,
+    filterDateTo,
   ]);
 
   if (!loading && !isClient)
@@ -693,15 +716,20 @@ export default function ClientHistory() {
                     variant="outline"
                     onClick={() => {
                       setSelectedAssignment("all");
-
                       setFilterDateFrom(undefined);
                       setFilterDateTo(undefined);
+                      toast.success("Filters cleared");
                     }}
                     className="h-9 text-xs border-slate-200 rounded-lg font-medium px-4"
                   >
                     <FormattedMessage id="common.clear" />
                   </Button>
-                  <Button className="h-9 text-xs bg-[#534AB7] hover:bg-[#534AB7]/90 text-white rounded-lg font-medium px-4">
+                  <Button
+                    onClick={() => {
+                      toast.success("Filters applied");
+                    }}
+                    className="h-9 text-xs bg-[#534AB7] hover:bg-[#534AB7]/90 text-white rounded-lg font-medium px-4"
+                  >
                     <FormattedMessage id="common.apply" />
                   </Button>
                 </div>
@@ -819,7 +847,7 @@ export default function ClientHistory() {
           </Card>
         </div>
 
-        {/* Pain Trend Chart */}
+        {/* Pain Trajectory Chart */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="space-y-0.5">

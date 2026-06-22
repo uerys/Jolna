@@ -1844,7 +1844,7 @@ export default function PhysioClientDetail() {
             )}
           </div>
 
-          {/* Pain Trend Card */}
+          {/* Pain Trajectory Card */}
           <Card className="bg-white border border-slate-200 shadow-sm rounded-xl mb-6">
             <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
               <div className="space-y-0.5">

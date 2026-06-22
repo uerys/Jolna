@@ -57,7 +57,7 @@ function ChartTick({
 }
 
 /**
- * Physio-wide monitoring overview: aggregated pain trend across all clients +
+ * Physio-wide monitoring overview: aggregated pain trajectory across all clients +
  * high-pain alerts within the last 24h.
  */
 export function MonitoringOverview() {

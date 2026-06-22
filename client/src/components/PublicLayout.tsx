@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,13 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
   const loginUrl = getLoginUrl();
 
+  // Reset scroll to top on navigation/location changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
   return (
-    <div className="min-h-screen bg-slate-50/20 text-slate-700 font-sans leading-[1.7] antialiased flex flex-col justify-between">
+    <div className="min-h-screen bg-background text-slate-700 font-sans leading-[1.7] antialiased flex flex-col justify-between">
       <div>
         {/* Sticky Navbar */}
         <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b-[0.5px] border-slate-200/80 px-6 py-3.5 flex items-center justify-between">
@@ -80,7 +85,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               className="h-8 border-[0.5px] border-slate-200 bg-white hover:bg-slate-50 px-3.5 rounded-full text-slate-600 font-semibold text-xs transition flex items-center gap-1.5 focus:outline-none"
               aria-label="Toggle language"
             >
-              <span>{language === "en" ? "EN" : "KH"}</span>
+              <span>{language === "en" ? "🇺🇸 EN" : "🇰🇭 KH"}</span>
             </button>
 
             {/* Outlined Sign In Button */}
@@ -215,6 +220,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <FormattedMessage
                 id="footer.projectDesc"
                 defaultMessage="Paragon International University Capstone Project."
+              />
+            </p>
+            <p className="text-[11px] text-slate-400 mt-2 leading-relaxed italic">
+              * <FormattedMessage
+                id="footer.disclaimer"
+                defaultMessage="This project is a research study. All data is mocked and used for demonstration purposes only."
               />
             </p>
             <p className="text-xs text-slate-400 mt-2.5">

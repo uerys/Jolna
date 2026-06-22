@@ -51,7 +51,7 @@ export default function Contact() {
       <main className="max-w-5xl mx-auto px-6 py-16 sm:py-24 space-y-12">
         {/* Contact Page Header */}
         <section className="space-y-4 text-center sm:text-left">
-          <span className="inline-flex items-center bg-[#EEEDFE] text-[#534AB7] text-[10px] font-semibold px-2.5 py-0.5 rounded-[8px] border-[0.5px] border-[#534AB7]/10 uppercase tracking-wider">
+          <span className="inline-flex items-center bg-[#EEEDFE] text-[#534AB7] text-[10px] font-semibold px-2.5 py-0.5 rounded-lg border-[0.5px] border-[#534AB7]/10 uppercase tracking-wider">
             <FormattedMessage id="nav.contact" defaultMessage="Contact" />
           </span>
           <h1 className="text-3xl sm:text-[36px] font-medium text-slate-900 tracking-tight leading-tight font-sans">
@@ -68,7 +68,7 @@ export default function Contact() {
         {/* Form and Info Section */}
         <section className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Contact Form */}
-          <div className="md:col-span-7 bg-white border-[0.5px] border-slate-200/80 rounded-[12px] p-6 sm:p-8 shadow-sm">
+          <div className="md:col-span-7 bg-white border-[0.5px] border-slate-200/80 rounded-xl p-6 sm:p-8 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
                 <label
@@ -176,7 +176,7 @@ export default function Contact() {
 
           {/* Contact Info Sidebar */}
           <div className="md:col-span-5 space-y-6">
-            <div className="bg-white border-[0.5px] border-slate-200/80 rounded-[12px] p-6 shadow-sm space-y-5">
+            <div className="bg-white border-[0.5px] border-slate-200/80 rounded-xl p-6 shadow-sm space-y-5">
               <h3 className="font-semibold text-slate-900 text-sm font-sans">
                 <FormattedMessage
                   id="contact.info.title"

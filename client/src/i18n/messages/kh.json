@@ -1,6 +1,6 @@
 {
   "app.name": "JOLNA",
-  "app.tagline": "កម្មវិធីស្តារនីតិសម្បទាតាមផ្ទះ សម្រាប់គ្លីនិក អ្នកស្តារកាយ និងអ្នកជំងឺ។",
+  "app.tagline": "កម្មវិធីស្តារនីតិសម្បទាតាមផ្ទះ សម្រាប់អ្នកស្តារកាយ និងអ្នកជំងឺ។",
 
   "nav.signIn": "ចូលប្រើប្រាស់",
   "nav.signOut": "ចាកចេញ",
@@ -88,6 +88,12 @@
 
   "physio.dashboard.title": "ផ្ទាំងគ្រប់គ្រងរបស់អ្នកស្តារកាយ",
   "physio.dashboard.subtitle": "តាមដានអ្នកជំងឺ គ្រប់គ្រងលំហាត់ប្រាណ និងមើលការវិវត្តនៃការជាសះស្បើយ។",
+  "physio.dashboard.filter.compliance": "ការអនុវត្ត",
+  "physio.dashboard.compliance.all": "ការអនុវត្តទាំងអស់",
+  "physio.dashboard.compliance.ontrack": "តាមកាលវិភាគ",
+  "physio.dashboard.compliance.missed": "ខកខានផ្ដល់ព័ត៌មាន",
+  "physio.dashboard.badge.ontrack": "តាមកាលវិភាគ",
+  "physio.dashboard.badge.missed": "ខកខានផ្ដល់ព័ត៌មាន",
   "physio.tab.clients": "អ្នកជំងឺរបស់ខ្ញុំ",
   "physio.tab.exercises": "គំរូលំហាត់ប្រាណ",
   "physio.tab.assignments": "កិច្ចការបានផ្ដល់",
@@ -123,7 +129,7 @@
   "physio.assign.submit": "ផ្ដល់",
   "physio.assign.created": "បានផ្ដល់កិច្ចការ។",
 
-  "physio.monitor.painTrend": "និន្នាការឈឺ",
+  "physio.monitor.painTrend": "គន្លងនៃការឈឺចាប់",
   "physio.monitor.completion": "អត្រាបញ្ចប់",
   "physio.monitor.history": "ប្រវត្តិវគ្គ",
   "physio.monitor.noData": "មិនទាន់មានទិន្នន័យយោបល់ទេ។",
@@ -221,7 +227,7 @@
   "physio.detail.onlyPhysio": "មានតែអ្នកស្តារកាយប៉ុណ្ណោះតែអាចមើលទំព័រនេះ។",
   "physio.monitor.activeSessions": "វគ្គកំពុងតាមដាន",
   "physio.monitor.alertsCount": "ការរាយការណ៍កម្រិតឈឺខ្ពស់ (48 ម៉ោង)",
-  "physio.monitor.painTrendAvg": "និន្នាការឈឺ — មធ្យមភាគនៃអ្នកជំងឺទាំងអស់",
+  "physio.monitor.painTrendAvg": "គន្លងនៃការឈឺចាប់ — មធ្យមភាគនៃអ្នកជំងឺទាំងអស់",
 
   "common.notAuthorised": "មិនមានសិទ្ធិចូល",
   "common.dashboard": "ផ្ទាំងគ្រប់គ្រង",
@@ -256,6 +262,7 @@
   "footer.academic": "គម្រោងសិក្សា",
   "footer.projectDesc": "គម្រោងសារណាបញ្ចប់ការសិក្សានៃសាកលវិទ្យាល័យ ផារ៉ាហ្គន អន្តរជាតិ។",
   "footer.rights": "រក្សាសិទ្ធិគ្រប់យ៉ាង។",
+  "footer.disclaimer": "គម្រោងនេះគឺជាការសិក្សាស្រាវជ្រាវ ហើយរាល់ទិន្នន័យទាំងអស់ត្រូវបានសន្មត និងប្រើប្រាស់សម្រាប់គោលបំណងបង្ហាញសាកល្បងតែប៉ុណ្ណោះ។",
   "nav.home": "ទំព័រដើម",
   "nav.about": "អំពីយើង",
   "nav.contact": "ទំនាក់ទំនង",
@@ -277,6 +284,9 @@
   "contact.toast.success": "សាររបស់អ្នកត្រូវបានផ្ញើដោយជោគជ័យ។ យើងនឹងទាក់ទងទៅអ្នកវិញក្នុងពេលឆាប់ៗនេះ!",
   "about.title": "អំពី JOLNA",
   "about.subtitle": "ស្វែងយល់បន្ថែមអំពីបេសកកម្ម និងក្រុមការងារស្នូលរបស់យើង។",
+  "about.storyTitle": "ប្រវត្តិនៃការបង្កើត JOLNA",
+  "about.academicTitle": "គម្រោងសិក្សា",
+  "about.academicDesc": "វេទិកានេះត្រូវបានបង្កើតឡើងក្រោមការណែនាំពីដេប៉ាតឺម៉ង់វិទ្យាសាស្ត្រកុំព្យូទ័រ និងបច្ចេកវិទ្យាព័ត៌មាន នៃសាកលវិទ្យាល័យ ផារ៉ាហ្គន អន្តរជាតិ រាជធានីភ្នំពេញ ប្រទេសកម្ពុជា។ វាមានគោលបំណងដោះស្រាយបញ្ហាប្រឈមនៃការធ្វើឌីជីថលនីយកម្មសុខាភិបាលក្នុងស្រុក ផ្នែកកាយព្យាបាល។",
   "about.teamSubtitle": "អ្នកបង្កើត",
   "about.teamTitle": "សមាជិកក្រុមការងារ",
   "about.roleCoDeveloper": "សហអ្នកបង្កើត និងអ្នកស្រាវជ្រាវ"

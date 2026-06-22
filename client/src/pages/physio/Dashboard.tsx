@@ -158,6 +158,9 @@ function ClientsTab() {
   const [clientStatusFilter, setClientStatusFilter] = useState<
     "active" | "suspended" | "inactive" | "all"
   >("active");
+  const [complianceFilter, setComplianceFilter] = useState<
+    "all" | "ontrack" | "missed"
+  >("all");
 
   const isLoading =
     clients.isLoading || assignments.isLoading || feedback.isLoading;
@@ -230,6 +233,7 @@ function ClientsTab() {
 
       // Relative timestamp for last log (using new Date conversion to avoid NaN)
       let lastLogLabel = "No logs yet";
+      let diffDays: number | null = null;
       if (lastLogStr) {
         const lastLogDate = new Date(lastLogStr);
         const date1 = new Date(todayStr + "T00:00:00");
@@ -238,7 +242,7 @@ function ClientsTab() {
           lastLogDate.getMonth(),
           lastLogDate.getDate()
         );
-        const diffDays = Math.floor(
+        diffDays = Math.floor(
           (date1.getTime() - date2.getTime()) / (24 * 60 * 60 * 1000)
         );
         if (diffDays <= 0) lastLogLabel = "Last log: Today";
@@ -257,6 +261,11 @@ function ClientsTab() {
       const isUrgent = isActive && latestPain !== null && latestPain >= 7;
       const isOnTrack = isActive && !isUrgent;
 
+      const hasActiveAssignments = activeSessions.length > 0;
+      const loggedRecently = diffDays !== null && diffDays <= 1;
+      const isComplianceOnTrack = isActive && hasActiveAssignments && loggedRecently;
+      const isComplianceMissing = isActive && hasActiveAssignments && !loggedRecently;
+
       let category: "urgent" | "ontrack" | "suspended" = "suspended";
       if (!isActive) category = "suspended";
       else if (isUrgent) category = "urgent";
@@ -272,6 +281,8 @@ function ClientsTab() {
         category,
         isUrgent,
         isOnTrack,
+        isComplianceOnTrack,
+        isComplianceMissing,
         unreadChatCount: c.unreadChatCount ?? 0,
       };
     });
@@ -299,12 +310,19 @@ function ClientsTab() {
       list = list.filter(c => c.client.status === "suspended");
     }
 
-    // 2. Triage summary filter
+    // 2. Compliance filter
+    if (complianceFilter === "ontrack") {
+      list = list.filter(c => c.isComplianceOnTrack);
+    } else if (complianceFilter === "missed") {
+      list = list.filter(c => c.isComplianceMissing);
+    }
+
+    // 3. Triage summary filter
     if (triageFilter !== "all") {
       list = list.filter(c => c.category === triageFilter);
     }
 
-    // 3. Search query
+    // 4. Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -314,7 +332,7 @@ function ClientsTab() {
       );
     }
 
-    // 4. Sort: Active first, then suspended (if All is selected)
+    // 5. Sort: Active first, then suspended (if All is selected)
     list.sort((a, b) => {
       const scoreA = a.client.status === "active" ? 2 : 1;
       const scoreB = b.client.status === "active" ? 2 : 1;
@@ -324,7 +342,7 @@ function ClientsTab() {
     });
 
     return list;
-  }, [clientDataList, triageFilter, searchQuery, clientStatusFilter]);
+  }, [clientDataList, triageFilter, searchQuery, clientStatusFilter, complianceFilter]);
 
   if (isLoading) {
     return (
@@ -418,12 +436,42 @@ function ClientsTab() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Divider */}
+        <div className="hidden md:block w-px h-5 bg-[#E4E7EC] shrink-0" />
+
+        {/* Compliance filter */}
+        <div className="w-full md:w-auto shrink-0 flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest shrink-0">
+            <FormattedMessage id="physio.dashboard.filter.compliance" defaultMessage="Compliance" />
+          </span>
+          <Select
+            value={complianceFilter}
+            onValueChange={(val: any) => setComplianceFilter(val)}
+          >
+            <SelectTrigger className="h-8 bg-[#F8FAFC] border-[#E4E7EC] text-[#344054] text-xs rounded-lg w-36 font-medium">
+              <SelectValue placeholder="Filter by compliance" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border border-[#E4E7EC] text-xs shadow-lg rounded-xl">
+              <SelectItem value="all">
+                <FormattedMessage id="physio.dashboard.compliance.all" defaultMessage="All compliance" />
+              </SelectItem>
+              <SelectItem value="ontrack">
+                <FormattedMessage id="physio.dashboard.compliance.ontrack" defaultMessage="On track" />
+              </SelectItem>
+              <SelectItem value="missed">
+                <FormattedMessage id="physio.dashboard.compliance.missed" defaultMessage="Missing submissions" />
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* ── 3. Active Filter Pills ──────────────────────────────── */}
       {(triageFilter !== "all" ||
         searchQuery.trim() !== "" ||
-        clientStatusFilter !== "active") && (
+        clientStatusFilter !== "active" ||
+        complianceFilter !== "all") && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">
             Active filters:
@@ -460,6 +508,22 @@ function ClientsTab() {
               &ldquo;{searchQuery}&rdquo;
               <button
                 onClick={() => setSearchQuery("")}
+                className="hover:text-indigo-900 font-bold leading-none ml-0.5"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {complianceFilter !== "all" && (
+            <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+              Compliance:{" "}
+              {complianceFilter === "ontrack" ? (
+                <FormattedMessage id="physio.dashboard.compliance.ontrack" defaultMessage="On track" />
+              ) : (
+                <FormattedMessage id="physio.dashboard.compliance.missed" defaultMessage="Missing submissions" />
+              )}
+              <button
+                onClick={() => setComplianceFilter("all")}
                 className="hover:text-indigo-900 font-bold leading-none ml-0.5"
               >
                 ×
@@ -545,16 +609,28 @@ function ClientsTab() {
                               Pending
                             </span>
                           ) : (
-                            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
-                              Undercare
-                            </span>
+                            <>
+                              <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Undercare
+                              </span>
+                              {data.isComplianceOnTrack && (
+                                <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <FormattedMessage id="physio.dashboard.badge.ontrack" defaultMessage="On Track" />
+                                </span>
+                              )}
+                              {data.isComplianceMissing && (
+                                <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                                  <FormattedMessage id="physio.dashboard.badge.missed" defaultMessage="Missed Submission" />
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                         <span className="text-xs text-[#667085] truncate block leading-relaxed">
                           {data.client.email ?? "—"}
                         </span>
                         {!isSuspended && (
-                          <span className="text-[10px] text-[#98A2B3] font-medium mt-0.5 block">
+                          <span className={`text-[10px] font-medium mt-0.5 block ${data.isComplianceMissing ? "text-amber-600 font-semibold" : "text-[#98A2B3]"}`}>
                             {data.lastLogLabel}
                           </span>
                         )}
