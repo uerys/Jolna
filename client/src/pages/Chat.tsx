@@ -358,7 +358,7 @@ export default function Chat() {
             </h3>
             <p className="text-sm text-slate-500 max-w-sm mt-1">
               {isPhysio
-                ? "Could not locate this client's profile."
+                ? "Could not locate this patient's profile."
                 : "You don't have a designated physiotherapist assigned yet. Please contact your administrator."}
             </p>
           </div>
@@ -384,7 +384,7 @@ export default function Chat() {
                 <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
                   {targetUser.role === "physiotherapist"
                     ? "Physiotherapist"
-                    : "Client"}
+                    : "Patient"}
                 </span>
               </div>
             </div>

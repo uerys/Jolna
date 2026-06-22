@@ -1329,7 +1329,7 @@ export default function PhysioClientDetail() {
                 >
                   <Link href={`/chat/${clientId}`}>
                     <MessageSquare className="size-4 text-slate-500 mr-1" />
-                    <span>Chat with Client</span>
+                    <span>Chat with Patient</span>
                   </Link>
                 </Button>
                 {viewMode === "historical" ? (

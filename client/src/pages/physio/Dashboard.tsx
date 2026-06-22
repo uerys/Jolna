@@ -414,7 +414,7 @@ function ClientsTab() {
               <SelectItem value="active">Undercare</SelectItem>
               <SelectItem value="inactive">Pending</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="all">All clients</SelectItem>
+              <SelectItem value="all">All patients</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1221,7 +1221,7 @@ function AssignmentsTab() {
         <Table className="mt-4">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[20%]">Client</TableHead>
+              <TableHead className="w-[20%]">Patient</TableHead>
               <TableHead className="w-[25%]">Exercise</TableHead>
               <TableHead className="w-[8%] text-center">Sets</TableHead>
               <TableHead className="w-[8%] text-center">Reps</TableHead>

@@ -1,3 +1,4 @@
+import PublicLayout from "@/components/PublicLayout";
 import { FormattedMessage } from "react-intl";
 import { useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -35,51 +36,7 @@ export default function Home() {
   }, [loading, isAuthenticated, user?.role, location, navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-50/20 text-slate-700 font-sans leading-[1.7] antialiased">
-      {/* Sticky Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b-[0.5px] border-slate-200/80 px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2 select-none">
-          <img
-            src="/logo.png"
-            alt="JOLNA Logo"
-            className="w-8 h-8 object-contain"
-          />
-          <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">
-            JOLNA
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Language Toggle Pill */}
-          <button
-            onClick={() => setLanguage(language === "en" ? "kh" : "en")}
-            className="h-8 border-[0.5px] border-slate-200 bg-white hover:bg-slate-50 px-3.5 rounded-full text-slate-600 font-semibold text-xs transition flex items-center gap-1.5 focus:outline-none"
-            aria-label="Toggle language"
-          >
-            <span>{language === "en" ? "EN" : "KH"}</span>
-          </button>
-
-          {/* Outlined Sign In Button */}
-          {!isAuthenticated ? (
-            <Button
-              asChild
-              className="h-8 px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition shadow-sm border-none"
-            >
-              <a href={loginUrl}>
-                <FormattedMessage id="home.ctaSignIn" />
-              </a>
-            </Button>
-          ) : (
-            <Button
-              onClick={() => navigate(dashboardPathFor(user?.role))}
-              className="h-8 px-4 bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs rounded-full transition"
-            >
-              <FormattedMessage id="home.ctaContinue" />
-            </Button>
-          )}
-        </div>
-      </nav>
-
+    <PublicLayout>
       {/* Main Container */}
       <main className="max-w-5xl mx-auto px-6 py-16 sm:py-24">
         {/* Hero Section */}
@@ -115,16 +72,35 @@ export default function Home() {
                 asChild
                 className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs px-5 h-9 rounded-full shadow-sm transition"
               >
-                <a href={loginUrl}>Get started</a>
+                <a href={loginUrl}>
+                  <FormattedMessage
+                    id="home.ctaGetStarted"
+                    defaultMessage="Get started"
+                  />
+                </a>
               </Button>
             ) : (
               <Button
                 onClick={() => navigate(dashboardPathFor(user?.role))}
                 className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold text-xs px-5 h-9 rounded-full shadow-sm transition"
               >
-                Go to Dashboard
+                <FormattedMessage
+                  id="home.ctaGoToDashboard"
+                  defaultMessage="Go to Dashboard"
+                />
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              onClick={() => navigate("/about")}
+              className="border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs px-5 h-9 rounded-full shadow-sm transition cursor-pointer"
+            >
+              <FormattedMessage
+                id="home.ctaAboutUs"
+                defaultMessage="About us"
+              />
+            </Button>
           </div>
         </section>
 
@@ -184,7 +160,109 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Horizontal Divider */}
+        <hr className="border-t-[0.5px] border-slate-200/80 my-12 w-full" />
+
+        {/* About Us Section */}
+        <section id="about-us" className="space-y-6 scroll-mt-20">
+          <span className="text-[10px] font-bold text-[#534AB7] uppercase tracking-widest block mb-2 font-sans">
+            <FormattedMessage
+              id="home.aboutSubtitle"
+              defaultMessage="Our Mission"
+            />
+          </span>
+          <h2 className="text-2xl sm:text-[28px] font-medium text-slate-900 tracking-tight leading-tight max-w-2xl font-sans">
+            <FormattedMessage
+              id="home.aboutTitle"
+              defaultMessage="About JOLNA"
+            />
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="space-y-4">
+              <p className="text-[14px] leading-[1.8] text-slate-500 font-normal">
+                <FormattedMessage
+                  id="home.aboutDesc1"
+                  defaultMessage="JOLNA is a specialized physiotherapy rehabilitation platform designed to bridge the gap between physiotherapists and clients. Developed as a capstone project for Paragon International University, JOLNA enables practitioners to design, prescribe, and track personalized recovery routines, while empowering clients with bilingual visual guidance and seamless progress logging."
+                />
+              </p>
+              <p className="text-[14px] leading-[1.8] text-slate-500 font-normal">
+                <FormattedMessage
+                  id="home.aboutDesc2"
+                  defaultMessage="Our goal is to make physical rehabilitation accessible, engaging, and measurable. By combining structured exercise schedules with daily pain monitoring, JOLNA provides clinical insight that helps prevent setbacks and supports a safer path back to full mobility."
+                />
+              </p>
+            </div>
+
+            {/* Core Values / Stats */}
+            <div className="bg-white border-[0.5px] border-slate-200/80 rounded-[12px] p-6 space-y-5 shadow-sm">
+              <h3 className="font-semibold text-slate-900 text-sm font-sans mb-1">
+                <FormattedMessage
+                  id="home.aboutValuesTitle"
+                  defaultMessage="Platform Pillars"
+                />
+              </h3>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#534AB7] mt-2 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900">
+                      <FormattedMessage
+                        id="home.aboutValue1Title"
+                        defaultMessage="Bilingual Communication"
+                      />
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      <FormattedMessage
+                        id="home.aboutValue1Desc"
+                        defaultMessage="Fully localized in English and Khmer to support local clinical needs."
+                      />
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900">
+                      <FormattedMessage
+                        id="home.aboutValue2Title"
+                        defaultMessage="Clinical Supervision"
+                      />
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      <FormattedMessage
+                        id="home.aboutValue2Desc"
+                        defaultMessage="Directly link with professional physiotherapists who customize your routine."
+                      />
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-900">
+                      <FormattedMessage
+                        id="home.aboutValue3Title"
+                        defaultMessage="Progress Insights"
+                      />
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      <FormattedMessage
+                        id="home.aboutValue3Desc"
+                        defaultMessage="Track pain score trends and compliance metrics over time."
+                      />
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-    </div>
+    </PublicLayout>
   );
 }

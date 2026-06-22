@@ -75,7 +75,7 @@ export function SignupForm() {
         <p className="text-balance text-sm text-muted-foreground font-sans">
           {isAdmin
             ? "Enter details below to create a new account"
-            : "Enter your details below to create your client account"}
+            : "Enter your details below to create your patient account"}
         </p>
       </div>
       <div className="grid gap-4">

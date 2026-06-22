@@ -9,6 +9,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { I18nProvider } from "./contexts/I18nContext";
 import Home from "./pages/Home";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 import AdminUsers from "./pages/admin/Users";
 import PhysioDashboard from "./pages/physio/Dashboard";
 import PhysioClientDetail from "./pages/physio/ClientDetail";
@@ -21,6 +23,8 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/about"} component={About} />
+      <Route path={"/contact"} component={Contact} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/profile"} component={Profile} />
