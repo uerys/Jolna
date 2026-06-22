@@ -44,7 +44,7 @@ async function resolveEffectiveUser(ctx: TrpcContext) {
   return impersonated ?? ctx.user;
 }
 
-const requireUser = t.middleware(async (opts) => {
+const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
   const effectiveUser = await resolveEffectiveUser(ctx);
 
@@ -63,10 +63,10 @@ export const protectedProcedure = t.procedure.use(requireUser);
 
 function makeRoleProcedure(
   allowedRoles: readonly string[],
-  notAllowedMessage = NOT_ADMIN_ERR_MSG,
+  notAllowedMessage = NOT_ADMIN_ERR_MSG
 ) {
   return t.procedure.use(
-    t.middleware(async (opts) => {
+    t.middleware(async opts => {
       const { ctx, next } = opts;
       const effectiveUser = await resolveEffectiveUser(ctx);
 
@@ -81,7 +81,7 @@ function makeRoleProcedure(
       }
 
       return next({ ctx: { ...ctx, user: effectiveUser } });
-    }),
+    })
   );
 }
 
@@ -89,9 +89,11 @@ function makeRoleProcedure(
  * Admin-only procedure that checks the ORIGINAL user's role (before impersonation).
  * This allows admins to perform admin actions even while impersonating another user.
  */
-function makeAdminOnlyProcedure(notAllowedMessage = "Clinic Admin access required.") {
+function makeAdminOnlyProcedure(
+  notAllowedMessage = "Clinic Admin access required."
+) {
   return t.procedure.use(
-    t.middleware(async (opts) => {
+    t.middleware(async opts => {
       const { ctx, next } = opts;
 
       // Check original user's role, not the effective (impersonated) user's role
@@ -109,29 +111,29 @@ function makeAdminOnlyProcedure(notAllowedMessage = "Clinic Admin access require
       }
 
       return next({ ctx: { ...ctx, user: effectiveUser } });
-    }),
+    })
   );
 }
 
 /** Clinic Admin only. Still matches the legacy `admin` enum value. */
 export const adminProcedure = makeAdminOnlyProcedure(
-  "Clinic Admin access required.",
+  "Clinic Admin access required."
 );
 
 /** Physiotherapist only. */
 export const physioProcedure = makeRoleProcedure(
   ["physiotherapist"],
-  "Physiotherapist access required.",
+  "Physiotherapist access required."
 );
 
 /** Client only. We also accept the legacy `user` role as "client" for back-compat. */
 export const clientProcedure = makeRoleProcedure(
   ["client", "user"],
-  "Client access required.",
+  "Client access required."
 );
 
 /** Any authenticated JOLNA role. Uses the effective (impersonated) user. */
 export const anyRoleProcedure = makeRoleProcedure(
   ["admin", "physiotherapist", "client", "user"],
-  UNAUTHED_ERR_MSG,
+  UNAUTHED_ERR_MSG
 );

@@ -9,7 +9,10 @@ type LoginPageProps = {
 
 type FormSubmitHandler = NonNullable<ComponentProps<"form">["onSubmit"]>;
 
-export default function LoginPage({ onLogin, onLoginWithGoogle }: Readonly<LoginPageProps>) {
+export default function LoginPage({
+  onLogin,
+  onLoginWithGoogle,
+}: Readonly<LoginPageProps>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +20,7 @@ export default function LoginPage({ onLogin, onLoginWithGoogle }: Readonly<Login
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit: FormSubmitHandler = (event) => {
+  const handleSubmit: FormSubmitHandler = event => {
     event.preventDefault();
     setError("");
 
@@ -74,35 +77,40 @@ export default function LoginPage({ onLogin, onLoginWithGoogle }: Readonly<Login
                 Sign in
               </h2>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed font-normal">
-                Log in to unlock tailored content and stay connected with your community.
+                Log in to unlock tailored content and stay connected with your
+                community.
               </p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-800">Email</label>
+                <label className="text-sm font-semibold text-gray-800">
+                  Email
+                </label>
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={event => setEmail(event.target.value)}
                   className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-800">Password</label>
+                <label className="text-sm font-semibold text-gray-800">
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={event => setPassword(event.target.value)}
                     className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
+                    onClick={() => setShowPassword(prev => !prev)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
                     aria-label="Toggle password visibility"
                   >

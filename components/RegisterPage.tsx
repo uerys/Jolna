@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, type ComponentProps } from "react";
+import { validateCambodianPhoneNumber } from "../shared/phoneValidation";
 
 type RegisterPageProps = {
   onRegister?: (
     name: string,
     email: string,
     phoneNumber: string,
-    password: string,
+    password: string
   ) => Promise<void> | void;
   pageTitle?: string;
   pageSubtitle?: string;
@@ -42,7 +43,7 @@ export default function RegisterPage({
   const passwordsDoNotMatch =
     confirmPassword.length > 0 && password !== confirmPassword;
 
-  const handleSubmit: FormSubmitHandler = (event) => {
+  const handleSubmit: FormSubmitHandler = event => {
     event.preventDefault();
     setError("");
 
@@ -58,6 +59,12 @@ export default function RegisterPage({
         return;
       }
 
+      if (!validateCambodianPhoneNumber(phoneNumber)) {
+        setError(
+          "Invalid Cambodian phone number. Must be a valid Cambodian phone number."
+        );
+        return;
+      }
       const passwordError = validatePassword(password);
       if (passwordError) {
         setError(passwordError);
@@ -83,9 +90,7 @@ export default function RegisterPage({
   return (
     <main className="flex min-h-screen items-center justify-center bg-white p-4">
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-gray-900 shadow-sm">
-        <h2 className="mb-8 text-center text-3xl font-semibold">
-          {pageTitle}
-        </h2>
+        <h2 className="mb-8 text-center text-3xl font-semibold">{pageTitle}</h2>
         {pageSubtitle && (
           <p className="mb-8 text-center text-sm text-gray-600">
             {pageSubtitle}
@@ -97,7 +102,7 @@ export default function RegisterPage({
             type="text"
             placeholder="Full name"
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={event => setName(event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
           />
 
@@ -105,7 +110,7 @@ export default function RegisterPage({
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={event => setEmail(event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
           />
 
@@ -114,7 +119,7 @@ export default function RegisterPage({
             type="tel"
             placeholder="Phone number"
             value={phoneNumber}
-            onChange={(event) => setPhoneNumber(event.target.value)}
+            onChange={event => setPhoneNumber(event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
           />
 
@@ -123,12 +128,12 @@ export default function RegisterPage({
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={event => setPassword(event.target.value)}
               className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 pr-12 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
             />
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
+              onClick={() => setShowPassword(prev => !prev)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
               aria-label="Toggle password visibility"
             >
@@ -172,7 +177,7 @@ export default function RegisterPage({
             type={showPassword ? "text" : "password"}
             placeholder="Confirm password"
             value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
+            onChange={event => setConfirmPassword(event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-4 text-gray-900 placeholder:text-gray-400 transition focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
           />
 

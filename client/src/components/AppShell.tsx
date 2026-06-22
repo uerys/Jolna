@@ -71,9 +71,10 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
   });
 
   const handleSignOutClick = () => {
-    const confirmMsg = language === "kh"
-      ? "តើអ្នកប្រាកដជាចង់ចាកចេញមែនទេ?"
-      : "Are you sure you want to sign out?";
+    const confirmMsg =
+      language === "kh"
+        ? "តើអ្នកប្រាកដជាចង់ចាកចេញមែនទេ?"
+        : "Are you sure you want to sign out?";
     if (window.confirm(confirmMsg)) {
       logout();
     }
@@ -101,7 +102,9 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
               alt="JOLNA Logo"
               className="w-8 h-8 object-contain"
             />
-            <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">JOLNA</span>
+            <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">
+              JOLNA
+            </span>
           </Link>
 
           <div className="flex-1" />
@@ -228,7 +231,6 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
           <div className="container py-6">{children}</div>
         </main>
       </div>
-
     </div>
   );
 }

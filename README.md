@@ -20,6 +20,7 @@ This repository is set up for `npm` and `package-lock.json`. Use `npm` commands 
 The database is run via a Docker container, while the application runs on your host machine.
 
 ### 1. Start the Database
+
 ## Docker Compose
 
 The repository includes a `docker-compose.yml` configuration to host the database container:
@@ -27,24 +28,30 @@ The repository includes a `docker-compose.yml` configuration to host the databas
 - `db`: MySQL 8.4 on port `3306`
 
 Start the database container using:
+
 ```bash
 npm run db:up
 ```
 
 ### 2. Install Dependencies
+
 Install the project dependencies:
+
 ```bash
 npm install
 ```
 
 ### 3. Create Environment Configuration
+
 Create a `.env` file in the project root:
+
 ```bash
 DATABASE_URL=mysql://root:password@localhost:3306/appdb
 JWT_SECRET=replace-with-a-long-random-secret
 ```
 
 Optional environment variables used by the current app can be left blank for local development:
+
 ```bash
 VITE_APP_ID=
 OAUTH_SERVER_URL=
@@ -54,24 +61,31 @@ BUILT_IN_FORGE_API_KEY=
 ```
 
 ### 4. Apply Database Schema & Migrations
+
 Apply the database schema:
+
 ```bash
 npm run db:push
 ```
 
 ### 5. Seed the Demo Records
+
 Seed the demo accounts and default exercises:
+
 ```bash
 node scripts/seed.mjs
 ```
 
 ### 6. Start the App
+
 Start the development server:
+
 ```bash
 npm run dev
 ```
 
 The app runs on the localhost URL printed in the terminal, usually `http://localhost:3000`.
+
 ## Main Routes
 
 The current client routes are:

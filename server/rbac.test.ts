@@ -78,7 +78,7 @@ describe("feedback validation", () => {
         assignmentId: 1,
         painScore: 11,
         completed: true,
-      }),
+      })
     ).rejects.toThrow();
   });
 
@@ -89,7 +89,7 @@ describe("feedback validation", () => {
         assignmentId: 1,
         painScore: -1,
         completed: true,
-      }),
+      })
     ).rejects.toThrow();
   });
 });
@@ -102,7 +102,7 @@ describe("language preference", () => {
     // We can't actually hit the DB in unit tests, but an invalid value must throw at the input layer.
     await expect(
       // @ts-expect-error — invalid on purpose
-      caller.settings.setLanguagePreference({ language: "fr" }),
+      caller.settings.setLanguagePreference({ language: "fr" })
     ).rejects.toThrow();
   });
 });
@@ -113,9 +113,9 @@ describe("impersonation safety", () => {
     process.env.NODE_ENV = "production";
     try {
       const caller = appRouter.createCaller(makeCtx("admin"));
-      await expect(
-        caller.dev.impersonate({ userId: 42 }),
-      ).rejects.toThrow(/disabled in production/i);
+      await expect(caller.dev.impersonate({ userId: 42 })).rejects.toThrow(
+        /disabled in production/i
+      );
     } finally {
       process.env.NODE_ENV = prev;
     }
@@ -142,20 +142,28 @@ describe("impersonation safety", () => {
 describe("sendTestEmail", () => {
   it("blocks non-admins from sending test emails", async () => {
     const clientCaller = appRouter.createCaller(makeCtx("client"));
-    await expect(clientCaller.admin.sendTestEmail({ to: "test@example.com" })).rejects.toThrow();
+    await expect(
+      clientCaller.admin.sendTestEmail({ to: "test@example.com" })
+    ).rejects.toThrow();
 
     const physioCaller = appRouter.createCaller(makeCtx("physiotherapist"));
-    await expect(physioCaller.admin.sendTestEmail({ to: "test@example.com" })).rejects.toThrow();
+    await expect(
+      physioCaller.admin.sendTestEmail({ to: "test@example.com" })
+    ).rejects.toThrow();
   });
 
   it("allows admins to send test emails successfully", async () => {
     const adminCaller = appRouter.createCaller(makeCtx("admin"));
-    const result = await adminCaller.admin.sendTestEmail({ to: "test@example.com" });
+    const result = await adminCaller.admin.sendTestEmail({
+      to: "test@example.com",
+    });
     expect(result).toEqual({ success: true });
   });
 
   it("handles email sending failure", async () => {
     const adminCaller = appRouter.createCaller(makeCtx("admin"));
-    await expect(adminCaller.admin.sendTestEmail({ to: "fail@example.com" })).rejects.toThrow("Failed to send test email");
+    await expect(
+      adminCaller.admin.sendTestEmail({ to: "fail@example.com" })
+    ).rejects.toThrow("Failed to send test email");
   });
 });

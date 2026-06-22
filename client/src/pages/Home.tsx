@@ -44,7 +44,9 @@ export default function Home() {
             alt="JOLNA Logo"
             className="w-8 h-8 object-contain"
           />
-          <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">JOLNA</span>
+          <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">
+            JOLNA
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -92,7 +94,11 @@ export default function Home() {
             <FormattedMessage
               id="home.heroTitle"
               values={{
-                accent: <span className="text-[#534AB7]">{language === "kh" ? "ប្រចាំថ្ងៃ" : "daily"}</span>
+                accent: (
+                  <span className="text-[#534AB7]">
+                    {language === "kh" ? "ប្រចាំថ្ងៃ" : "daily"}
+                  </span>
+                ),
               }}
             />
           </h1>
@@ -178,7 +184,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
       </main>
     </div>
   );

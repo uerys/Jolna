@@ -30,7 +30,9 @@ export async function getDb() {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
-      throw new Error("DATABASE_URL environment variable is missing. Please set it in your Vercel settings.");
+      throw new Error(
+        "DATABASE_URL environment variable is missing. Please set it in your Vercel settings."
+      );
     }
     try {
       // Use a connection pool for serverless environments
@@ -39,7 +41,10 @@ export async function getDb() {
       }
       _db = drizzle(_pool);
     } catch (error) {
-      console.error("[Database] Failed to initialize Drizzle with Pool:", error);
+      console.error(
+        "[Database] Failed to initialize Drizzle with Pool:",
+        error
+      );
       throw error;
     }
   }
@@ -334,7 +339,10 @@ export async function listAssignmentsForClient(
 
   // Enrich with physiotherapist names
   const physioIds = [...new Set(rows.map(r => r.assignment.physiotherapistId))];
-  const physioMap = new Map<number, { name: string | null; email: string | null }>();
+  const physioMap = new Map<
+    number,
+    { name: string | null; email: string | null }
+  >();
   if (physioIds.length > 0) {
     for (const pid of physioIds) {
       const p = await getUserById(pid);
@@ -344,7 +352,10 @@ export async function listAssignmentsForClient(
 
   return rows.map(r => ({
     ...r,
-    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? { name: null, email: null },
+    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? {
+      name: null,
+      email: null,
+    },
   }));
 }
 
@@ -384,7 +395,10 @@ export async function listAllAssignmentsForClient(clientId: number) {
     .orderBy(desc(assignments.startDate));
 
   const physioIds = [...new Set(rows.map(r => r.assignment.physiotherapistId))];
-  const physioMap = new Map<number, { name: string | null; email: string | null }>();
+  const physioMap = new Map<
+    number,
+    { name: string | null; email: string | null }
+  >();
   for (const pid of physioIds) {
     const p = await getUserById(pid);
     if (p) physioMap.set(pid, { name: p.name, email: p.email });
@@ -392,7 +406,10 @@ export async function listAllAssignmentsForClient(clientId: number) {
 
   return rows.map(r => ({
     ...r,
-    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? { name: null, email: null },
+    physiotherapist: physioMap.get(r.assignment.physiotherapistId) ?? {
+      name: null,
+      email: null,
+    },
   }));
 }
 
@@ -516,7 +533,8 @@ export async function listFeedbackByClientEnriched(
   const db = await getDb();
   if (!db) return [];
   const clauses = [eq(feedbackLogs.clientId, clientId)];
-  if (opts?.assignmentId) clauses.push(eq(feedbackLogs.assignmentId, opts.assignmentId));
+  if (opts?.assignmentId)
+    clauses.push(eq(feedbackLogs.assignmentId, opts.assignmentId));
   if (opts?.from) clauses.push(gte(feedbackLogs.submittedAt, opts.from));
   if (opts?.to) clauses.push(lte(feedbackLogs.submittedAt, opts.to));
 
@@ -569,7 +587,11 @@ export async function listFeedbackForPhysio(physiotherapistId: number) {
     .orderBy(desc(feedbackLogs.submittedAt));
 }
 
-export async function updateFeedbackNotes(id: number, notes: string | null, physiotherapistId: number) {
+export async function updateFeedbackNotes(
+  id: number,
+  notes: string | null,
+  physiotherapistId: number
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -582,7 +604,9 @@ export async function updateFeedbackNotes(id: number, notes: string | null, phys
     .limit(1);
 
   if (!row || row.physioId !== physiotherapistId) {
-    throw new Error("Unauthorized: You do not have permission to annotate this feedback.");
+    throw new Error(
+      "Unauthorized: You do not have permission to annotate this feedback."
+    );
   }
 
   await db.update(feedbackLogs).set({ notes }).where(eq(feedbackLogs.id, id));
@@ -608,7 +632,10 @@ export async function getAssignmentCompletionStats(assignmentId: number) {
   };
 }
 
-export async function getAssignmentLogCountForDay(assignmentId: number, day: string) {
+export async function getAssignmentLogCountForDay(
+  assignmentId: number,
+  day: string
+) {
   const db = await getDb();
   if (!db) return 0;
   // MySQL timestamp comparison with date string
@@ -756,7 +783,10 @@ export async function createAuditLog(data: InsertAuditLog) {
   }
 }
 
-export async function listAuditLogs(opts?: { limit?: number; actorId?: number }) {
+export async function listAuditLogs(opts?: {
+  limit?: number;
+  actorId?: number;
+}) {
   const db = await getDb();
   if (!db) return [];
   const limit = Math.max(1, Math.min(opts?.limit ?? 50, 200));
@@ -764,7 +794,10 @@ export async function listAuditLogs(opts?: { limit?: number; actorId?: number })
   if (opts?.actorId) clauses.push(eq(auditLogs.actorId, opts.actorId));
   const q = db.select().from(auditLogs);
   const rows = clauses.length
-    ? await q.where(and(...clauses)).orderBy(desc(auditLogs.createdAt)).limit(limit)
+    ? await q
+        .where(and(...clauses))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(limit)
     : await q.orderBy(desc(auditLogs.createdAt)).limit(limit);
   return rows;
 }
@@ -772,7 +805,7 @@ export async function listAuditLogs(opts?: { limit?: number; actorId?: number })
 function formatInjuryTypeLocal(type: string): string {
   return type
     .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
@@ -783,14 +816,26 @@ function formatExerciseTypeLocal(type: string): string {
 export async function listCustomExerciseTypes() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const rows = await db.select().from(customExerciseTypes);
   if (rows.length === 0) {
-    const defaults = ["strength", "flexibility", "balance", "endurance", "mobility", "stretching", "functional", "other"];
-    await db.insert(customExerciseTypes).values(
-      defaults.map(name => ({ name: formatExerciseTypeLocal(name) }))
-    );
-    return db.select().from(customExerciseTypes).orderBy(asc(customExerciseTypes.name));
+    const defaults = [
+      "strength",
+      "flexibility",
+      "balance",
+      "endurance",
+      "mobility",
+      "stretching",
+      "functional",
+      "other",
+    ];
+    await db
+      .insert(customExerciseTypes)
+      .values(defaults.map(name => ({ name: formatExerciseTypeLocal(name) })));
+    return db
+      .select()
+      .from(customExerciseTypes)
+      .orderBy(asc(customExerciseTypes.name));
   }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -804,7 +849,7 @@ export async function createCustomExerciseType(name: string) {
 export async function listCustomInjuryTypes() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const rows = await db.select().from(customInjuryTypes);
   if (rows.length === 0) {
     const defaults = [
@@ -819,12 +864,15 @@ export async function listCustomInjuryTypes() {
       "knee_injury",
       "ankle_injury",
       "tendonitis",
-      "other"
+      "other",
     ];
-    await db.insert(customInjuryTypes).values(
-      defaults.map(name => ({ name: formatInjuryTypeLocal(name) }))
-    );
-    return db.select().from(customInjuryTypes).orderBy(asc(customInjuryTypes.name));
+    await db
+      .insert(customInjuryTypes)
+      .values(defaults.map(name => ({ name: formatInjuryTypeLocal(name) })));
+    return db
+      .select()
+      .from(customInjuryTypes)
+      .orderBy(asc(customInjuryTypes.name));
   }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }

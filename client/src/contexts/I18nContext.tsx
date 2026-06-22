@@ -1,4 +1,12 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { IntlProvider } from "react-intl";
 import { trpc } from "@/lib/trpc";
 import en from "@/i18n/messages/en.json";
@@ -38,7 +46,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Hydrate from authenticated user's persisted preference when available.
   const me = trpc.auth.me.useQuery();
   useEffect(() => {
-    const preferred = (me.data as { languagePreference?: Language } | null)?.languagePreference;
+    const preferred = (me.data as { languagePreference?: Language } | null)
+      ?.languagePreference;
     if (preferred && preferred !== language) {
       setLanguageState(preferred);
       window.localStorage.setItem(LANG_STORAGE_KEY, preferred);
@@ -64,10 +73,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         saveToServer.mutate({ language: next }, { onError: () => void 0 });
       }
     },
-    [saveToServer, me.data],
+    [saveToServer, me.data]
   );
 
-  const value = useMemo(() => ({ language, setLanguage }), [language, setLanguage]);
+  const value = useMemo(
+    () => ({ language, setLanguage }),
+    [language, setLanguage]
+  );
 
   return (
     <I18nContext.Provider value={value}>
@@ -75,7 +87,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         locale={language === "kh" ? "km" : "en"}
         messages={catalogs[language]}
         defaultLocale="en"
-        onError={(err) => {
+        onError={err => {
           // Suppress missing-locale-data warnings for Khmer: the app
           // does not rely on locale-specific number/date formatting.
           // Intl falls back to English, which is acceptable for our UI.

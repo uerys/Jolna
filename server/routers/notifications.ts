@@ -39,14 +39,18 @@ export const notificationsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const senderName = ctx.user.name ?? ctx.user.email ?? "Someone";
-      const href = ctx.user.role === "physiotherapist" ? "/chat" : `/chat/${ctx.user.id}`;
+      const href =
+        ctx.user.role === "physiotherapist" ? "/chat" : `/chat/${ctx.user.id}`;
 
       await createNotification({
         recipientId: input.recipientId,
         actorId: ctx.user.id,
         type: "new_message",
         title: `New message from ${senderName}`,
-        content: input.text.length > 100 ? `${input.text.slice(0, 100)}...` : input.text,
+        content:
+          input.text.length > 100
+            ? `${input.text.slice(0, 100)}...`
+            : input.text,
         href,
       });
 

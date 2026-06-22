@@ -23,7 +23,7 @@ export async function GET() {
     await ensureNotesTable();
 
     const [rows] = await query<NoteRow[]>(
-      "SELECT id, content, created_at FROM notes ORDER BY id DESC",
+      "SELECT id, content, created_at FROM notes ORDER BY id DESC"
     );
 
     return NextResponse.json({ notes: rows });
@@ -44,18 +44,18 @@ export async function POST(request: NextRequest) {
     if (!content) {
       return NextResponse.json(
         { error: "Content is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const [result] = await query<ResultSetHeader>(
       "INSERT INTO notes (content) VALUES (?)",
-      [content],
+      [content]
     );
 
     const [rows] = await query<NoteRow[]>(
       "SELECT id, content, created_at FROM notes WHERE id = ? LIMIT 1",
-      [result.insertId],
+      [result.insertId]
     );
 
     return NextResponse.json({ note: rows[0] }, { status: 201 });

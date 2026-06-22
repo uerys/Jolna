@@ -2,7 +2,9 @@ import { runReminderJob } from "../../scripts/send-reminders";
 
 export function startNotificationScheduler() {
   if (process.env.DISABLE_SCHEDULER === "true") {
-    console.log("[Scheduler] In-memory scheduler disabled via DISABLE_SCHEDULER env var.");
+    console.log(
+      "[Scheduler] In-memory scheduler disabled via DISABLE_SCHEDULER env var."
+    );
     return;
   }
   const hour = 18; // 6:00 PM
@@ -20,9 +22,12 @@ export function startNotificationScheduler() {
 
     const msToWait = target.getTime() - now.getTime();
     console.log(
-      `[Scheduler] Daily exercise reminder job scheduled in ${(msToWait / 1000 / 60 / 60).toFixed(
-        2
-      )} hours (at ${target.toLocaleString()})`
+      `[Scheduler] Daily exercise reminder job scheduled in ${(
+        msToWait /
+        1000 /
+        60 /
+        60
+      ).toFixed(2)} hours (at ${target.toLocaleString()})`
     );
 
     setTimeout(async () => {
@@ -30,7 +35,10 @@ export function startNotificationScheduler() {
       try {
         await runReminderJob();
       } catch (err) {
-        console.error("[Scheduler] Error running daily exercise reminder job:", err);
+        console.error(
+          "[Scheduler] Error running daily exercise reminder job:",
+          err
+        );
       }
       scheduleNext();
     }, msToWait);

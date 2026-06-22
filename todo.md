@@ -82,7 +82,7 @@
 - [x] Vitest: pain score validation (0–10)
 - [x] Vitest: language preference input validation
 - [x] Updated `auth.logout.test.ts` to expect impersonation cookie clearing
- - [x] `npm test` passes (12 passed / 0 failed)
+- [x] `npm test` passes (12 passed / 0 failed)
 
 ## 11. Delivery
 

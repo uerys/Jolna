@@ -23,12 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -48,7 +43,16 @@ import {
 import { trpc } from "@/lib/trpc";
 import { EXERCISE_TYPES, INJURY_TYPES } from "../../../../drizzle/schema";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Plus, Stethoscope, Trash2, Search, ChevronRight, AlertCircle, Users, MessageSquare } from "lucide-react";
+import {
+  Plus,
+  Stethoscope,
+  Trash2,
+  Search,
+  ChevronRight,
+  AlertCircle,
+  Users,
+  MessageSquare,
+} from "lucide-react";
 
 export default function PhysioDashboard() {
   const { user, loading } = useAuth();
@@ -70,8 +74,12 @@ export default function PhysioDashboard() {
       <AppShell>
         <Card>
           <CardHeader>
-            <CardTitle><FormattedMessage id="common.notAuthorised" /></CardTitle>
-            <CardDescription><FormattedMessage id="physio.dashboard.onlyPhysio" /></CardDescription>
+            <CardTitle>
+              <FormattedMessage id="common.notAuthorised" />
+            </CardTitle>
+            <CardDescription>
+              <FormattedMessage id="physio.dashboard.onlyPhysio" />
+            </CardDescription>
           </CardHeader>
         </Card>
       </AppShell>
@@ -119,10 +127,18 @@ export default function PhysioDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="clients"><ClientsTab /></TabsContent>
-        <TabsContent value="exercises"><ExercisesTab /></TabsContent>
-        <TabsContent value="assignments"><AssignmentsTab /></TabsContent>
-        <TabsContent value="configuration"><ConfigurationTab /></TabsContent>
+        <TabsContent value="clients">
+          <ClientsTab />
+        </TabsContent>
+        <TabsContent value="exercises">
+          <ExercisesTab />
+        </TabsContent>
+        <TabsContent value="assignments">
+          <AssignmentsTab />
+        </TabsContent>
+        <TabsContent value="configuration">
+          <ConfigurationTab />
+        </TabsContent>
       </Tabs>
     </AppShell>
   );
@@ -139,9 +155,12 @@ function ClientsTab() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [triageFilter, setTriageFilter] = useState<"all" | "urgent">("all");
-  const [clientStatusFilter, setClientStatusFilter] = useState<"active" | "suspended" | "inactive" | "all">("active");
+  const [clientStatusFilter, setClientStatusFilter] = useState<
+    "active" | "suspended" | "inactive" | "all"
+  >("active");
 
-  const isLoading = clients.isLoading || assignments.isLoading || feedback.isLoading;
+  const isLoading =
+    clients.isLoading || assignments.isLoading || feedback.isLoading;
 
   const clientDataList = useMemo(() => {
     if (!clients.data) return [];
@@ -151,49 +170,81 @@ function ClientsTab() {
     const dayBefore = new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000);
     const dayBeforeStr = dayBefore.toISOString().slice(0, 10);
 
-    return clients.data.map((c) => {
+    return clients.data.map(c => {
       const isActive = c.status === "active";
       // Find assignments for this client
-      const cAssignments = (assignments.data ?? []).filter((a) => a.assignment.clientId === c.id);
-      const activeSessions = cAssignments.filter((a) => {
-        return a.assignment.status === "active" && a.assignment.endDate >= todayStr;
+      const cAssignments = (assignments.data ?? []).filter(
+        a => a.assignment.clientId === c.id
+      );
+      const activeSessions = cAssignments.filter(a => {
+        return (
+          a.assignment.status === "active" && a.assignment.endDate >= todayStr
+        );
       });
 
       // Find logs
-      const cLogs = (feedback.data ?? []).filter((f) => {
-        return f.feedback.assignmentId && cAssignments.some((a) => a.assignment.id === f.feedback.assignmentId);
+      const cLogs = (feedback.data ?? []).filter(f => {
+        return (
+          f.feedback.assignmentId &&
+          cAssignments.some(a => a.assignment.id === f.feedback.assignmentId)
+        );
       });
 
       const sortedLogs = [...cLogs].sort(
-        (a, b) => new Date(b.feedback.submittedAt).getTime() - new Date(a.feedback.submittedAt).getTime()
+        (a, b) =>
+          new Date(b.feedback.submittedAt).getTime() -
+          new Date(a.feedback.submittedAt).getTime()
       );
 
-      const lastLogStr = sortedLogs[0] ? sortedLogs[0].feedback.submittedAt : null;
-      const latestPain = sortedLogs[0] ? sortedLogs[0].feedback.painScore : null;
+      const lastLogStr = sortedLogs[0]
+        ? sortedLogs[0].feedback.submittedAt
+        : null;
+      const latestPain = sortedLogs[0]
+        ? sortedLogs[0].feedback.painScore
+        : null;
 
       // Progress rate calculation (elapsed duration progress between start date and end date)
       const today = new Date(todayStr + "T00:00:00");
       let totalProgressPercent = 0;
-      activeSessions.forEach((a) => {
+      activeSessions.forEach(a => {
         const start = new Date(a.assignment.startDate + "T00:00:00");
         const end = new Date(a.assignment.endDate + "T00:00:00");
-        const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 864e5) + 1);
-        const elapsed = Math.max(0, Math.min(total, Math.round((today.getTime() - start.getTime()) / 864e5) + 1));
+        const total = Math.max(
+          1,
+          Math.round((end.getTime() - start.getTime()) / 864e5) + 1
+        );
+        const elapsed = Math.max(
+          0,
+          Math.min(
+            total,
+            Math.round((today.getTime() - start.getTime()) / 864e5) + 1
+          )
+        );
         const percent = Math.round((elapsed / total) * 100);
         totalProgressPercent += percent;
       });
-      const progressRate = activeSessions.length > 0 ? Math.round(totalProgressPercent / activeSessions.length) : null;
+      const progressRate =
+        activeSessions.length > 0
+          ? Math.round(totalProgressPercent / activeSessions.length)
+          : null;
 
       // Relative timestamp for last log (using new Date conversion to avoid NaN)
       let lastLogLabel = "No logs yet";
       if (lastLogStr) {
         const lastLogDate = new Date(lastLogStr);
         const date1 = new Date(todayStr + "T00:00:00");
-        const date2 = new Date(lastLogDate.getFullYear(), lastLogDate.getMonth(), lastLogDate.getDate());
-        const diffDays = Math.floor((date1.getTime() - date2.getTime()) / (24 * 60 * 60 * 1000));
+        const date2 = new Date(
+          lastLogDate.getFullYear(),
+          lastLogDate.getMonth(),
+          lastLogDate.getDate()
+        );
+        const diffDays = Math.floor(
+          (date1.getTime() - date2.getTime()) / (24 * 60 * 60 * 1000)
+        );
         if (diffDays <= 0) lastLogLabel = "Last log: Today";
         else if (diffDays === 1) lastLogLabel = "Last log: Yesterday";
-        else if (!isNaN(diffDays)) lastLogLabel = `Last log: ${diffDays} days ago`;
+        else if (!isNaN(diffDays))
+          lastLogLabel = `Last log: ${diffDays} days ago`;
       }
 
       // Pain warning alert message
@@ -229,7 +280,7 @@ function ClientsTab() {
   // Aggregate summary metrics
   const triageStats = useMemo(() => {
     let urgent = 0;
-    clientDataList.forEach((c) => {
+    clientDataList.forEach(c => {
       if (c.category === "urgent") urgent++;
     });
     return { urgent };
@@ -241,23 +292,23 @@ function ClientsTab() {
 
     // 1. Client Status filter (Active by default, can select Suspended, Pending or All)
     if (clientStatusFilter === "active") {
-      list = list.filter((c) => c.client.status === "active");
+      list = list.filter(c => c.client.status === "active");
     } else if (clientStatusFilter === "inactive") {
-      list = list.filter((c) => c.client.status === "inactive");
+      list = list.filter(c => c.client.status === "inactive");
     } else if (clientStatusFilter === "suspended") {
-      list = list.filter((c) => c.client.status === "suspended");
+      list = list.filter(c => c.client.status === "suspended");
     }
 
     // 2. Triage summary filter
     if (triageFilter !== "all") {
-      list = list.filter((c) => c.category === triageFilter);
+      list = list.filter(c => c.category === triageFilter);
     }
 
     // 3. Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
-        (c) =>
+        c =>
           c.client.name?.toLowerCase().includes(q) ||
           c.client.email?.toLowerCase().includes(q)
       );
@@ -285,10 +336,11 @@ function ClientsTab() {
 
   return (
     <div className="space-y-4 mt-4">
-
       {/* ── 1. Triage Alert Banner ──────────────────────────────── */}
       <button
-        onClick={() => setTriageFilter(triageFilter === "urgent" ? "all" : "urgent")}
+        onClick={() =>
+          setTriageFilter(triageFilter === "urgent" ? "all" : "urgent")
+        }
         className={`text-left w-full px-4 py-3 rounded-xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           triageFilter === "urgent"
             ? "bg-rose-50 border-rose-300 shadow-sm ring-2 ring-rose-400/40 ring-offset-1"
@@ -296,9 +348,11 @@ function ClientsTab() {
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg shrink-0 ${
-            triageFilter === "urgent" ? "bg-rose-100" : "bg-rose-50"
-          }`}>
+          <div
+            className={`p-2 rounded-lg shrink-0 ${
+              triageFilter === "urgent" ? "bg-rose-100" : "bg-rose-50"
+            }`}
+          >
             <AlertCircle className="size-4 text-rose-500" />
           </div>
           <div>
@@ -306,17 +360,22 @@ function ClientsTab() {
               Urgent Pain Triage
             </h3>
             <p className="text-xs text-[#667085] font-normal leading-relaxed">
-              Clients reporting severe pain (≥7/10) requiring immediate intervention
+              Clients reporting severe pain (≥7/10) requiring immediate
+              intervention
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-          <span className="text-2xl font-bold text-[#101828] tabular-nums">{triageStats.urgent}</span>
-          <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide ${
-            triageStats.urgent > 0
-              ? "bg-rose-100 text-rose-700 animate-pulse"
-              : "bg-[#F2F4F7] text-[#667085]"
-          }`}>
+          <span className="text-2xl font-bold text-[#101828] tabular-nums">
+            {triageStats.urgent}
+          </span>
+          <span
+            className={`text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide ${
+              triageStats.urgent > 0
+                ? "bg-rose-100 text-rose-700 animate-pulse"
+                : "bg-[#F2F4F7] text-[#667085]"
+            }`}
+          >
             {triageStats.urgent > 0 ? "Attention Required" : "All Clear"}
           </span>
         </div>
@@ -332,7 +391,7 @@ function ClientsTab() {
             placeholder="Search clients by name or email…"
             className="h-8 pl-8 text-xs bg-[#F8FAFC] border-[#E4E7EC] focus-visible:ring-indigo-500 focus-visible:border-indigo-400 rounded-lg w-full font-normal text-[#101828] placeholder:text-[#98A2B3]"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
 
@@ -341,8 +400,13 @@ function ClientsTab() {
 
         {/* Status filter */}
         <div className="w-full md:w-auto shrink-0 flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest shrink-0">Show</span>
-          <Select value={clientStatusFilter} onValueChange={(val: any) => setClientStatusFilter(val)}>
+          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest shrink-0">
+            Show
+          </span>
+          <Select
+            value={clientStatusFilter}
+            onValueChange={(val: any) => setClientStatusFilter(val)}
+          >
             <SelectTrigger className="h-8 bg-[#F8FAFC] border-[#E4E7EC] text-[#344054] text-xs rounded-lg w-36 font-medium">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -357,25 +421,49 @@ function ClientsTab() {
       </div>
 
       {/* ── 3. Active Filter Pills ──────────────────────────────── */}
-      {(triageFilter !== "all" || searchQuery.trim() !== "" || clientStatusFilter !== "active") && (
+      {(triageFilter !== "all" ||
+        searchQuery.trim() !== "" ||
+        clientStatusFilter !== "active") && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">Active filters:</span>
+          <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest mr-1">
+            Active filters:
+          </span>
           {clientStatusFilter !== "active" && (
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
-              Status: {clientStatusFilter === "all" ? "All" : clientStatusFilter === "inactive" ? "Pending" : "Suspended"}
-              <button onClick={() => setClientStatusFilter("active")} className="hover:text-indigo-900 font-bold leading-none ml-0.5">×</button>
+              Status:{" "}
+              {clientStatusFilter === "all"
+                ? "All"
+                : clientStatusFilter === "inactive"
+                  ? "Pending"
+                  : "Suspended"}
+              <button
+                onClick={() => setClientStatusFilter("active")}
+                className="hover:text-indigo-900 font-bold leading-none ml-0.5"
+              >
+                ×
+              </button>
             </span>
           )}
           {triageFilter !== "all" && (
             <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
               Urgent Pain
-              <button onClick={() => setTriageFilter("all")} className="hover:text-rose-900 font-bold leading-none ml-0.5">×</button>
+              <button
+                onClick={() => setTriageFilter("all")}
+                className="hover:text-rose-900 font-bold leading-none ml-0.5"
+              >
+                ×
+              </button>
             </span>
           )}
           {searchQuery.trim() !== "" && (
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
               &ldquo;{searchQuery}&rdquo;
-              <button onClick={() => setSearchQuery("")} className="hover:text-indigo-900 font-bold leading-none ml-0.5">×</button>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="hover:text-indigo-900 font-bold leading-none ml-0.5"
+              >
+                ×
+              </button>
             </span>
           )}
         </div>
@@ -388,8 +476,12 @@ function ClientsTab() {
             <div className="p-3 rounded-full bg-[#F2F4F7] mb-3">
               <Users className="size-5 text-[#98A2B3]" />
             </div>
-            <p className="text-sm font-medium text-[#667085]">No clients match the current filters</p>
-            <p className="text-xs text-[#98A2B3] mt-0.5">Try adjusting your search or filter criteria</p>
+            <p className="text-sm font-medium text-[#667085]">
+              No clients match the current filters
+            </p>
+            <p className="text-xs text-[#98A2B3] mt-0.5">
+              Try adjusting your search or filter criteria
+            </p>
           </div>
         ) : (
           filteredClients.map((data, idx) => {
@@ -397,23 +489,26 @@ function ClientsTab() {
             const isPending = data.client.status === "inactive";
             const isInactive = isSuspended || isPending;
 
-            const painBg = isInactive || data.latestPain === null
-              ? "bg-[#F2F4F7] text-[#98A2B3] border-[#E4E7EC]"
-              : data.latestPain >= 7
-              ? "bg-rose-50 text-rose-600 border-rose-200"
-              : data.latestPain >= 4
-              ? "bg-amber-50 text-amber-600 border-amber-200"
-              : "bg-emerald-50 text-emerald-600 border-emerald-200";
+            const painBg =
+              isInactive || data.latestPain === null
+                ? "bg-[#F2F4F7] text-[#98A2B3] border-[#E4E7EC]"
+                : data.latestPain >= 7
+                  ? "bg-rose-50 text-rose-600 border-rose-200"
+                  : data.latestPain >= 4
+                    ? "bg-amber-50 text-amber-600 border-amber-200"
+                    : "bg-emerald-50 text-emerald-600 border-emerald-200";
 
-            const progressColor = data.progressRate !== null && data.progressRate < 50
-              ? "#F59E0B"
-              : "#534AB7";
+            const progressColor =
+              data.progressRate !== null && data.progressRate < 50
+                ? "#F59E0B"
+                : "#534AB7";
 
-            const cardAccent = data.category === "urgent"
-              ? "border-l-rose-500"
-              : data.category === "ontrack"
-              ? "border-l-emerald-500"
-              : "border-l-[#D0D5DD]";
+            const cardAccent =
+              data.category === "urgent"
+                ? "border-l-rose-500"
+                : data.category === "ontrack"
+                  ? "border-l-emerald-500"
+                  : "border-l-[#D0D5DD]";
 
             return (
               <div
@@ -423,10 +518,12 @@ function ClientsTab() {
                 }`}
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
-                <Link href={`/physio/clients/${data.client.id}`} className="block">
+                <Link
+                  href={`/physio/clients/${data.client.id}`}
+                  className="block"
+                >
                   <div className="px-5 py-4">
                     <div className="flex flex-col md:flex-row md:items-center gap-4">
-
                       {/* ── Col 1: Identity ── */}
                       <div className="flex-1 min-w-0 md:max-w-[220px]">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -466,12 +563,17 @@ function ClientsTab() {
                       {/* ── Col 2: Pain Level ── */}
                       <div className="flex items-center gap-2 md:w-24 md:justify-center">
                         {data.activeCount > 0 ? (
-                          <div className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}>
-                            {data.latestPain !== null && data.latestPain >= 7 && (
-                              <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
-                            )}
+                          <div
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}
+                          >
+                            {data.latestPain !== null &&
+                              data.latestPain >= 7 && (
+                                <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
+                              )}
                             <span className="tabular-nums">
-                              {data.latestPain !== null ? `${data.latestPain}/10` : "—"}
+                              {data.latestPain !== null
+                                ? `${data.latestPain}/10`
+                                : "—"}
                             </span>
                           </div>
                         ) : (
@@ -502,7 +604,9 @@ function ClientsTab() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-[#98A2B3] font-medium font-sans">No active sessions</span>
+                          <span className="text-xs text-[#98A2B3] font-medium font-sans">
+                            No active sessions
+                          </span>
                         )}
                       </div>
 
@@ -526,16 +630,17 @@ function ClientsTab() {
                           <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
                         </span>
                       </div>
-
                     </div>
 
                     {/* ── Alert Row ── */}
                     {!isSuspended && data.alertMsg && (
-                      <div className={`mt-3 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold border ${
-                        data.category === "urgent"
-                          ? "bg-rose-50 border-rose-200 text-rose-700"
-                          : "bg-amber-50 border-amber-200 text-amber-700"
-                      }`}>
+                      <div
+                        className={`mt-3 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-semibold border ${
+                          data.category === "urgent"
+                            ? "bg-rose-50 border-rose-200 text-rose-700"
+                            : "bg-amber-50 border-amber-200 text-amber-700"
+                        }`}
+                      >
                         <AlertCircle className="size-3.5 shrink-0" />
                         <span>{data.alertMsg}</span>
                       </div>
@@ -550,8 +655,6 @@ function ClientsTab() {
     </div>
   );
 }
-
-
 
 /* ---------- Exercises tab ---------- */
 
@@ -580,33 +683,66 @@ function ExercisesTab() {
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.exercises" })}</h3>
-          <Button size="sm" onClick={() => setCreating(true)} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm">
+          <h3 className="font-medium">
+            {intl.formatMessage({ id: "physio.tab.exercises" })}
+          </h3>
+          <Button
+            size="sm"
+            onClick={() => setCreating(true)}
+            className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"
+          >
             <Plus className="size-4 mr-1" />
             <FormattedMessage id="physio.exercise.new" />
           </Button>
         </div>
         <div className="mt-4 space-y-3">
-          {exercises.isLoading && <div className="text-muted-foreground"><FormattedMessage id="common.loading" /></div>}
-          {!exercises.isLoading && (exercises.data?.length ?? 0) === 0 && (
-            <div className="text-muted-foreground"><FormattedMessage id="physio.exercise.empty" /></div>
+          {exercises.isLoading && (
+            <div className="text-muted-foreground">
+              <FormattedMessage id="common.loading" />
+            </div>
           )}
-          {exercises.data?.map((e) => (
-            <div key={e.id} className="flex items-start justify-between border rounded-md p-3 gap-3">
+          {!exercises.isLoading && (exercises.data?.length ?? 0) === 0 && (
+            <div className="text-muted-foreground">
+              <FormattedMessage id="physio.exercise.empty" />
+            </div>
+          )}
+          {exercises.data?.map(e => (
+            <div
+              key={e.id}
+              className="flex items-start justify-between border rounded-md p-3 gap-3"
+            >
               <div className="min-w-0">
                 <div className="font-medium">{e.title}</div>
-                <div className="text-sm text-muted-foreground line-clamp-2">{e.instructionsEn}</div>
+                <div className="text-sm text-muted-foreground line-clamp-2">
+                  {e.instructionsEn}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Default: {e.defaultSets ?? 1} sets · {e.defaultReps} reps · <a href={e.videoUrl} target="_blank" rel="noreferrer" className="underline">video</a>
+                  Default: {e.defaultSets ?? 1} sets · {e.defaultReps} reps ·{" "}
+                  <a
+                    href={e.videoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    video
+                  </a>
                 </div>
               </div>
               <div className="shrink-0 space-x-2">
-                <Button size="sm" variant="outline" onClick={() => setEditing(e as Exercise)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(e as Exercise)}
+                >
                   <FormattedMessage id="admin.action.edit" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => {
-                  if (confirm("Delete exercise?")) del.mutate({ id: e.id });
-                }}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (confirm("Delete exercise?")) del.mutate({ id: e.id });
+                  }}
+                >
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -642,7 +778,9 @@ function ExerciseDialog({
   const [kh, setKh] = useState(exercise?.instructionsKh ?? "");
   const [videoUrl, setVideoUrl] = useState(exercise?.videoUrl ?? "");
   const [defaultReps, setDefaultReps] = useState(exercise?.defaultReps ?? 10);
-  const [defaultSets, setDefaultSets] = useState<number>(exercise?.defaultSets ?? 1);
+  const [defaultSets, setDefaultSets] = useState<number>(
+    exercise?.defaultSets ?? 1
+  );
 
   const create = trpc.physio.createExercise.useMutation({
     onSuccess: async () => {
@@ -665,62 +803,109 @@ function ExerciseDialog({
     if (exercise) {
       update.mutate({
         id: exercise.id,
-        patch: { title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps, defaultSets },
+        patch: {
+          title,
+          instructionsEn: en,
+          instructionsKh: kh,
+          videoUrl,
+          defaultReps,
+          defaultSets,
+        },
       });
     } else {
-      create.mutate({ title, instructionsEn: en, instructionsKh: kh, videoUrl, defaultReps, defaultSets });
+      create.mutate({
+        title,
+        instructionsEn: en,
+        instructionsKh: kh,
+        videoUrl,
+        defaultReps,
+        defaultSets,
+      });
     }
   }
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={o => !o && onClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            <FormattedMessage id={exercise ? "physio.exercise.edit" : "physio.exercise.new"} />
+            <FormattedMessage
+              id={exercise ? "physio.exercise.edit" : "physio.exercise.new"}
+            />
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label><FormattedMessage id="physio.exercise.title" /></Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Label>
+              <FormattedMessage id="physio.exercise.title" />
+            </Label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} />
           </div>
           <div>
-            <Label><FormattedMessage id="physio.exercise.instructionsEn" /></Label>
-            <Textarea rows={3} value={en} onChange={(e) => setEn(e.target.value)} />
+            <Label>
+              <FormattedMessage id="physio.exercise.instructionsEn" />
+            </Label>
+            <Textarea
+              rows={3}
+              value={en}
+              onChange={e => setEn(e.target.value)}
+            />
           </div>
           <div>
-            <Label><FormattedMessage id="physio.exercise.instructionsKh" /></Label>
-            <Textarea rows={3} value={kh} onChange={(e) => setKh(e.target.value)} />
+            <Label>
+              <FormattedMessage id="physio.exercise.instructionsKh" />
+            </Label>
+            <Textarea
+              rows={3}
+              value={kh}
+              onChange={e => setKh(e.target.value)}
+            />
           </div>
           <div>
-            <Label><FormattedMessage id="physio.exercise.videoUrl" /></Label>
-            <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/embed/..." />
+            <Label>
+              <FormattedMessage id="physio.exercise.videoUrl" />
+            </Label>
+            <Input
+              value={videoUrl}
+              onChange={e => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/embed/..."
+            />
           </div>
           <div>
-            <Label><FormattedMessage id="physio.assign.sets" /></Label>
+            <Label>
+              <FormattedMessage id="physio.assign.sets" />
+            </Label>
             <Input
               type="number"
               min={1}
               max={100}
               value={defaultSets}
-              onChange={(e) => setDefaultSets(Number(e.target.value))}
+              onChange={e => setDefaultSets(Number(e.target.value))}
             />
           </div>
           <div>
-            <Label><FormattedMessage id="physio.exercise.defaultReps" /></Label>
+            <Label>
+              <FormattedMessage id="physio.exercise.defaultReps" />
+            </Label>
             <Input
               type="number"
               min={1}
               max={500}
               value={defaultReps}
-              onChange={(e) => setDefaultReps(Number(e.target.value))}
+              onChange={e => setDefaultReps(Number(e.target.value))}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}><FormattedMessage id="common.cancel" /></Button>
-          <Button onClick={submit} className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"><FormattedMessage id="physio.exercise.save" /></Button>
+          <Button variant="outline" onClick={onClose}>
+            <FormattedMessage id="common.cancel" />
+          </Button>
+          <Button
+            onClick={submit}
+            className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"
+          >
+            <FormattedMessage id="physio.exercise.save" />
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -754,26 +939,38 @@ function AssignmentsTab() {
   const [injuryType, setInjuryType] = useState<string>("");
   const [exerciseType, setExerciseType] = useState<string>("");
   const [dailyFrequency, setDailyFrequency] = useState<string | number>(1);
-  const [exercisePreview, setExercisePreview] = useState<null | { title: string; defaultReps?: number; defaultSets?: number; exerciseType?: string }>(null);
+  const [exercisePreview, setExercisePreview] = useState<null | {
+    title: string;
+    defaultReps?: number;
+    defaultSets?: number;
+    exerciseType?: string;
+  }>(null);
 
   // When an exercise is selected, default reps to the exercise's defaultReps
   useEffect(() => {
     if (!exerciseId) return;
-    const ex = exercises.data?.find((e) => String(e.id) === exerciseId);
+    const ex = exercises.data?.find(e => String(e.id) === exerciseId);
     if (ex) {
       if (typeof ex.defaultReps === "number") setReps(String(ex.defaultReps));
       if (typeof ex.defaultSets === "number") setSets(String(ex.defaultSets));
       if ((ex as any).exerciseType) setExerciseType((ex as any).exerciseType);
-      setExercisePreview({ title: ex.title, defaultReps: ex.defaultReps, defaultSets: ex.defaultSets, exerciseType: (ex as any).exerciseType });
+      setExercisePreview({
+        title: ex.title,
+        defaultReps: ex.defaultReps,
+        defaultSets: ex.defaultSets,
+        exerciseType: (ex as any).exerciseType,
+      });
     }
   }, [exerciseId, exercises.data]);
 
   // If there's only one client or one exercise, preselect them to speed up assignment
   useEffect(() => {
-    if (!clientId && clients.data?.length === 1) setClientId(String(clients.data[0].id));
+    if (!clientId && clients.data?.length === 1)
+      setClientId(String(clients.data[0].id));
   }, [clients.data, clientId]);
   useEffect(() => {
-    if (!exerciseId && exercises.data?.length === 1) setExerciseId(String(exercises.data[0].id));
+    if (!exerciseId && exercises.data?.length === 1)
+      setExerciseId(String(exercises.data[0].id));
   }, [exercises.data, exerciseId]);
 
   const assign = trpc.physio.assignExercise.useMutation({
@@ -791,14 +988,24 @@ function AssignmentsTab() {
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">{intl.formatMessage({ id: "physio.tab.assignments" })}</h3>
+          <h3 className="font-medium">
+            {intl.formatMessage({ id: "physio.tab.assignments" })}
+          </h3>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"><Plus className="size-4 mr-1" /><FormattedMessage id="physio.assign.title" /></Button>
+              <Button
+                size="sm"
+                className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-semibold rounded-lg shadow-sm"
+              >
+                <Plus className="size-4 mr-1" />
+                <FormattedMessage id="physio.assign.title" />
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
               <DialogHeader>
-                <DialogTitle className="text-slate-950 font-bold text-lg">Assign Exercise Plan</DialogTitle>
+                <DialogTitle className="text-slate-950 font-bold text-lg">
+                  Assign Exercise Plan
+                </DialogTitle>
                 <DialogDescription className="text-slate-500 text-xs mt-1">
                   Create a customized exercise task assigned to this patient.
                 </DialogDescription>
@@ -807,13 +1014,18 @@ function AssignmentsTab() {
               <div className="space-y-4 my-2 pt-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Patient</Label>
-                    <Select value={clientId} onValueChange={(v) => setClientId(v)}>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Patient
+                    </Label>
+                    <Select
+                      value={clientId}
+                      onValueChange={v => setClientId(v)}
+                    >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
                         <SelectValue placeholder="Select patient..." />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {clients.data?.map((c) => (
+                        {clients.data?.map(c => (
                           <SelectItem key={c.id} value={String(c.id)}>
                             {c.name ?? c.email ?? `#${c.id}`}
                           </SelectItem>
@@ -822,13 +1034,18 @@ function AssignmentsTab() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Select Exercise Template</Label>
-                    <Select value={exerciseId} onValueChange={(v) => setExerciseId(v)}>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Select Exercise Template
+                    </Label>
+                    <Select
+                      value={exerciseId}
+                      onValueChange={v => setExerciseId(v)}
+                    >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
                         <SelectValue placeholder="Choose exercise template" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {exercises.data?.map((e) => (
+                        {exercises.data?.map(e => (
                           <SelectItem key={e.id} value={String(e.id)}>
                             {e.title}
                           </SelectItem>
@@ -840,42 +1057,48 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Reps</Label>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Reps
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       max={500}
                       className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                       value={reps as unknown as string}
-                      onChange={(e) => {
+                      onChange={e => {
                         const v = e.target.value;
                         setReps(v === "" ? "" : Number(v));
                       }}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Sets</Label>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Sets
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       max={100}
                       className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                       value={sets as unknown as string}
-                      onChange={(e) => {
+                      onChange={e => {
                         const v = e.target.value;
                         setSets(v === "" ? "" : Number(v));
                       }}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">PER DAY</Label>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      PER DAY
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       max={20}
                       className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
                       value={dailyFrequency as unknown as string}
-                      onChange={(e) => {
+                      onChange={e => {
                         const v = e.target.value;
                         setDailyFrequency(v === "" ? "" : Number(v));
                       }}
@@ -885,21 +1108,25 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Start Date</Label>
-                    <Input 
-                      type="date" 
-                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700" 
-                      value={startDate} 
-                      onChange={(e) => setStartDate(e.target.value)} 
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Start Date
+                    </Label>
+                    <Input
+                      type="date"
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">End Date</Label>
-                    <Input 
-                      type="date" 
-                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700" 
-                      value={endDate} 
-                      onChange={(e) => setEndDate(e.target.value)} 
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      End Date
+                    </Label>
+                    <Input
+                      type="date"
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
                       min={startDate}
                     />
                   </div>
@@ -907,13 +1134,18 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Injury Type</Label>
-                    <Select value={injuryType} onValueChange={(v) => setInjuryType(v)}>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Injury Type
+                    </Label>
+                    <Select
+                      value={injuryType}
+                      onValueChange={v => setInjuryType(v)}
+                    >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
                         <SelectValue placeholder="Other" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {(customInjTypes.data ?? []).map((type) => (
+                        {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
                           </SelectItem>
@@ -922,13 +1154,18 @@ function AssignmentsTab() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">Exercise Type</Label>
-                    <Select value={exerciseType} onValueChange={(v) => setExerciseType(v)}>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                      Exercise Type
+                    </Label>
+                    <Select
+                      value={exerciseType}
+                      onValueChange={v => setExerciseType(v)}
+                    >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
                         <SelectValue placeholder="Other" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {(customExTypes.data ?? []).map((type) => (
+                        {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
                           </SelectItem>
@@ -940,7 +1177,11 @@ function AssignmentsTab() {
               </div>
 
               <DialogFooter className="mt-6 border-t border-slate-100 pt-4 gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setOpen(false)} className="border-slate-200 text-xs font-semibold h-9 rounded-lg px-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  className="border-slate-200 text-xs font-semibold h-9 rounded-lg px-4"
+                >
                   <FormattedMessage id="common.cancel" />
                 </Button>
                 <Button
@@ -949,15 +1190,20 @@ function AssignmentsTab() {
                   className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
                   onClick={() => {
                     if (new Date(endDate) < new Date(startDate)) {
-                      toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
+                      toast.error(
+                        intl.formatMessage({ id: "physio.assign.invalidDates" })
+                      );
                       return;
                     }
                     assign.mutate({
                       clientId: Number(clientId),
                       exerciseId: Number(exerciseId),
-                      reps: (reps === "" ? undefined : Number(reps)),
-                      sets: (sets === "" ? undefined : Number(sets)),
-                      dailyFrequency: (dailyFrequency === "" ? undefined : Number(dailyFrequency)),
+                      reps: reps === "" ? undefined : Number(reps),
+                      sets: sets === "" ? undefined : Number(sets),
+                      dailyFrequency:
+                        dailyFrequency === ""
+                          ? undefined
+                          : Number(dailyFrequency),
                       injuryType: (injuryType || undefined) as any,
                       exerciseType: (exerciseType || undefined) as any,
                       startDate,
@@ -986,15 +1232,30 @@ function AssignmentsTab() {
           </TableHeader>
           <TableBody>
             {assignments.isLoading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6"><FormattedMessage id="common.loading" /></TableCell></TableRow>
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground py-6"
+                >
+                  <FormattedMessage id="common.loading" />
+                </TableCell>
+              </TableRow>
             )}
-            {assignments.data?.map((row) => (
+            {assignments.data?.map(row => (
               <TableRow key={row.assignment.id}>
-                <TableCell className="w-[20%] font-medium">{row.client.name ?? row.client.email ?? `#${row.client.id}`}</TableCell>
+                <TableCell className="w-[20%] font-medium">
+                  {row.client.name ?? row.client.email ?? `#${row.client.id}`}
+                </TableCell>
                 <TableCell className="w-[25%]">{row.exercise.title}</TableCell>
-                <TableCell className="w-[8%] text-center">{row.assignment.sets}</TableCell>
-                <TableCell className="w-[8%] text-center">{row.assignment.reps}</TableCell>
-                <TableCell className="w-[25%] text-sm text-slate-500 font-mono">{row.assignment.startDate} → {row.assignment.endDate}</TableCell>
+                <TableCell className="w-[8%] text-center">
+                  {row.assignment.sets}
+                </TableCell>
+                <TableCell className="w-[8%] text-center">
+                  {row.assignment.reps}
+                </TableCell>
+                <TableCell className="w-[25%] text-sm text-slate-500 font-mono">
+                  {row.assignment.startDate} → {row.assignment.endDate}
+                </TableCell>
                 <TableCell className="w-[10%] text-center">
                   <Badge
                     variant="outline"
@@ -1004,13 +1265,20 @@ function AssignmentsTab() {
                         : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100 border font-semibold text-[10px] rounded-full"
                     }
                   >
-                    {row.assignment.status === "active" ? "Active Exercise" : row.assignment.status}
+                    {row.assignment.status === "active"
+                      ? "Active Exercise"
+                      : row.assignment.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="w-[4%] text-right">
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    if (confirm("Delete assignment?")) del.mutate({ id: row.assignment.id });
-                  }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm("Delete assignment?"))
+                        del.mutate({ id: row.assignment.id });
+                    }}
+                  >
                     <Trash2 className="size-4" />
                   </Button>
                 </TableCell>
@@ -1027,7 +1295,7 @@ function formatInjuryType(type: string | null | undefined): string {
   if (!type) return "—";
   return type
     .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 }
 
@@ -1050,7 +1318,7 @@ function ConfigurationTab() {
       setNewExType("");
       toast.success("Exercise type created successfully");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to create exercise type");
     },
   });
@@ -1061,7 +1329,7 @@ function ConfigurationTab() {
       setNewInjType("");
       toast.success("Injury type created successfully");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to create injury type");
     },
   });
@@ -1071,7 +1339,7 @@ function ConfigurationTab() {
       utils.physio.listCustomExerciseTypes.invalidate();
       toast.success("Exercise type deleted successfully");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to delete exercise type");
     },
   });
@@ -1081,7 +1349,7 @@ function ConfigurationTab() {
       utils.physio.listCustomInjuryTypes.invalidate();
       toast.success("Injury type deleted successfully");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to delete injury type");
     },
   });
@@ -1112,7 +1380,9 @@ function ConfigurationTab() {
       {/* Exercise Types Card */}
       <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none">
         <CardHeader className="pb-3 border-b border-slate-100/80">
-          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">Exercise Types</CardTitle>
+          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">
+            Exercise Types
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
           {/* Input group */}
@@ -1121,8 +1391,8 @@ function ConfigurationTab() {
               placeholder="e.g. Strength, Stretching..."
               className="h-9 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg flex-1"
               value={newExType}
-              onChange={(e) => setNewExType(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreateExType()}
+              onChange={e => setNewExType(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleCreateExType()}
             />
             <Button
               size="sm"
@@ -1137,12 +1407,19 @@ function ConfigurationTab() {
           {/* List */}
           <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
             {exTypes.isLoading ? (
-              <div className="text-center py-6 text-slate-400 text-xs font-sans">Loading...</div>
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">
+                Loading...
+              </div>
             ) : (exTypes.data ?? []).length === 0 ? (
-              <div className="text-center py-6 text-slate-400 text-xs font-sans">No exercise types found.</div>
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">
+                No exercise types found.
+              </div>
             ) : (
-              (exTypes.data ?? []).map((type) => (
-                <div key={type.id} className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group">
+              (exTypes.data ?? []).map(type => (
+                <div
+                  key={type.id}
+                  className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group"
+                >
                   <span>{type.name}</span>
                   <Button
                     size="sm"
@@ -1162,7 +1439,9 @@ function ConfigurationTab() {
       {/* Injury Types Card */}
       <Card className="bg-white border border-slate-200/60 rounded-xl shadow-none">
         <CardHeader className="pb-3 border-b border-slate-100/80">
-          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">Injury Types</CardTitle>
+          <CardTitle className="text-sm font-semibold text-slate-900 font-sans">
+            Injury Types
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
           {/* Input group */}
@@ -1171,8 +1450,8 @@ function ConfigurationTab() {
               placeholder="e.g. Back Pain, Shoulder Injury..."
               className="h-9 text-xs bg-white border-slate-200 focus-visible:ring-indigo-600 rounded-lg flex-1"
               value={newInjType}
-              onChange={(e) => setNewInjType(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreateInjType()}
+              onChange={e => setNewInjType(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleCreateInjType()}
             />
             <Button
               size="sm"
@@ -1187,12 +1466,19 @@ function ConfigurationTab() {
           {/* List */}
           <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
             {injTypes.isLoading ? (
-              <div className="text-center py-6 text-slate-400 text-xs font-sans">Loading...</div>
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">
+                Loading...
+              </div>
             ) : (injTypes.data ?? []).length === 0 ? (
-              <div className="text-center py-6 text-slate-400 text-xs font-sans">No injury types found.</div>
+              <div className="text-center py-6 text-slate-400 text-xs font-sans">
+                No injury types found.
+              </div>
             ) : (
-              (injTypes.data ?? []).map((type) => (
-                <div key={type.id} className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group">
+              (injTypes.data ?? []).map(type => (
+                <div
+                  key={type.id}
+                  className="p-3 text-xs text-slate-700 font-medium bg-slate-50/20 flex justify-between items-center group"
+                >
                   <span>{type.name}</span>
                   <Button
                     size="sm"

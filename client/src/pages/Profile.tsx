@@ -4,7 +4,13 @@ import AppShell from "@/components/AppShell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
@@ -12,18 +18,21 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { UserCog, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { validateCambodianPhoneNumber } from "@shared/phoneValidation";
 
-function makeInitials(name: string | null | undefined, email: string | null | undefined) {
+function makeInitials(
+  name: string | null | undefined,
+  email: string | null | undefined
+) {
   return (
     (name ?? email ?? "")
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
+      .map(part => part[0]?.toUpperCase() ?? "")
       .join("") || "U"
   );
 }
-
 
 export default function Profile() {
   const intl = useIntl();
@@ -36,7 +45,10 @@ export default function Profile() {
   });
   const role = profile.data?.user.role ?? user?.role;
   const admins = trpc.settings.getAdminsContacts.useQuery(undefined, {
-    enabled: !loading && !!user && (role === "client" || role === "physiotherapist" || role === "user"),
+    enabled:
+      !loading &&
+      !!user &&
+      (role === "client" || role === "physiotherapist" || role === "user"),
   });
 
   const [name, setName] = useState("");
@@ -56,26 +68,41 @@ export default function Profile() {
       setNewPassword("");
       setConfirmPassword("");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to update password");
-    }
+    },
   });
   useEffect(() => {
     if (!profile.data) return;
     setName(profile.data.user.name ?? "");
-    setPhoneNumber((profile.data.user as { phoneNumber?: string | null }).phoneNumber ?? "");
-    setAvatarUrl((profile.data.user as { avatarUrl?: string | null }).avatarUrl ?? null);
-    setAvatarPreview((profile.data.user as { avatarUrl?: string | null }).avatarUrl ?? null);
+    setPhoneNumber(
+      (profile.data.user as { phoneNumber?: string | null }).phoneNumber ?? ""
+    );
+    setAvatarUrl(
+      (profile.data.user as { avatarUrl?: string | null }).avatarUrl ?? null
+    );
+    setAvatarPreview(
+      (profile.data.user as { avatarUrl?: string | null }).avatarUrl ?? null
+    );
   }, [profile.data]);
 
   const updateProfile = trpc.settings.updateMyProfile.useMutation({
-    onSuccess: async (updated) => {
-      await Promise.all([utils.settings.getMyProfile.invalidate(), utils.auth.me.invalidate()]);
+    onSuccess: async updated => {
+      await Promise.all([
+        utils.settings.getMyProfile.invalidate(),
+        utils.auth.me.invalidate(),
+      ]);
       if (!updated) return;
       setName(updated.name ?? "");
-      setPhoneNumber((updated as { phoneNumber?: string | null }).phoneNumber ?? "");
-      setAvatarUrl((updated as { avatarUrl?: string | null }).avatarUrl ?? null);
-      setAvatarPreview((updated as { avatarUrl?: string | null }).avatarUrl ?? null);
+      setPhoneNumber(
+        (updated as { phoneNumber?: string | null }).phoneNumber ?? ""
+      );
+      setAvatarUrl(
+        (updated as { avatarUrl?: string | null }).avatarUrl ?? null
+      );
+      setAvatarPreview(
+        (updated as { avatarUrl?: string | null }).avatarUrl ?? null
+      );
       toast.success("Saved successfully");
     },
     onError: () => {
@@ -86,14 +113,14 @@ export default function Profile() {
     onSuccess: () => {
       toast.success("Password reset request sent to administrators.");
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(err.message || "Failed to send reset request.");
-    }
+    },
   });
 
   const userInitials = useMemo(
     () => makeInitials(profile.data?.user.name, profile.data?.user.email),
-    [profile.data?.user.email, profile.data?.user.name],
+    [profile.data?.user.email, profile.data?.user.name]
   );
 
   async function onFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -127,9 +154,15 @@ export default function Profile() {
       return;
     }
 
+    const trimmedPhone = phoneNumber.trim();
+    if (trimmedPhone && !validateCambodianPhoneNumber(trimmedPhone)) {
+      toast.error("Invalid Cambodian phone number.");
+      return;
+    }
+
     await updateProfile.mutateAsync({
       name: trimmedName,
-      phoneNumber: phoneNumber.trim() || null,
+      phoneNumber: trimmedPhone || null,
       avatarUrl: avatarUrl && avatarUrl.length > 0 ? avatarUrl : null,
     });
   }
@@ -139,19 +172,24 @@ export default function Profile() {
       <AppShell>
         <Card>
           <CardHeader>
-            <CardTitle><FormattedMessage id="common.notAuthorised" /></CardTitle>
-            <CardDescription>Please sign in to view your profile.</CardDescription>
+            <CardTitle>
+              <FormattedMessage id="common.notAuthorised" />
+            </CardTitle>
+            <CardDescription>
+              Please sign in to view your profile.
+            </CardDescription>
           </CardHeader>
         </Card>
       </AppShell>
     );
   }
 
-  const roleLabel = role === "physiotherapist"
-    ? "role.physiotherapist"
-    : role === "admin"
-      ? "role.admin"
-      : "role.client";
+  const roleLabel =
+    role === "physiotherapist"
+      ? "role.physiotherapist"
+      : role === "admin"
+        ? "role.admin"
+        : "role.client";
   const assignedClients = (profile.data?.assignedClients ?? []) as Array<{
     id: number;
     name: string | null;
@@ -160,11 +198,12 @@ export default function Profile() {
     phoneNumber?: string | null;
   }>;
 
-  const goBackPath = role === "admin"
-    ? "/admin/users"
-    : role === "physiotherapist"
-    ? "/physio"
-    : "/client/exercises";
+  const goBackPath =
+    role === "admin"
+      ? "/admin/users"
+      : role === "physiotherapist"
+        ? "/physio"
+        : "/client/exercises";
 
   return (
     <AppShell>
@@ -183,9 +222,7 @@ export default function Profile() {
       <div className="flex items-center gap-3">
         <UserCog className="size-6 text-primary" />
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            My Profile
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">My Profile</h1>
           <p className="text-sm text-muted-foreground">
             Update your name, phone number, and profile picture.
           </p>
@@ -197,18 +234,34 @@ export default function Profile() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Details</CardTitle>
-              <CardDescription>Basic profile settings for your account.</CardDescription>
+              <CardDescription>
+                Basic profile settings for your account.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex flex-col sm:flex-row gap-5 sm:items-center">
                 <Avatar className="h-24 w-24 border">
-                  <AvatarImage src={avatarPreview ?? undefined} alt={profile.data?.user.name ?? profile.data?.user.email ?? "Profile"} />
-                  <AvatarFallback className="text-2xl font-semibold">{userInitials}</AvatarFallback>
+                  <AvatarImage
+                    src={avatarPreview ?? undefined}
+                    alt={
+                      profile.data?.user.name ??
+                      profile.data?.user.email ??
+                      "Profile"
+                    }
+                  />
+                  <AvatarFallback className="text-2xl font-semibold">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
 
                 <div className="space-y-2">
                   <Label htmlFor="avatarUpload">Profile picture</Label>
-                  <Input id="avatarUpload" type="file" accept="image/*" onChange={onFileChange} />
+                  <Input
+                    id="avatarUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={onFileChange}
+                  />
                   <p className="text-xs text-muted-foreground">
                     Upload a PNG, JPG, or WEBP image under 1.5 MB.
                   </p>
@@ -220,7 +273,7 @@ export default function Profile() {
                 <Input
                   id="displayName"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={event => setName(event.target.value)}
                   placeholder="Your full name"
                 />
               </div>
@@ -231,13 +284,16 @@ export default function Profile() {
                   id="phoneNumber"
                   type="tel"
                   value={phoneNumber}
-                  onChange={(event) => setPhoneNumber(event.target.value)}
+                  onChange={event => setPhoneNumber(event.target.value)}
                   placeholder="Your phone number"
                 />
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void onSave()} disabled={updateProfile.isPending}>
+                <Button
+                  onClick={() => void onSave()}
+                  disabled={updateProfile.isPending}
+                >
                   {updateProfile.isPending ? "Saving..." : "Save profile"}
                 </Button>
                 <Button
@@ -255,14 +311,16 @@ export default function Profile() {
               <div className="border-t border-slate-100 my-6 pt-6 space-y-4">
                 <div>
                   <h3 className="text-lg font-medium">Change Password</h3>
-                  <p className="text-sm text-muted-foreground">Update your account password</p>
+                  <p className="text-sm text-muted-foreground">
+                    Update your account password
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Current Password</Label>
                   <Input
                     type="password"
                     value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    onChange={e => setCurrentPassword(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -271,7 +329,7 @@ export default function Profile() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Min 8 characters"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={e => setNewPassword(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -280,7 +338,7 @@ export default function Profile() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Min 8 characters"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={e => setConfirmPassword(e.target.value)}
                   />
                 </div>
 
@@ -289,7 +347,7 @@ export default function Profile() {
                     <input
                       type="checkbox"
                       checked={showPassword}
-                      onChange={(e) => setShowPassword(e.target.checked)}
+                      onChange={e => setShowPassword(e.target.checked)}
                       className="rounded border-gray-300"
                     />
                     Show Passwords
@@ -303,7 +361,9 @@ export default function Profile() {
                       return;
                     }
                     if (newPassword.length < 8) {
-                      toast.error("New password must be at least 8 characters.");
+                      toast.error(
+                        "New password must be at least 8 characters."
+                      );
                       return;
                     }
                     if (newPassword !== confirmPassword) {
@@ -329,7 +389,9 @@ export default function Profile() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Role</span>
-                <Badge variant="secondary"><FormattedMessage id={roleLabel} /></Badge>
+                <Badge variant="secondary">
+                  <FormattedMessage id={roleLabel} />
+                </Badge>
               </div>
               {role === "client" && (
                 <div className="flex items-center justify-between gap-3">
@@ -339,17 +401,23 @@ export default function Profile() {
                       profile.data?.user.status === "active"
                         ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 border font-semibold shadow-none"
                         : profile.data?.user.status === "inactive"
-                        ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold shadow-none"
-                        : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold shadow-none"
+                          ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 border font-semibold shadow-none"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 border font-semibold shadow-none"
                     }
                   >
-                    <FormattedMessage id={`status.${profile.data?.user.status}`} />
+                    <FormattedMessage
+                      id={`status.${profile.data?.user.status}`}
+                    />
                   </Badge>
                 </div>
               )}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Phone Number</span>
-                <span className="text-sm font-medium">{profile.data?.user.phoneNumber ?? "—"}</span>
+                <span className="text-sm text-muted-foreground">
+                  Phone Number
+                </span>
+                <span className="text-sm font-medium">
+                  {profile.data?.user.phoneNumber ?? "—"}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -359,52 +427,97 @@ export default function Profile() {
               <CardHeader>
                 <CardTitle>Assigned Physiotherapist</CardTitle>
                 <CardDescription>
-                  Your rehab plan can show the physiotherapist responsible for your care.
+                  Your rehab plan can show the physiotherapist responsible for
+                  your care.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {profile.data?.physiotherapist ? (
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border">
-                      <AvatarImage src={profile.data.physiotherapist.avatarUrl ?? undefined} alt={profile.data.physiotherapist.name ?? profile.data.physiotherapist.email ?? "Physiotherapist"} />
-                      <AvatarFallback className="text-xs font-medium">{makeInitials(profile.data.physiotherapist.name, profile.data.physiotherapist.email)}</AvatarFallback>
+                      <AvatarImage
+                        src={
+                          profile.data.physiotherapist.avatarUrl ?? undefined
+                        }
+                        alt={
+                          profile.data.physiotherapist.name ??
+                          profile.data.physiotherapist.email ??
+                          "Physiotherapist"
+                        }
+                      />
+                      <AvatarFallback className="text-xs font-medium">
+                        {makeInitials(
+                          profile.data.physiotherapist.name,
+                          profile.data.physiotherapist.email
+                        )}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{profile.data.physiotherapist.name ?? profile.data.physiotherapist.email ?? `#${profile.data.physiotherapist.id}`}</div>
-                      <div className="text-sm text-muted-foreground">{profile.data.physiotherapist.email ?? ""}</div>
+                      <div className="font-medium">
+                        {profile.data.physiotherapist.name ??
+                          profile.data.physiotherapist.email ??
+                          `#${profile.data.physiotherapist.id}`}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {profile.data.physiotherapist.email ?? ""}
+                      </div>
                       {profile.data.physiotherapist.phoneNumber ? (
                         <div className="mt-1">
-                          <div className="text-sm font-medium">{profile.data.physiotherapist.phoneNumber}</div>
+                          <div className="text-sm font-medium">
+                            {profile.data.physiotherapist.phoneNumber}
+                          </div>
                         </div>
                       ) : null}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No physiotherapist assigned yet.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No physiotherapist assigned yet.
+                  </p>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {(role === "client" || role === "physiotherapist" || role === "user") && (
+          {(role === "client" ||
+            role === "physiotherapist" ||
+            role === "user") && (
             <Card>
               <CardHeader>
                 <CardTitle>Contact Admin</CardTitle>
-                <CardDescription>If you need help, contact your clinic administrator.</CardDescription>
+                <CardDescription>
+                  If you need help, contact your clinic administrator.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {admins.isLoading && <p className="text-sm text-muted-foreground">Loading admins…</p>}
-                {!admins.isLoading && (!admins.data || admins.data.length === 0) && (
-                  <p className="text-sm text-muted-foreground">No admin contact available.</p>
+                {admins.isLoading && (
+                  <p className="text-sm text-muted-foreground">
+                    Loading admins…
+                  </p>
                 )}
+                {!admins.isLoading &&
+                  (!admins.data || admins.data.length === 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      No admin contact available.
+                    </p>
+                  )}
                 {!admins.isLoading && admins.data && admins.data.length > 0 && (
                   <div className="space-y-3">
-                    {admins.data.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between gap-3">
+                    {admins.data.map(a => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between gap-3"
+                      >
                         <div>
-                          <div className="font-medium">{a.name ?? a.email ?? `#${a.id}`}</div>
-                          <div className="text-sm text-muted-foreground">{a.email ?? ""}</div>
-                          <div className="text-sm text-muted-foreground">{a.phoneNumber ?? "No phone"}</div>
+                          <div className="font-medium">
+                            {a.name ?? a.email ?? `#${a.id}`}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {a.email ?? ""}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {a.phoneNumber ?? "No phone"}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -418,14 +531,14 @@ export default function Profile() {
                     variant="outline"
                     className="w-full text-xs font-semibold"
                   >
-                    {requestReset.isPending ? "Sending Request..." : "Request Password Reset"}
+                    {requestReset.isPending
+                      ? "Sending Request..."
+                      : "Request Password Reset"}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           )}
-
-
         </div>
       </div>
     </AppShell>

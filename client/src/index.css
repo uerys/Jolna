@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -46,43 +46,43 @@
 
 :root {
   /* Accent: premium indigo-violet */
-  --primary: #534AB7;
+  --primary: #534ab7;
   --primary-foreground: #ffffff;
-  --sidebar-primary: #534AB7;
+  --sidebar-primary: #534ab7;
   --sidebar-primary-foreground: #ffffff;
 
   /* Chart colors aligned with indigo */
   --chart-1: #a5b4fc;
   --chart-2: #818cf8;
-  --chart-3: #534AB7;
-  --chart-4: #4F46E5;
-  --chart-5: #4338CA;
+  --chart-3: #534ab7;
+  --chart-4: #4f46e5;
+  --chart-5: #4338ca;
 
   /* Design tokens: premium neutral palette */
   --radius: 0.5rem;
-  --background: #F8FAFC;
+  --background: #f8fafc;
   --foreground: #101828;
   --card: #ffffff;
   --card-foreground: #101828;
   --popover: #ffffff;
   --popover-foreground: #101828;
-  --secondary: #F2F4F7;
+  --secondary: #f2f4f7;
   --secondary-foreground: #344054;
-  --muted: #F2F4F7;
+  --muted: #f2f4f7;
   --muted-foreground: #667085;
-  --accent: #EEF2FF;
-  --accent-foreground: #4338CA;
+  --accent: #eef2ff;
+  --accent-foreground: #4338ca;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: #E4E7EC;
-  --input: #E4E7EC;
-  --ring: #534AB7;
+  --border: #e4e7ec;
+  --input: #e4e7ec;
+  --ring: #534ab7;
   --sidebar: #ffffff;
   --sidebar-foreground: #101828;
-  --sidebar-accent: #F2F4F7;
+  --sidebar-accent: #f2f4f7;
   --sidebar-accent-foreground: #101828;
-  --sidebar-border: #E4E7EC;
-  --sidebar-ring: #534AB7;
+  --sidebar-border: #e4e7ec;
+  --sidebar-ring: #534ab7;
 }
 
 .dark {
@@ -101,7 +101,7 @@
   --muted: oklch(0.274 0.006 286.033);
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
+  --accent-foreground: oklch(0.92 0.005 65);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
@@ -115,7 +115,7 @@
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.85 0.005 65);
   --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.488 0.243 264.376);
 }
@@ -137,9 +137,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    font-variation-settings: 'opsz' 32;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" 32;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
@@ -150,14 +150,21 @@
 
   /* ── Global typography reset ──────────────────────────────────────── */
   /* Force all elements to inherit Inter so no system-font bleed occurs */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     font-family: inherit;
   }
 
   /* Heading scale — Inter with tight tracking */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.02em;
     line-height: 1.25;
@@ -165,12 +172,30 @@
     color: #101828;
   }
 
-  h1 { font-size: 1.375rem; font-weight: 700; }  /* 22px */
-  h2 { font-size: 1.125rem; font-weight: 600; }  /* 18px */
-  h3 { font-size: 0.9375rem; font-weight: 600; } /* 15px */
-  h4 { font-size: 0.875rem;  font-weight: 600; } /* 14px */
-  h5 { font-size: 0.8125rem; font-weight: 600; } /* 13px */
-  h6 { font-size: 0.75rem;   font-weight: 600; } /* 12px */
+  h1 {
+    font-size: 1.375rem;
+    font-weight: 700;
+  } /* 22px */
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+  } /* 18px */
+  h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  } /* 15px */
+  h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+  } /* 14px */
+  h5 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+  } /* 13px */
+  h6 {
+    font-size: 0.75rem;
+    font-weight: 600;
+  } /* 12px */
 
   p {
     line-height: 1.65;
@@ -178,9 +203,13 @@
   }
 
   /* Input, button, select, textarea must all inherit Inter */
-  input, button, select, textarea, optgroup {
-    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
+  input,
+  button,
+  select,
+  textarea,
+  optgroup {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     font-size: inherit;
     line-height: inherit;
@@ -188,8 +217,12 @@
   }
 
   /* Code/mono elements — keep monospace but don't bleed elsewhere */
-  code, kbd, samp, pre {
-    font-family: ui-monospace, 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family:
+      ui-monospace, "Cascadia Code", "Fira Code", "Courier New", monospace;
     font-size: 0.875em;
   }
   button:not(:disabled),
@@ -254,7 +287,7 @@
 
   /* Premium progress bar */
   .progress-track {
-    background: #E4E7EC;
+    background: #e4e7ec;
     border-radius: 999px;
     height: 5px;
     overflow: hidden;
@@ -268,6 +301,11 @@
 }
 
 /* Global Noto Sans Khmer font override for Khmer locale */
-html[lang="km"] *, html[lang="km"] body, html[lang="km"] input, html[lang="km"] button, html[lang="km"] select, html[lang="km"] textarea {
-  font-family: 'Noto Sans Khmer', sans-serif !important;
+html[lang="km"] *,
+html[lang="km"] body,
+html[lang="km"] input,
+html[lang="km"] button,
+html[lang="km"] select,
+html[lang="km"] textarea {
+  font-family: "Noto Sans Khmer", sans-serif !important;
 }

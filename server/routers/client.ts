@@ -61,7 +61,7 @@ export const clientRouter = router({
 
       // TIMEZONE FIX: Trust the client date if provided, otherwise fallback to server UTC
       const today = input?.clientDate ?? new Date().toISOString().slice(0, 10);
-      
+
       const activeAssignments = await listAssignmentsForClient(user.id, {
         activeOn: today,
         status: "active",
@@ -82,15 +82,18 @@ export const clientRouter = router({
     .query(async ({ ctx, input }) => {
       // TIMEZONE FIX: Trust the client date if provided, otherwise fallback to server UTC
       const today = input?.clientDate ?? new Date().toISOString().slice(0, 10);
-      
+
       const assignments = await listAssignmentsForClient(ctx.user.id, {
         activeOn: today,
         status: "active",
       });
 
       return Promise.all(
-        assignments.map(async (row) => {
-          const todayLogCount = await getAssignmentLogCountForDay(row.assignment.id, today);
+        assignments.map(async row => {
+          const todayLogCount = await getAssignmentLogCountForDay(
+            row.assignment.id,
+            today
+          );
           return {
             ...row,
             todayLogCount,
@@ -172,11 +175,13 @@ export const clientRouter = router({
    */
   listMyFeedbackEnriched: clientProcedure
     .input(
-      z.object({
-        assignmentId: z.number().int().positive().optional(),
-        from: z.string().optional(),
-        to: z.string().optional(),
-      }).optional()
+      z
+        .object({
+          assignmentId: z.number().int().positive().optional(),
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+        .optional()
     )
     .query(({ ctx, input }) =>
       listFeedbackByClientEnriched(ctx.user.id, {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -56,9 +56,15 @@ function formatExerciseType(type: string | null | undefined): string {
 }
 
 /** Format clinic visit string */
-function formatClinicVisit(visitStr: string | null | undefined, intl: any): string {
+function formatClinicVisit(
+  visitStr: string | null | undefined,
+  intl: any
+): string {
   if (!visitStr) {
-    return intl.formatMessage({ id: "client.today.nextClinicVisit.notScheduled", defaultMessage: "Not scheduled" });
+    return intl.formatMessage({
+      id: "client.today.nextClinicVisit.notScheduled",
+      defaultMessage: "Not scheduled",
+    });
   }
   try {
     const d = new Date(visitStr);
@@ -83,7 +89,10 @@ function formatClinicVisit(visitStr: string | null | undefined, intl: any): stri
       })
       .toLowerCase();
     return intl.formatMessage(
-      { id: "client.today.nextClinicVisit.format", defaultMessage: "{datePart} at {timePart}" },
+      {
+        id: "client.today.nextClinicVisit.format",
+        defaultMessage: "{datePart} at {timePart}",
+      },
       { datePart, timePart }
     );
   } catch {
@@ -155,7 +164,10 @@ export default function ClientExercises() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border border-slate-200 shadow-sm flex items-center justify-center bg-indigo-50 text-indigo-700 rounded-full">
-                  <AvatarImage src={user?.avatarUrl ?? undefined} alt={rehabSummary.data.clientName} />
+                  <AvatarImage
+                    src={user?.avatarUrl ?? undefined}
+                    alt={rehabSummary.data.clientName}
+                  />
                   <AvatarFallback className="text-xl font-bold bg-indigo-50 text-indigo-700">
                     {rehabSummary.data.clientName
                       .split(" ")
@@ -170,24 +182,29 @@ export default function ClientExercises() {
                     <h1 className="text-xl font-bold text-[#101828] tracking-tight">
                       {rehabSummary.data.clientName}
                     </h1>
-                    <Badge className={
-                      user?.status === "active"
-                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold shadow-sm"
-                        : user?.status === "inactive"
-                        ? "bg-amber-50 text-amber-800 border-amber-200 font-semibold shadow-sm"
-                        : "bg-red-50 text-red-800 border-red-200 font-semibold shadow-sm"
-                    }>
+                    <Badge
+                      className={
+                        user?.status === "active"
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold shadow-sm"
+                          : user?.status === "inactive"
+                            ? "bg-amber-50 text-amber-800 border-amber-200 font-semibold shadow-sm"
+                            : "bg-red-50 text-red-800 border-red-200 font-semibold shadow-sm"
+                      }
+                    >
                       {user?.status === "active"
                         ? intl.formatMessage({ id: "status.active" })
                         : user?.status === "inactive"
-                        ? intl.formatMessage({ id: "status.inactive" })
-                        : user?.status === "suspended"
-                        ? intl.formatMessage({ id: "status.suspended" })
-                        : "—"}
+                          ? intl.formatMessage({ id: "status.inactive" })
+                          : user?.status === "suspended"
+                            ? intl.formatMessage({ id: "status.suspended" })
+                            : "—"}
                     </Badge>
                   </div>
                   <p className="text-xs text-[#98A2B3] font-medium">
-                    {intl.formatMessage({ id: "physio.detail.patientId" }, { id: user?.id })}
+                    {intl.formatMessage(
+                      { id: "physio.detail.patientId" },
+                      { id: user?.id }
+                    )}
                   </p>
                 </div>
               </div>
@@ -227,7 +244,9 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    {intl.formatMessage({ id: "physio.detail.primaryDiagnosis" })}
+                    {intl.formatMessage({
+                      id: "physio.detail.primaryDiagnosis",
+                    })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {formatInjuryType(rehabSummary.data.injuryType)}
@@ -240,7 +259,9 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    {intl.formatMessage({ id: "physio.detail.nextClinicVisit" })}
+                    {intl.formatMessage({
+                      id: "physio.detail.nextClinicVisit",
+                    })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {formatClinicVisit(rehabSummary.data.nextClinicVisit, intl)}
@@ -253,7 +274,9 @@ export default function ClientExercises() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#98A2B3] font-semibold uppercase tracking-widest">
-                    {intl.formatMessage({ id: "physio.detail.activeExercises" })}
+                    {intl.formatMessage({
+                      id: "physio.detail.activeExercises",
+                    })}
                   </p>
                   <p className="font-semibold text-[#101828] truncate text-sm">
                     {rehabSummary.data.activeAssignmentCount}
@@ -327,7 +350,6 @@ export default function ClientExercises() {
           />
         ))}
       </div>
-
     </AppShell>
   );
 }
@@ -378,6 +400,103 @@ function DurationBar({
   );
 }
 
+function YouTubeInlinePlayer({
+  videoId,
+  title,
+  onEmbedError,
+}: {
+  videoId: string;
+  title: string;
+  onEmbedError: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<any>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    // Load YouTube Iframe API if not already loaded
+    if (!(window as any).YT) {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName("script")[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    }
+
+    // Helper function to initialize the player
+    const initPlayer = () => {
+      if (!active || !containerRef.current || playerRef.current) return;
+
+      const placeholder = document.createElement("div");
+      placeholder.id = `yt-player-${videoId}`;
+      placeholder.className = "w-full h-full";
+      containerRef.current.appendChild(placeholder);
+
+      playerRef.current = new (window as any).YT.Player(placeholder.id, {
+        height: "100%",
+        width: "100%",
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          playsinline: 1,
+          rel: 0,
+        },
+        events: {
+          onReady: (event: any) => {
+            try {
+              event.target.setVolume(50);
+            } catch (e) {
+              // Ignore
+            }
+          },
+          onError: (event: any) => {
+            console.warn("YouTube player error:", event.data);
+            if (active) {
+              onEmbedError();
+            }
+          },
+        },
+      });
+    };
+
+    if ((window as any).YT && (window as any).YT.Player) {
+      initPlayer();
+    } else {
+      // Poll for YT API to be ready
+      const checkInterval = setInterval(() => {
+        if ((window as any).YT && (window as any).YT.Player) {
+          clearInterval(checkInterval);
+          initPlayer();
+        }
+      }, 100);
+
+      return () => {
+        clearInterval(checkInterval);
+        active = false;
+        if (playerRef.current && playerRef.current.destroy) {
+          try {
+            playerRef.current.destroy();
+          } catch (e) {
+            // Ignore
+          }
+        }
+      };
+    }
+
+    return () => {
+      active = false;
+      if (playerRef.current && playerRef.current.destroy) {
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+  }, [videoId, onEmbedError]);
+
+  return <div ref={containerRef} className="w-full h-full" />;
+}
 function ExerciseCard({
   assignment,
   exercise,
@@ -422,42 +541,162 @@ function ExerciseCard({
     language === "kh" ? exercise.instructionsKh : exercise.instructionsEn;
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasEmbedError, setHasEmbedError] = useState(false);
 
-  const { embedSrc, watchUrl, thumbnail } = useMemo(() => {
-    if (!exercise.videoUrl)
-      return { embedSrc: null, watchUrl: null, thumbnail: null };
+  const { embedSrc, watchUrl, thumbnail, isRawVideo, youtubeId } =
+    useMemo(() => {
+      if (!exercise.videoUrl)
+        return {
+          embedSrc: null,
+          watchUrl: null,
+          thumbnail: null,
+          isRawVideo: false,
+          youtubeId: null,
+        };
+      try {
+        const u = new URL(exercise.videoUrl);
+
+        // YouTube Embed URL
+        if (
+          u.hostname.includes("youtube.com") &&
+          u.pathname.startsWith("/embed/")
+        ) {
+          const id = u.pathname.split("/embed/")[1]?.split("?")[0];
+          if (id) {
+            const search = u.search;
+            return {
+              embedSrc: `https://www.youtube.com/embed/${id}${search}`,
+              watchUrl: `https://www.youtube.com/watch?v=${id}${search}`,
+              thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+              isRawVideo: false,
+              youtubeId: id,
+            };
+          }
+        }
+
+        // YouTube Watch URL (v=...)
+        if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+          const id = u.searchParams.get("v")!;
+          const temp = new URL(exercise.videoUrl);
+          temp.searchParams.delete("v");
+          const search = temp.search;
+          return {
+            embedSrc: `https://www.youtube.com/embed/${id}${search}`,
+            watchUrl: `https://www.youtube.com/watch?v=${id}${search}`,
+            thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+            isRawVideo: false,
+            youtubeId: id,
+          };
+        }
+
+        // YouTube Short URL (shorts/...)
+        if (
+          u.hostname.includes("youtube.com") &&
+          u.pathname.startsWith("/shorts/")
+        ) {
+          const id = u.pathname.split("/shorts/")[1]?.split("?")[0];
+          if (id) {
+            const search = u.search;
+            return {
+              embedSrc: `https://www.youtube.com/embed/${id}${search}`,
+              watchUrl: `https://www.youtube.com/watch?v=${id}${search}`,
+              thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+              isRawVideo: false,
+              youtubeId: id,
+            };
+          }
+        }
+
+        // YouTube Shortened URL (youtu.be/...)
+        if (u.hostname === "youtu.be") {
+          const id = u.pathname.replace(/^\//, "").split("?")[0];
+          const search = u.search;
+          return {
+            embedSrc: `https://www.youtube.com/embed/${id}${search}`,
+            watchUrl: `https://www.youtube.com/watch?v=${id}${search}`,
+            thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+            isRawVideo: false,
+            youtubeId: id,
+          };
+        }
+
+        // Vimeo URL
+        if (u.hostname.includes("vimeo.com")) {
+          // player.vimeo.com/video/12345
+          if (u.pathname.startsWith("/video/")) {
+            const id = u.pathname
+              .split("/video/")[1]
+              ?.split("?")[0]
+              ?.split("/")[0];
+            if (id) {
+              const search = u.search;
+              return {
+                embedSrc: `https://player.vimeo.com/video/${id}${search}`,
+                watchUrl: `https://vimeo.com/${id}${search}`,
+                thumbnail: null,
+                isRawVideo: false,
+                youtubeId: null,
+              };
+            }
+          }
+          // vimeo.com/12345
+          const match = u.pathname.match(/^\/(\d+)/);
+          if (match) {
+            const id = match[1];
+            const search = u.search;
+            return {
+              embedSrc: `https://player.vimeo.com/video/${id}${search}`,
+              watchUrl: `https://vimeo.com/${id}${search}`,
+              thumbnail: null,
+              isRawVideo: false,
+              youtubeId: null,
+            };
+          }
+        }
+
+        // Direct Video Files (mp4, webm, ogg, mov)
+        const isDirectVideo = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(u.pathname);
+        if (isDirectVideo) {
+          return {
+            embedSrc: exercise.videoUrl,
+            watchUrl: exercise.videoUrl,
+            thumbnail: null,
+            isRawVideo: true,
+            youtubeId: null,
+          };
+        }
+
+        return {
+          embedSrc: null,
+          watchUrl: exercise.videoUrl,
+          thumbnail: null,
+          isRawVideo: false,
+          youtubeId: null,
+        };
+      } catch (e) {
+        return {
+          embedSrc: null,
+          watchUrl: exercise.videoUrl,
+          thumbnail: null,
+          isRawVideo: false,
+          youtubeId: null,
+        };
+      }
+    }, [exercise.videoUrl]);
+  const platformName = useMemo(() => {
+    if (!exercise.videoUrl) return "";
     try {
       const u = new URL(exercise.videoUrl);
-      if (
-        u.hostname.includes("youtube.com") &&
-        u.pathname.startsWith("/embed/")
-      ) {
-        const id = u.pathname.split("/embed/")[1];
-        return {
-          embedSrc: `https://www.youtube.com/embed/${id}`,
-          watchUrl: `https://www.youtube.com/watch?v=${id}`,
-          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-        };
+      if (u.hostname.includes("youtube.com") || u.hostname === "youtu.be") {
+        return "YouTube";
       }
-      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
-        const id = u.searchParams.get("v")!;
-        return {
-          embedSrc: `https://www.youtube.com/embed/${id}`,
-          watchUrl: `https://www.youtube.com/watch?v=${id}`,
-          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-        };
+      if (u.hostname.includes("vimeo.com")) {
+        return "Vimeo";
       }
-      if (u.hostname === "youtu.be") {
-        const id = u.pathname.replace(/^\//, "");
-        return {
-          embedSrc: `https://www.youtube.com/embed/${id}`,
-          watchUrl: `https://www.youtube.com/watch?v=${id}`,
-          thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-        };
-      }
-      return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
-    } catch (e) {
-      return { embedSrc: null, watchUrl: exercise.videoUrl, thumbnail: null };
+      return "external browser";
+    } catch {
+      return "new tab";
     }
   }, [exercise.videoUrl]);
 
@@ -474,11 +713,17 @@ function ExerciseCard({
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-lg leading-tight">{exercise.title}</CardTitle>
+              <CardTitle className="text-lg leading-tight">
+                {exercise.title}
+              </CardTitle>
               <p className="text-sm font-medium text-muted-foreground mt-1.5">
                 {intl.formatMessage(
                   { id: "client.today.prescription" },
-                  { sets: assignment.sets, reps: assignment.reps, dailyFrequency: assignment.dailyFrequency }
+                  {
+                    sets: assignment.sets,
+                    reps: assignment.reps,
+                    dailyFrequency: assignment.dailyFrequency,
+                  }
                 )}
               </p>
             </div>
@@ -486,8 +731,8 @@ function ExerciseCard({
               {assignment.status === "active"
                 ? intl.formatMessage({ id: "client.today.activeExercise" })
                 : assignment.status === "completed"
-                ? intl.formatMessage({ id: "client.history.completed" })
-                : assignment.status}
+                  ? intl.formatMessage({ id: "client.history.completed" })
+                  : assignment.status}
             </Badge>
           </div>
 
@@ -506,7 +751,10 @@ function ExerciseCard({
               >
                 {intl.formatMessage(
                   { id: "client.today.sessions" },
-                  { current: Math.min(todayLogCount ?? 0, dailyFrequency), total: dailyFrequency }
+                  {
+                    current: Math.min(todayLogCount ?? 0, dailyFrequency),
+                    total: dailyFrequency,
+                  }
                 )}
               </span>
             </div>
@@ -522,32 +770,105 @@ function ExerciseCard({
       <CardContent className="space-y-4 pb-4">
         {/* Video Container */}
         <div className="aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border/50 flex items-center justify-center">
-          {thumbnail ? (
-            <a
-              href={watchUrl ?? exercise.videoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full h-full relative"
-            >
-              <img
-                src={thumbnail}
-                alt={`Video thumbnail for ${exercise.title}`}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="rounded-full bg-white/90 p-3 shadow-lg">
+          {embedSrc ? (
+            hasEmbedError ? (
+              <div className="flex flex-col items-center justify-center text-center p-6 bg-slate-900 text-white w-full h-full">
+                <p className="mb-3 text-sm text-slate-300 font-medium px-4">
+                  This video cannot be played inline (embedding restricted).
+                </p>
+                <a
+                  href={watchUrl ?? exercise.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md shadow transition-colors"
+                >
+                  Watch on YouTube
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
-                    width="28"
-                    height="28"
-                    fill="#ff0000"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+              </div>
+            ) : isPlaying ? (
+              isRawVideo ? (
+                <video
+                  src={embedSrc}
+                  controls
+                  autoPlay
+                  className="w-full h-full object-cover"
+                />
+              ) : youtubeId ? (
+                <YouTubeInlinePlayer
+                  videoId={youtubeId}
+                  title={exercise.title}
+                  onEmbedError={() => setHasEmbedError(true)}
+                />
+              ) : (
+                <iframe
+                  src={embedSrc}
+                  title={exercise.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              )
+            ) : thumbnail ? (
+              <button
+                onClick={() => setIsPlaying(true)}
+                className="block w-full h-full relative text-left"
+              >
+                <img
+                  src={thumbnail}
+                  alt={`Video thumbnail for ${exercise.title}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors">
+                  <div className="rounded-full bg-white/90 p-3 shadow-lg hover:scale-105 transition-transform duration-200">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      width="28"
+                      height="28"
+                      fill="#ff0000"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsPlaying(true)}
+                className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 relative hover:from-slate-800 hover:to-slate-700 transition-colors"
+              >
+                <div className="rounded-full bg-white/20 p-4 mb-3 backdrop-blur-sm">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="36"
+                    height="36"
+                    fill="#ffffff"
                   >
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </div>
-              </div>
-            </a>
+                <span className="text-sm font-medium tracking-wide">
+                  Watch Video Tutorial
+                </span>
+              </button>
+            )
           ) : (
             <div className="flex flex-col items-center justify-center text-center p-6">
               <p className="mb-2 text-sm text-muted-foreground">
@@ -564,6 +885,57 @@ function ExerciseCard({
             </div>
           )}
         </div>
+        {/* External Watch Link */}
+        {exercise.videoUrl && (
+          <div className="flex justify-between items-center text-xs text-muted-foreground px-1 -mt-1">
+            <div className="flex items-center gap-2">
+              <span>
+                {hasEmbedError
+                  ? "Playback restricted"
+                  : isPlaying
+                    ? "Playing inline"
+                    : "Video tutorial"}
+              </span>
+              {(isPlaying || hasEmbedError) && (
+                <>
+                  <span>•</span>
+                  <button
+                    onClick={() => {
+                      setIsPlaying(false);
+                      setHasEmbedError(false);
+                    }}
+                    className="text-slate-500 hover:text-slate-800 hover:underline font-medium"
+                  >
+                    Close player
+                  </button>
+                </>
+              )}
+            </div>
+            <a
+              href={watchUrl ?? exercise.videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 hover:underline flex items-center gap-1 font-medium"
+            >
+              Open in {platformName}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
+        )}
 
         {/* Instructions */}
         <div className="bg-muted/40 rounded-lg p-3 sm:p-4">
@@ -585,8 +957,11 @@ function ExerciseCard({
         </button>
         {expanded && (
           <div className="bg-muted/30 rounded-lg p-4 space-y-4 text-sm mt-4">
-            <DurationBar startDate={assignment.startDate} endDate={assignment.endDate} />
-            
+            <DurationBar
+              startDate={assignment.startDate}
+              endDate={assignment.endDate}
+            />
+
             <div className="grid grid-cols-2 gap-y-3 gap-x-2 pt-2 border-t border-slate-200/60">
               <div>
                 <span className="text-muted-foreground text-xs">
@@ -621,7 +996,8 @@ function ExerciseCard({
                   {intl.formatMessage(
                     { id: "client.today.detail.dailyTarget" },
                     { dailyFrequency: assignment.dailyFrequency }
-                  )})
+                  )}
+                  )
                 </p>
               </div>
               <div>
@@ -648,8 +1024,8 @@ function ExerciseCard({
                   {assignment.status === "active"
                     ? intl.formatMessage({ id: "client.today.activeExercise" })
                     : assignment.status === "completed"
-                    ? intl.formatMessage({ id: "client.history.completed" })
-                    : assignment.status}
+                      ? intl.formatMessage({ id: "client.history.completed" })
+                      : assignment.status}
                 </p>
               </div>
               <div>
@@ -677,7 +1053,11 @@ function ExerciseCard({
             </Button>
             <Button
               onClick={() => {
-                if (confirm(intl.formatMessage({ id: "client.today.redoConfirm" }))) {
+                if (
+                  confirm(
+                    intl.formatMessage({ id: "client.today.redoConfirm" })
+                  )
+                ) {
                   setOpen(true);
                 }
               }}

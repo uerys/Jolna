@@ -24,7 +24,7 @@ function getPool(): Pool {
 
 export function query<T extends QueryResult = QueryResult>(
   text: string,
-  params: unknown[] = [],
+  params: unknown[] = []
 ): Promise<[T, FieldPacket[]]> {
   return getPool().query<T>(text, params);
 }

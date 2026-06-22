@@ -11,10 +11,14 @@ try {
 
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     try {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) as ServiceAccount;
+      serviceAccount = JSON.parse(
+        process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+      ) as ServiceAccount;
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e);
-      console.error(`[FirebaseAdmin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var: ${err}`);
+      console.error(
+        `[FirebaseAdmin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var: ${err}`
+      );
     }
   }
 
@@ -25,7 +29,9 @@ try {
         fs.readFileSync(serviceAccountPath, "utf-8")
       ) as ServiceAccount;
     } else {
-      console.warn(`[FirebaseAdmin] Service account file not found at: ${serviceAccountPath}`);
+      console.warn(
+        `[FirebaseAdmin] Service account file not found at: ${serviceAccountPath}`
+      );
     }
   }
 

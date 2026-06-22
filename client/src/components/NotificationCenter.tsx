@@ -67,7 +67,11 @@ export function NotificationCenter(props: Props) {
     if (href) navigate(href);
   };
 
-  const localizeNotification = (title: string, content: string, type: string) => {
+  const localizeNotification = (
+    title: string,
+    content: string,
+    type: string
+  ) => {
     const titleParts = title.split(" / ");
     const contentParts = content.split(" / ");
     const isKhmer = intl.locale === "km" || intl.locale === "kh";
@@ -83,40 +87,72 @@ export function NotificationCenter(props: Props) {
     let localizedContent = content;
 
     if (type === "assignment_created") {
-      localizedTitle = isKhmer ? "លំហាត់ថ្មីត្រូវបានផ្ដល់" : "New exercise assigned";
-      const match = content.match(/^(.+?)(?:\s+was assigned to you|\s+ត្រូវបានផ្ដល់ឲ្យអ្នកហើយ)/);
+      localizedTitle = isKhmer
+        ? "លំហាត់ថ្មីត្រូវបានផ្ដល់"
+        : "New exercise assigned";
+      const match = content.match(
+        /^(.+?)(?:\s+was assigned to you|\s+ត្រូវបានផ្ដល់ឲ្យអ្នកហើយ)/
+      );
       const exName = match ? match[1].trim() : "Exercise";
       localizedContent = isKhmer
         ? `${exName} ត្រូវបានផ្ដល់ឲ្យអ្នកហើយ។ សូមចូលទៅមើលក្នុងផ្ទាំងលំហាត់របស់អ្នក។`
         : `${exName} was assigned to you. Open your exercise list to review the plan.`;
     } else if (type === "assignment_status_updated") {
-      localizedTitle = isKhmer ? "ស្ថានភាពលំហាត់ត្រូវបានធ្វើបច្ចុប្បន្នភាព" : "Assignment status updated";
-      
+      localizedTitle = isKhmer
+        ? "ស្ថានភាពលំហាត់ត្រូវបានធ្វើបច្ចុប្បន្នភាព"
+        : "Assignment status updated";
+
       let exName = "Exercise";
       let statusRaw = "";
-      
+
       if (content.startsWith("ស្ថានភាពលំហាត់")) {
-        const exMatch = content.match(/^ស្ថានភាពលំហាត់\s+(.+?)\s+ត្រូវបានផ្លាស់ប្តូរ/i);
-        const statusMatch = content.match(/ត្រូវបានផ្លាស់ប្តូរទៅជា\s*(.+?)(?:\.|$|។)/i);
+        const exMatch = content.match(
+          /^ស្ថានភាពលំហាត់\s+(.+?)\s+ត្រូវបានផ្លាស់ប្តូរ/i
+        );
+        const statusMatch = content.match(
+          /ត្រូវបានផ្លាស់ប្តូរទៅជា\s*(.+?)(?:\.|$|។)/i
+        );
         exName = exMatch ? exMatch[1].trim() : "Exercise";
         statusRaw = statusMatch ? statusMatch[1].trim() : "";
       } else {
-        const exMatch = content.match(/^(.+?)(?:\s+was updated to|\s+status was updated to)/i);
-        const statusMatch = content.match(/(?:was updated to|status was updated to)\s*(.+?)(?:\.|$)/i);
+        const exMatch = content.match(
+          /^(.+?)(?:\s+was updated to|\s+status was updated to)/i
+        );
+        const statusMatch = content.match(
+          /(?:was updated to|status was updated to)\s*(.+?)(?:\.|$)/i
+        );
         exName = exMatch ? exMatch[1].trim() : "Exercise";
         statusRaw = statusMatch ? statusMatch[1].trim() : "";
       }
 
       let statusLabel = statusRaw;
       if (isKhmer) {
-        if (statusRaw.toLowerCase() === "active" || statusRaw === "សកម្ម") statusLabel = "សកម្ម";
-        else if (statusRaw.toLowerCase() === "completed" || statusRaw === "បានបញ្ចប់") statusLabel = "បានបញ្ចប់";
-        else if (statusRaw.toLowerCase() === "cancelled" || statusRaw === "បានលុបចោល") statusLabel = "បានលុបចោល";
+        if (statusRaw.toLowerCase() === "active" || statusRaw === "សកម្ម")
+          statusLabel = "សកម្ម";
+        else if (
+          statusRaw.toLowerCase() === "completed" ||
+          statusRaw === "បានបញ្ចប់"
+        )
+          statusLabel = "បានបញ្ចប់";
+        else if (
+          statusRaw.toLowerCase() === "cancelled" ||
+          statusRaw === "បានលុបចោល"
+        )
+          statusLabel = "បានលុបចោល";
         else statusLabel = "បានធ្វើបច្ចុប្បន្នភាព";
       } else {
-        if (statusRaw === "សកម្ម" || statusRaw.toLowerCase() === "active") statusLabel = "active";
-        else if (statusRaw === "បានបញ្ចប់" || statusRaw.toLowerCase() === "completed") statusLabel = "completed";
-        else if (statusRaw === "បានលុបចោល" || statusRaw.toLowerCase() === "cancelled") statusLabel = "cancelled";
+        if (statusRaw === "សកម្ម" || statusRaw.toLowerCase() === "active")
+          statusLabel = "active";
+        else if (
+          statusRaw === "បានបញ្ចប់" ||
+          statusRaw.toLowerCase() === "completed"
+        )
+          statusLabel = "completed";
+        else if (
+          statusRaw === "បានលុបចោល" ||
+          statusRaw.toLowerCase() === "cancelled"
+        )
+          statusLabel = "cancelled";
         else statusLabel = "updated";
       }
 
@@ -126,12 +162,16 @@ export function NotificationCenter(props: Props) {
     } else if (type === "new_message") {
       const match = title.match(/(?:New message from|សារថ្មីពី)\s*(.+)$/i);
       const senderName = match ? match[1].trim() : "Someone";
-      localizedTitle = isKhmer ? `សារថ្មីពី ${senderName}` : `New message from ${senderName}`;
+      localizedTitle = isKhmer
+        ? `សារថ្មីពី ${senderName}`
+        : `New message from ${senderName}`;
     } else if (type === "password_reset_requested") {
-      const match = title.match(/(?:Password Reset Request|ស្នើសុំកំណត់ពាក្យសម្ងាត់ឡើងវិញ)\s*-\s*(.+)$/i);
+      const match = title.match(
+        /(?:Password Reset Request|ស្នើសុំកំណត់ពាក្យសម្ងាត់ឡើងវិញ)\s*-\s*(.+)$/i
+      );
       const requesterName = match ? match[1].trim() : "User";
-      localizedTitle = isKhmer 
-        ? `ស្នើសុំកំណត់ពាក្យសម្ងាត់ឡើងវិញ - ${requesterName}` 
+      localizedTitle = isKhmer
+        ? `ស្នើសុំកំណត់ពាក្យសម្ងាត់ឡើងវិញ - ${requesterName}`
         : `Password Reset Request - ${requesterName}`;
     }
 
@@ -153,7 +193,11 @@ export function NotificationCenter(props: Props) {
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={12} className="w-96 p-0 overflow-hidden">
+      <PopoverContent
+        align="end"
+        sideOffset={12}
+        className="w-96 p-0 overflow-hidden"
+      >
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
             <div className="font-medium">

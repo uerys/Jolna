@@ -10,11 +10,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysqladmin ping -h localhost -ppassword --silent",
-        ]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -ppassword --silent"]
       interval: 5s
       timeout: 5s
       retries: 20

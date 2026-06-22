@@ -85,23 +85,17 @@
       "indexes": {
         "assignments_client_idx": {
           "name": "assignments_client_idx",
-          "columns": [
-            "clientId"
-          ],
+          "columns": ["clientId"],
           "isUnique": false
         },
         "assignments_physio_idx": {
           "name": "assignments_physio_idx",
-          "columns": [
-            "physiotherapistId"
-          ],
+          "columns": ["physiotherapistId"],
           "isUnique": false
         },
         "assignments_exercise_idx": {
           "name": "assignments_exercise_idx",
-          "columns": [
-            "exerciseId"
-          ],
+          "columns": ["exerciseId"],
           "isUnique": false
         }
       },
@@ -109,9 +103,7 @@
       "compositePrimaryKeys": {
         "assignments_id": {
           "name": "assignments_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -191,9 +183,7 @@
       "indexes": {
         "exercises_creator_idx": {
           "name": "exercises_creator_idx",
-          "columns": [
-            "createdBy"
-          ],
+          "columns": ["createdBy"],
           "isUnique": false
         }
       },
@@ -201,9 +191,7 @@
       "compositePrimaryKeys": {
         "exercises_id": {
           "name": "exercises_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -267,16 +255,12 @@
       "indexes": {
         "feedback_assignment_idx": {
           "name": "feedback_assignment_idx",
-          "columns": [
-            "assignmentId"
-          ],
+          "columns": ["assignmentId"],
           "isUnique": false
         },
         "feedback_client_idx": {
           "name": "feedback_client_idx",
-          "columns": [
-            "clientId"
-          ],
+          "columns": ["clientId"],
           "isUnique": false
         }
       },
@@ -284,9 +268,7 @@
       "compositePrimaryKeys": {
         "feedback_logs_id": {
           "name": "feedback_logs_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -404,16 +386,12 @@
       "indexes": {
         "users_role_idx": {
           "name": "users_role_idx",
-          "columns": [
-            "role"
-          ],
+          "columns": ["role"],
           "isUnique": false
         },
         "users_physio_idx": {
           "name": "users_physio_idx",
-          "columns": [
-            "physiotherapistId"
-          ],
+          "columns": ["physiotherapistId"],
           "isUnique": false
         }
       },
@@ -421,17 +399,13 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "users_openId_unique": {
           "name": "users_openId_unique",
-          "columns": [
-            "openId"
-          ]
+          "columns": ["openId"]
         }
       },
       "checkConstraint": {}

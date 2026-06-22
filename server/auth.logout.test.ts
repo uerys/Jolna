@@ -10,7 +10,10 @@ type CookieCall = {
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] } {
+function createAuthContext(): {
+  ctx: TrpcContext;
+  clearedCookies: CookieCall[];
+} {
   const clearedCookies: CookieCall[] = [];
 
   const user: AuthenticatedUser = {
@@ -50,9 +53,9 @@ describe("auth.logout", () => {
 
     expect(result).toEqual({ success: true });
     expect(clearedCookies).toHaveLength(2);
-    const sessionCookie = clearedCookies.find((c) => c.name === COOKIE_NAME);
+    const sessionCookie = clearedCookies.find(c => c.name === COOKIE_NAME);
     expect(sessionCookie).toBeDefined();
-    expect(clearedCookies.some((c) => c.name === "jolna_impersonate")).toBe(true);
+    expect(clearedCookies.some(c => c.name === "jolna_impersonate")).toBe(true);
     expect(sessionCookie?.options).toMatchObject({
       maxAge: -1,
       secure: true,

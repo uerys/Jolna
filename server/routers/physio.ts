@@ -35,7 +35,12 @@ import {
 } from "../db";
 import { getDb } from "../db";
 import { eq, and, sql } from "drizzle-orm";
-import { ASSIGNMENT_STATUSES, INJURY_TYPES, EXERCISE_TYPES, notifications } from "../../drizzle/schema";
+import {
+  ASSIGNMENT_STATUSES,
+  INJURY_TYPES,
+  EXERCISE_TYPES,
+  notifications,
+} from "../../drizzle/schema";
 
 const AssignmentStatusEnum = z.enum(ASSIGNMENT_STATUSES);
 const InjuryTypeEnum = z.enum(INJURY_TYPES);
@@ -105,7 +110,11 @@ export const physioRouter = router({
       })
     )
     .mutation(({ ctx, input }) =>
-      createExercise({ ...input, exerciseType: input.exerciseType ?? "other", createdBy: ctx.user.id })
+      createExercise({
+        ...input,
+        exerciseType: input.exerciseType ?? "other",
+        createdBy: ctx.user.id,
+      })
     ),
 
   updateExercise: physioProcedure
@@ -144,15 +153,18 @@ export const physioRouter = router({
 
   /* Clients & Assignments */
   listMyClients: physioProcedure.query(async ({ ctx }) => {
-    const clients = await listUsers({ role: "client", physiotherapistId: ctx.user.id });
+    const clients = await listUsers({
+      role: "client",
+      physiotherapistId: ctx.user.id,
+    });
     const dbInstance = await getDb();
-    if (!dbInstance) return clients.map((c) => ({ ...c, unreadChatCount: 0 }));
+    if (!dbInstance) return clients.map(c => ({ ...c, unreadChatCount: 0 }));
 
     const enriched = await Promise.all(
-      clients.map(async (client) => {
+      clients.map(async client => {
         const rows = await dbInstance
           .select({
-            total: sql<number>`count(*)`
+            total: sql<number>`count(*)`,
           })
           .from(notifications)
           .where(
@@ -184,7 +196,7 @@ export const physioRouter = router({
       if (dbInstance) {
         const rows = await dbInstance
           .select({
-            total: sql<number>`count(*)`
+            total: sql<number>`count(*)`,
           })
           .from(notifications)
           .where(
@@ -554,7 +566,6 @@ export const physioRouter = router({
 
       return { success: true };
     }),
-
 
   deleteCustomExerciseType: physioProcedure
     .input(z.object({ id: z.number().int().positive() }))

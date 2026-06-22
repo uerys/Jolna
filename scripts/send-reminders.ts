@@ -13,7 +13,9 @@ export async function runReminderJob() {
   }
 
   const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
-  console.log(`[ReminderJob] Running daily exercise reminder job for: ${todayStr}`);
+  console.log(
+    `[ReminderJob] Running daily exercise reminder job for: ${todayStr}`
+  );
 
   try {
     // 1. Get all active clients
@@ -22,13 +24,17 @@ export async function runReminderJob() {
       .from(users)
       .where(and(eq(users.role, "client"), eq(users.status, "active")));
 
-    console.log(`[ReminderJob] Found ${activeClients.length} active clients in the database.`);
+    console.log(
+      `[ReminderJob] Found ${activeClients.length} active clients in the database.`
+    );
 
     let sentCount = 0;
 
     for (const client of activeClients) {
       if (!client.email) {
-        console.warn(`[ReminderJob] Client ${client.name} (ID: ${client.id}) has no email address.`);
+        console.warn(
+          `[ReminderJob] Client ${client.name} (ID: ${client.id}) has no email address.`
+        );
         continue;
       }
       // 2. Check if client has active assignments today
@@ -51,7 +57,9 @@ export async function runReminderJob() {
         );
 
       if (activeTodayAssignments.length === 0) {
-        console.log(`[ReminderJob] Client ${client.name} (${client.email}) has no active exercises assigned for today.`);
+        console.log(
+          `[ReminderJob] Client ${client.name} (${client.email}) has no active exercises assigned for today.`
+        );
         continue;
       }
 
@@ -67,16 +75,24 @@ export async function runReminderJob() {
         );
 
       if (todayFeedback.length > 0) {
-        console.log(`[ReminderJob] Client ${client.name} (${client.email}) has already submitted feedback for today.`);
+        console.log(
+          `[ReminderJob] Client ${client.name} (${client.email}) has already submitted feedback for today.`
+        );
         continue;
       }
 
       // 4. Send email reminder
-      console.log(`[ReminderJob] Sending reminder email to ${client.name} (${client.email})...`);
-      const subject = "Daily Physical Therapy Exercise Reminder / សេចក្តីរំលឹកការហាត់ប្រាណប្រចាំថ្ងៃ";
+      console.log(
+        `[ReminderJob] Sending reminder email to ${client.name} (${client.email})...`
+      );
+      const subject =
+        "Daily Physical Therapy Exercise Reminder / សេចក្តីរំលឹកការហាត់ប្រាណប្រចាំថ្ងៃ";
 
       const exerciseListHtml = activeTodayAssignments
-        .map(a => `<li><strong>${a.exerciseTitle}</strong> — ធ្វើចំនួន ${a.sets} សិត x ${a.reps} ដង (${a.sets} sets x ${a.reps} reps)</li>`)
+        .map(
+          a =>
+            `<li><strong>${a.exerciseTitle}</strong> — ធ្វើចំនួន ${a.sets} សិត x ${a.reps} ដង (${a.sets} sets x ${a.reps} reps)</li>`
+        )
         .join("");
 
       const emailContent = `
@@ -109,11 +125,7 @@ export async function runReminderJob() {
         </div>
       `;
 
-      const result = await sendEmail(
-        client.email,
-        subject,
-        emailContent
-      );
+      const result = await sendEmail(client.email, subject, emailContent);
 
       if (result.success) {
         sentCount++;
@@ -121,18 +133,24 @@ export async function runReminderJob() {
           await createNotification({
             recipientId: client.id,
             type: "assignment_created",
-            title: "Daily Exercise Reminder / សេចក្តីរំលឹកការហាត់ប្រាណប្រចាំថ្ងៃ",
-            content: "Please log in to review and log your daily exercises. / សូមចូលគណនីរបស់អ្នកដើម្បីពិនិត្យ និងកត់ត្រាការហាត់ប្រាណ។",
+            title:
+              "Daily Exercise Reminder / សេចក្តីរំលឹកការហាត់ប្រាណប្រចាំថ្ងៃ",
+            content:
+              "Please log in to review and log your daily exercises. / សូមចូលគណនីរបស់អ្នកដើម្បីពិនិត្យ និងកត់ត្រាការហាត់ប្រាណ។",
             href: "/client/exercises",
           });
         } catch (dbErr) {
-          console.warn(`[ReminderJob] Failed to create database notification for ${client.name}:`, dbErr);
+          console.warn(
+            `[ReminderJob] Failed to create database notification for ${client.name}:`,
+            dbErr
+          );
         }
       }
-
     }
 
-    console.log(`[ReminderJob] Completed. Successfully sent ${sentCount} reminders.`);
+    console.log(
+      `[ReminderJob] Completed. Successfully sent ${sentCount} reminders.`
+    );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[ReminderJob] Execution failed:", msg);
@@ -150,7 +168,7 @@ const isMain = !!(
 if (isMain) {
   runReminderJob()
     .then(() => process.exit(0))
-    .catch((err) => {
+    .catch(err => {
       console.error(err);
       process.exit(1);
     });

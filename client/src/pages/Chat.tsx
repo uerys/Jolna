@@ -14,7 +14,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
-  type DocumentData
+  type DocumentData,
 } from "firebase/firestore";
 import {
   Send,
@@ -24,7 +24,7 @@ import {
   User,
   Pencil,
   Trash2,
-  X
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,9 @@ interface Message {
 }
 
 export default function Chat() {
-  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+  const { user, loading: authLoading } = useAuth({
+    redirectOnUnauthenticated: true,
+  });
   const params = useParams<{ clientId?: string }>();
   const [, navigate] = useLocation();
 
@@ -48,7 +50,7 @@ export default function Chat() {
 
   // 1. Fetch details of the counterpart in the conversation
   const physioProfile = trpc.settings.getMyProfile.useQuery(undefined, {
-    enabled: !authLoading && !!user && !isPhysio
+    enabled: !authLoading && !!user && !isPhysio,
   });
 
   const clientDetail = trpc.physio.getClientDetail.useQuery(
@@ -62,7 +64,7 @@ export default function Chat() {
     onSuccess: () => {
       void utils.notifications.unreadCount.invalidate();
       void utils.notifications.listMine.invalidate();
-    }
+    },
   });
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -71,7 +73,13 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // 2. Resolve target counterpart and chat room ID
-  let targetUser: { id: number; name: string | null; email: string | null; avatarUrl?: string | null; role: string } | null = null;
+  let targetUser: {
+    id: number;
+    name: string | null;
+    email: string | null;
+    avatarUrl?: string | null;
+    role: string;
+  } | null = null;
   let roomId = "";
 
   if (isPhysio && targetClientId && clientDetail.data) {
@@ -80,16 +88,20 @@ export default function Chat() {
       name: clientDetail.data.name,
       email: clientDetail.data.email,
       avatarUrl: clientDetail.data.avatarUrl,
-      role: "client"
+      role: "client",
     };
     roomId = `chat_client_${targetClientId}_physio_${user.id}`;
-  } else if (!isPhysio && user?.physiotherapistId && physioProfile.data?.physiotherapist) {
+  } else if (
+    !isPhysio &&
+    user?.physiotherapistId &&
+    physioProfile.data?.physiotherapist
+  ) {
     targetUser = {
       id: physioProfile.data.physiotherapist.id,
       name: physioProfile.data.physiotherapist.name,
       email: physioProfile.data.physiotherapist.email,
       avatarUrl: physioProfile.data.physiotherapist.avatarUrl,
-      role: "physiotherapist"
+      role: "physiotherapist",
     };
     roomId = `chat_client_${user.id}_physio_${user.physiotherapistId}`;
   }
@@ -103,9 +115,9 @@ export default function Chat() {
       orderBy("createdAt", "asc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, snapshot => {
       const msgs: Message[] = [];
-      snapshot.forEach((doc) => {
+      snapshot.forEach(doc => {
         const data = doc.data() as DocumentData;
         msgs.push({
           id: doc.id,
@@ -113,7 +125,7 @@ export default function Chat() {
           senderName: String(data.senderName),
           text: String(data.text),
           createdAt: data.createdAt as { toDate: () => Date } | null,
-          editedAt: data.editedAt as { toDate: () => Date } | null | undefined
+          editedAt: data.editedAt as { toDate: () => Date } | null | undefined,
         });
       });
       setMessages(msgs);
@@ -143,23 +155,26 @@ export default function Chat() {
       setInputText("");
 
       if (editingMessageId) {
-        await updateDoc(doc(db, "chats", roomId, "messages", editingMessageId), {
-          text: tempText.trim(),
-          editedAt: serverTimestamp()
-        });
+        await updateDoc(
+          doc(db, "chats", roomId, "messages", editingMessageId),
+          {
+            text: tempText.trim(),
+            editedAt: serverTimestamp(),
+          }
+        );
         setEditingMessageId(null);
       } else {
         await addDoc(collection(db, "chats", roomId, "messages"), {
           senderId: String(user.id),
           senderName: user.name ?? user.email ?? "User",
           text: tempText.trim(),
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
         });
 
         if (targetUser) {
           await sendChat.mutateAsync({
             recipientId: targetUser.id,
-            text: tempText
+            text: tempText,
           });
         }
       }
@@ -177,7 +192,8 @@ export default function Chat() {
 
   const handleDeleteMessage = async (msgId: string) => {
     if (!roomId) return;
-    if (!window.confirm("Are you sure you want to delete this message?")) return;
+    if (!window.confirm("Are you sure you want to delete this message?"))
+      return;
 
     try {
       await deleteDoc(doc(db, "chats", roomId, "messages", msgId));
@@ -189,14 +205,20 @@ export default function Chat() {
     const elements: React.ReactNode[] = [];
     let lastDateStr = "";
 
-    messages.forEach((msg) => {
+    messages.forEach(msg => {
       if (msg.createdAt) {
         const msgDate = msg.createdAt.toDate();
-        const formattedDate = msgDate.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+        const formattedDate = msgDate.toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+        });
         if (formattedDate !== lastDateStr) {
           lastDateStr = formattedDate;
           elements.push(
-            <div key={`date_${msg.id}`} className="flex justify-center my-4 select-none">
+            <div
+              key={`date_${msg.id}`}
+              className="flex justify-center my-4 select-none"
+            >
               <span className="bg-slate-800/10 text-slate-500 text-[10px] font-bold px-3.5 py-1 rounded-full uppercase tracking-wider">
                 {formattedDate}
               </span>
@@ -250,13 +272,17 @@ export default function Chat() {
                     isOwnMessage ? "text-[#8a997d]" : "text-muted-foreground"
                   }`}
                 >
-                  {msg.editedAt && <span className="text-[8px] opacity-75 mr-1 font-normal">edited</span>}
+                  {msg.editedAt && (
+                    <span className="text-[8px] opacity-75 mr-1 font-normal">
+                      edited
+                    </span>
+                  )}
                   <span>
                     {msg.createdAt
                       ? msg.createdAt.toDate().toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
-                          hour12: true
+                          hour12: true,
                         })
                       : "Sending..."}
                   </span>
@@ -266,11 +292,17 @@ export default function Chat() {
 
               {/* Telegram Custom Bubble Tail */}
               {isOwnMessage ? (
-                <svg className="absolute bottom-0 -right-[6px] w-[9px] h-[16px] text-[#eeffde] fill-current" viewBox="0 0 9 16">
+                <svg
+                  className="absolute bottom-0 -right-[6px] w-[9px] h-[16px] text-[#eeffde] fill-current"
+                  viewBox="0 0 9 16"
+                >
                   <path d="M0 16h9V0C9 0 7.5 12 0 16z" />
                 </svg>
               ) : (
-                <svg className="absolute bottom-0 -left-[6px] w-[9px] h-[16px] text-white fill-current filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.02)]" viewBox="0 0 9 16">
+                <svg
+                  className="absolute bottom-0 -left-[6px] w-[9px] h-[16px] text-white fill-current filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.02)]"
+                  viewBox="0 0 9 16"
+                >
                   <path d="M9 16H0V0C0 0 1.5 12 9 16z" />
                 </svg>
               )}
@@ -282,7 +314,9 @@ export default function Chat() {
 
     return elements;
   }, [messages, user?.id, editingMessageId]);
-  const isLoading = authLoading || (isPhysio ? clientDetail.isLoading : physioProfile.isLoading);
+  const isLoading =
+    authLoading ||
+    (isPhysio ? clientDetail.isLoading : physioProfile.isLoading);
 
   return (
     <AppShell>
@@ -290,7 +324,13 @@ export default function Chat() {
         {/* Back Button */}
         <div className="mb-4 flex items-center justify-between">
           <Button
-            onClick={() => navigate(isPhysio ? `/physio/clients/${targetClientId}` : "/client/exercises")}
+            onClick={() =>
+              navigate(
+                isPhysio
+                  ? `/physio/clients/${targetClientId}`
+                  : "/client/exercises"
+              )
+            }
             variant="ghost"
             size="sm"
             className="text-slate-500 hover:text-[#534AB7] hover:bg-indigo-50/50 transition-colors"
@@ -313,7 +353,9 @@ export default function Chat() {
             <div className="p-3 rounded-full bg-slate-100 text-slate-400 mb-3">
               <MessageSquare className="size-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">No designated partner found</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              No designated partner found
+            </h3>
             <p className="text-sm text-slate-500 max-w-sm mt-1">
               {isPhysio
                 ? "Could not locate this client's profile."
@@ -329,7 +371,7 @@ export default function Chat() {
                 <AvatarFallback className="font-bold text-sm bg-indigo-50 text-indigo-700">
                   {targetUser.name
                     ?.split(" ")
-                    .map((n) => n[0])
+                    .map(n => n[0])
                     .join("")
                     .toUpperCase()
                     .slice(0, 2) ?? "U"}
@@ -340,7 +382,9 @@ export default function Chat() {
                   {targetUser.name ?? targetUser.email}
                 </h3>
                 <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
-                  {targetUser.role === "physiotherapist" ? "Physiotherapist" : "Client"}
+                  {targetUser.role === "physiotherapist"
+                    ? "Physiotherapist"
+                    : "Client"}
                 </span>
               </div>
             </div>
@@ -352,8 +396,12 @@ export default function Chat() {
                   <div className="p-3 rounded-full bg-slate-50 text-slate-400 mb-2">
                     <MessageSquare className="size-5" />
                   </div>
-                  <p className="text-sm font-medium text-slate-800">No messages yet</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Send a message to start the conversation.</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    No messages yet
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Send a message to start the conversation.
+                  </p>
                 </div>
               ) : (
                 renderedMessages
@@ -381,12 +429,15 @@ export default function Chat() {
                 </button>
               </div>
             )}
-            <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2.5 bg-white">
+            <form
+              onSubmit={handleSendMessage}
+              className="border-t p-4 flex gap-2.5 bg-white"
+            >
               <input
                 type="text"
                 placeholder="Type a message..."
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={e => setInputText(e.target.value)}
                 disabled={sending}
                 className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm placeholder:text-slate-400 transition focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300 disabled:opacity-60"
               />

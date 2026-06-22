@@ -62,7 +62,8 @@ export const appRouter = router({
           });
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Your account is pending administrator approval. Please contact your administrator.",
+            message:
+              "Your account is pending administrator approval. Please contact your administrator.",
           });
         } catch (error) {
           if (error instanceof TRPCError) {
@@ -101,7 +102,8 @@ export const appRouter = router({
         if (!firebaseAuth) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Google OAuth via Firebase is not configured on the server.",
+            message:
+              "Google OAuth via Firebase is not configured on the server.",
           });
         }
 
@@ -160,13 +162,15 @@ export const appRouter = router({
         if (user.status === "inactive") {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Your account is pending administrator approval. Please contact your administrator.",
+            message:
+              "Your account is pending administrator approval. Please contact your administrator.",
           });
         }
         if (user.status === "suspended") {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Your account has been suspended. Please contact your administrator.",
+            message:
+              "Your account has been suspended. Please contact your administrator.",
           });
         }
 

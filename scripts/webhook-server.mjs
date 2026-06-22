@@ -4,19 +4,22 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 
 const PORT = Number.parseInt(process.env.WEBHOOK_PORT || "9000", 10);
 const HOST = process.env.WEBHOOK_HOST || "127.0.0.1";
 const SECRET = process.env.WEBHOOK_SECRET;
-const DEPLOY_SCRIPT = process.env.DEPLOY_SCRIPT || path.join(repoRoot, "scripts", "deploy.sh");
+const DEPLOY_SCRIPT =
+  process.env.DEPLOY_SCRIPT || path.join(repoRoot, "scripts", "deploy.sh");
 const EXPECTED_BRANCH = process.env.DEPLOY_BRANCH || "";
 const EXPECTED_EVENT = "push";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 const TELEGRAM_THREAD_ID = process.env.TELEGRAM_THREAD_ID || "";
 const TELEGRAM_MAX_MESSAGE_LENGTH = 3900;
-
 
 let deploying = false;
 let queued = false;
@@ -72,7 +75,11 @@ function telegramEnabled() {
 function telegramChunks(text) {
   const chunks = [];
 
-  for (let offset = 0; offset < text.length; offset += TELEGRAM_MAX_MESSAGE_LENGTH) {
+  for (
+    let offset = 0;
+    offset < text.length;
+    offset += TELEGRAM_MAX_MESSAGE_LENGTH
+  ) {
     chunks.push(text.slice(offset, offset + TELEGRAM_MAX_MESSAGE_LENGTH));
   }
 
@@ -125,7 +132,9 @@ function appendLog(log, chunk, stream = process.stdout) {
 function runDeploy() {
   if (deploying) {
     queued = true;
-    void sendTelegram(`[Jolna deploy] Deploy queued while another deploy is running.`);
+    void sendTelegram(
+      `[Jolna deploy] Deploy queued while another deploy is running.`
+    );
     return;
   }
 
@@ -154,12 +163,16 @@ function runDeploy() {
     deploying = false;
 
     const finishedAt = new Date();
-    const durationSeconds = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
+    const durationSeconds = Math.round(
+      (finishedAt.getTime() - startedAt.getTime()) / 1000
+    );
     const succeeded = code === 0 && signal === null;
     const status = succeeded ? "Succeeded" : "Failed";
     const exit = signal ? `signal ${signal}` : `exit code ${code}`;
 
-    console.log(`[webhook] deploy exited code=${code} signal=${signal ?? "none"}`);
+    console.log(
+      `[webhook] deploy exited code=${code} signal=${signal ?? "none"}`
+    );
     void sendTelegram(
       `[Jolna deploy] ${status}\nid: ${deployId}\nduration: ${durationSeconds}s\n${exit}\n\n${log.value || "(no output)"}`
     );
@@ -173,7 +186,9 @@ function runDeploy() {
   child.on("error", error => {
     deploying = false;
     console.error("[webhook] deploy failed to start", error);
-    void sendTelegram(`[Jolna deploy] Failed to start\nid: ${deployId}\n${String(error)}`);
+    void sendTelegram(
+      `[Jolna deploy] Failed to start\nid: ${deployId}\n${String(error)}`
+    );
   });
 }
 

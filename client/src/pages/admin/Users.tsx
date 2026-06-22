@@ -222,7 +222,8 @@ export default function AdminUsers() {
                     id:
                       roleFilter === "all"
                         ? "status.active.all"
-                        : roleFilter === "admin" || roleFilter === "physiotherapist"
+                        : roleFilter === "admin" ||
+                            roleFilter === "physiotherapist"
                           ? "status.active.staff"
                           : "status.active",
                   })}

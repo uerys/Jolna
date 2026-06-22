@@ -11,7 +11,10 @@ export function LanguageToggle() {
   const { language, setLanguage } = useI18n();
 
   return (
-    <Select value={language} onValueChange={(value) => setLanguage(value as "en" | "kh") }>
+    <Select
+      value={language}
+      onValueChange={value => setLanguage(value as "en" | "kh")}
+    >
       <SelectTrigger
         className="h-10 w-[84px] shrink-0 rounded-full border-2 border-blue-100 bg-white px-3 text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
         aria-label="Language"

@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error: unknown) {
     console.error("[Vercel Handler Error]:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    
+
     // Ensure we don't send two responses
     if (!res.writableEnded) {
       res.status(500).json({

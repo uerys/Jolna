@@ -1,7 +1,14 @@
 import { z } from "zod";
+import { validateCambodianPhoneNumber } from "../../shared/phoneValidation";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getUserById, listUsers, setLanguagePreference, updateUserFields, createNotification } from "../db";
+import {
+  getUserById,
+  listUsers,
+  setLanguagePreference,
+  updateUserFields,
+  createNotification,
+} from "../db";
 import { LANGUAGES } from "../../drizzle/schema";
 import { sdk } from "../_core/localAuth";
 import { sendEmail } from "../_core/mailer";
@@ -14,9 +21,14 @@ export const settingsRouter = router({
     const physiotherapist = ctx.user.physiotherapistId
       ? await getUserById(ctx.user.physiotherapistId)
       : null;
-    const assignedClients = ctx.user.role === "physiotherapist"
-      ? await listUsers({ role: "client", status: "active", physiotherapistId: ctx.user.id })
-      : [];
+    const assignedClients =
+      ctx.user.role === "physiotherapist"
+        ? await listUsers({
+            role: "client",
+            status: "active",
+            physiotherapistId: ctx.user.id,
+          })
+        : [];
 
     return {
       user: ctx.user,
@@ -29,7 +41,7 @@ export const settingsRouter = router({
             phoneNumber: physiotherapist.phoneNumber,
           }
         : null,
-      assignedClients: assignedClients.map((client) => ({
+      assignedClients: assignedClients.map(client => ({
         id: client.id,
         name: client.name,
         email: client.email,
@@ -43,7 +55,7 @@ export const settingsRouter = router({
   // Contacts for clinic admins so users (clients/physios) can reach out
   getAdminsContacts: protectedProcedure.query(async ({ ctx }) => {
     const admins = await listUsers({ role: "admin", status: "active" });
-    return admins.map((a) => ({
+    return admins.map(a => ({
       id: a.id,
       name: a.name,
       email: a.email,
@@ -55,9 +67,17 @@ export const settingsRouter = router({
     .input(
       z.object({
         name: z.string().min(1).max(120).optional(),
-        phoneNumber: z.string().min(1).max(32).nullable().optional(),
+        phoneNumber: z
+          .string()
+          .min(1)
+          .max(32)
+          .nullable()
+          .optional()
+          .refine(val => !val || validateCambodianPhoneNumber(val), {
+            message: "Invalid Cambodian phone number.",
+          }),
         avatarUrl: z.string().max(2_000_000).nullable().optional(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const patch: {
@@ -67,7 +87,8 @@ export const settingsRouter = router({
       } = {};
 
       if (input.name !== undefined) patch.name = input.name;
-      if (input.phoneNumber !== undefined) patch.phoneNumber = input.phoneNumber;
+      if (input.phoneNumber !== undefined)
+        patch.phoneNumber = input.phoneNumber;
       if (input.avatarUrl !== undefined) patch.avatarUrl = input.avatarUrl;
 
       return updateUserFields(ctx.user.id, patch);
@@ -122,7 +143,7 @@ export const settingsRouter = router({
     let emailSent = false;
     for (const admin of admins) {
       if (!admin.email) continue;
-      
+
       const emailContent = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e4e7ec; border-radius: 12px;">
           <h2 style="color: #534AB7;">Password Reset Request</h2>

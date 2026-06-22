@@ -58,7 +58,7 @@ export default function Home() {
         }
 
         setContent("");
-        setNotes((previous) => [data.note, ...previous]);
+        setNotes(previous => [data.note, ...previous]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create note");
       } finally {
@@ -74,7 +74,7 @@ export default function Home() {
       <form onSubmit={onSubmit} className="flex gap-2">
         <input
           value={content}
-          onChange={(event) => setContent(event.target.value)}
+          onChange={event => setContent(event.target.value)}
           placeholder="Write a note"
           className="flex-1 rounded-md border border-black/15 px-3 py-2"
         />
@@ -97,7 +97,7 @@ export default function Home() {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <ul className="space-y-2">
-        {notes.map((note) => (
+        {notes.map(note => (
           <li
             key={note.id}
             className="rounded-md border border-black/10 px-3 py-2"

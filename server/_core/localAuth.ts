@@ -40,7 +40,10 @@ class LocalAuthService {
     return ENV.appId || "local";
   }
 
-  private hashPassword(password: string, salt = crypto.randomBytes(16).toString("hex")) {
+  private hashPassword(
+    password: string,
+    salt = crypto.randomBytes(16).toString("hex")
+  ) {
     const derivedKey = crypto.scryptSync(password, salt, 64).toString("hex");
     return `scrypt$${salt}$${derivedKey}`;
   }
@@ -62,7 +65,7 @@ class LocalAuthService {
   }
   async createSessionToken(
     openId: string,
-    options: { expiresInMs?: number; name?: string } = {},
+    options: { expiresInMs?: number; name?: string } = {}
   ): Promise<string> {
     const issuedAt = Date.now();
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
@@ -80,7 +83,7 @@ class LocalAuthService {
   }
 
   async verifySession(
-    cookieValue: string | undefined | null,
+    cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
       return null;
@@ -107,10 +110,17 @@ class LocalAuthService {
     }
   }
 
-  async register(input: { name: string; email: string; phone?: string; password: string; role?: string }) {
+  async register(input: {
+    name: string;
+    email: string;
+    phone?: string;
+    password: string;
+    role?: string;
+  }) {
     const email = this.normalizeEmail(input.email);
     const openId = email;
-    const existingUser = (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(openId));
+    const existingUser =
+      (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(openId));
     if (existingUser) {
       throw ForbiddenError("An account with that email already exists.");
     }
@@ -142,7 +152,8 @@ class LocalAuthService {
 
   async login(input: { email: string; password: string }) {
     const email = this.normalizeEmail(input.email);
-    const user = (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(email));
+    const user =
+      (await db.getUserByEmail(email)) ?? (await db.getUserByOpenId(email));
     if (!user || !user.passwordHash) {
       throw ForbiddenError("Invalid email or password.");
     }
@@ -152,7 +163,9 @@ class LocalAuthService {
       throw ForbiddenError("Your account is pending administrator approval.");
     }
     if (user.status === "suspended") {
-      throw ForbiddenError("Your account has been suspended. Contact your administrator.");
+      throw ForbiddenError(
+        "Your account has been suspended. Contact your administrator."
+      );
     }
 
     if (!this.verifyPassword(input.password, user.passwordHash)) {

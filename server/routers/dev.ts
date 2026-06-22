@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import {
-  adminProcedure,
-  IMPERSONATE_COOKIE,
-  router,
-} from "../_core/trpc";
+import { adminProcedure, IMPERSONATE_COOKIE, router } from "../_core/trpc";
 import { listUsers } from "../db";
 
 const isDev = () => process.env.NODE_ENV !== "production";

@@ -1,12 +1,8 @@
 import { z } from "zod";
+import { validateCambodianPhoneNumber } from "../../shared/phoneValidation";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
-import {
-  deleteUser,
-  getUserById,
-  listUsers,
-  updateUserFields,
-} from "../db";
+import { deleteUser, getUserById, listUsers, updateUserFields } from "../db";
 import {
   ACCOUNT_STATUSES,
   INJURY_TYPES,
@@ -30,7 +26,7 @@ export const adminRouter = router({
           status: StatusEnum.optional(),
           physiotherapistId: z.number().int().positive().optional(),
         })
-        .optional(),
+        .optional()
     )
     .query(async ({ input }) => listUsers(input)),
 
@@ -58,15 +54,24 @@ export const adminRouter = router({
           injuryType: z.enum(INJURY_TYPES).nullable().optional(),
           nextClinicVisit: z.string().nullable().optional(),
         }),
-      }),
+      })
     )
     .mutation(async ({ input, ctx }) => {
       if (ctx.originalUser && ctx.originalUser.id === input.id) {
         if (input.patch.role && input.patch.role !== ctx.originalUser.role) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own role" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot change your own role",
+          });
         }
-        if (input.patch.status && input.patch.status !== ctx.originalUser.status) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot change your own status" });
+        if (
+          input.patch.status &&
+          input.patch.status !== ctx.originalUser.status
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot change your own status",
+          });
         }
       }
       const result = await updateUserFields(input.id, input.patch);
@@ -83,7 +88,7 @@ export const adminRouter = router({
   approveUser: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ input }) =>
-      updateUserFields(input.id, { status: "active" }),
+      updateUserFields(input.id, { status: "active" })
     ),
 
   suspendUser: adminProcedure
@@ -91,7 +96,10 @@ export const adminRouter = router({
     .mutation(async ({ input, ctx }) => {
       // Prevent an admin from suspending their own account
       if (ctx.originalUser && ctx.originalUser.id === input.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot suspend your own account" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot suspend your own account",
+        });
       }
       return updateUserFields(input.id, { status: "suspended" });
     }),
@@ -100,7 +108,10 @@ export const adminRouter = router({
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.originalUser && ctx.originalUser.id === input.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete your own account" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete your own account",
+        });
       }
       await deleteUser(input.id);
       return { success: true };
@@ -131,12 +142,12 @@ export const adminRouter = router({
       z.object({
         clientId: z.number().int().positive(),
         physiotherapistId: z.number().int().positive().nullable(),
-      }),
+      })
     )
     .mutation(async ({ input }) =>
       updateUserFields(input.clientId, {
         physiotherapistId: input.physiotherapistId,
-      }),
+      })
     ),
 
   createUser: adminProcedure
@@ -144,11 +155,17 @@ export const adminRouter = router({
       z.object({
         name: z.string().min(1).max(120),
         email: z.string().email().max(320),
-        phoneNumber: z.string().min(1).max(32),
+        phoneNumber: z
+          .string()
+          .min(1)
+          .max(32)
+          .refine(validateCambodianPhoneNumber, {
+            message: "Invalid Cambodian phone number.",
+          }),
         password: z.string().min(8),
         role: RoleEnum.default("client"),
         status: StatusEnum.default("active"),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       const result = await sdk.register({
