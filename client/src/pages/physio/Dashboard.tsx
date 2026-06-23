@@ -52,6 +52,12 @@ import {
   AlertCircle,
   Users,
   MessageSquare,
+  Calendar,
+  Clock,
+  Check,
+  ClipboardList,
+  Activity,
+  Dumbbell,
 } from "lucide-react";
 
 export default function PhysioDashboard() {
@@ -147,6 +153,29 @@ export default function PhysioDashboard() {
 /* ---------- Clients tab ---------- */
 
 function ClientsTab() {
+  const intl = useIntl();
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      return intl.formatDate(d, {
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return "P";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
+  };
+
   const clients = trpc.physio.listMyClients.useQuery(undefined, {
     refetchInterval: 5000,
   });
@@ -231,6 +260,22 @@ function ClientsTab() {
           ? Math.round(totalProgressPercent / activeSessions.length)
           : null;
 
+      let earliestStartDate: string | null = null;
+      let latestEndDate: string | null = null;
+      if (activeSessions.length > 0) {
+        activeSessions.forEach(a => {
+          if (
+            !earliestStartDate ||
+            a.assignment.startDate < earliestStartDate
+          ) {
+            earliestStartDate = a.assignment.startDate;
+          }
+          if (!latestEndDate || a.assignment.endDate > latestEndDate) {
+            latestEndDate = a.assignment.endDate;
+          }
+        });
+      }
+
       // Relative timestamp for last log (using new Date conversion to avoid NaN)
       let lastLogLabel = "No logs yet";
       let diffDays: number | null = null;
@@ -261,12 +306,79 @@ function ClientsTab() {
       const isUrgent = isActive && latestPain !== null && latestPain >= 7;
       const isOnTrack = isActive && !isUrgent;
 
-      const hasActiveAssignments = activeSessions.length > 0;
-      const loggedRecently = diffDays !== null && diffDays <= 1;
-      const isComplianceOnTrack =
-        isActive && hasActiveAssignments && loggedRecently;
-      const isComplianceMissing =
-        isActive && hasActiveAssignments && !loggedRecently;
+      const activeSessionsToday = cAssignments.filter(a => {
+        return (
+          a.assignment.status === "active" &&
+          a.assignment.startDate <= todayStr &&
+          a.assignment.endDate >= todayStr
+        );
+      });
+
+      // Count how many of these active assignments have been logged today
+      const completedTodayCount = activeSessionsToday.filter(a => {
+        const aLogs = cLogs.filter(
+          f => f.feedback.assignmentId === a.assignment.id
+        );
+        return aLogs.some(f => {
+          const logDate = new Date(f.feedback.submittedAt);
+          const date1 = new Date(todayStr + "T00:00:00");
+          const date2 = new Date(
+            logDate.getFullYear(),
+            logDate.getMonth(),
+            logDate.getDate()
+          );
+          const diff = Math.floor(
+            (date1.getTime() - date2.getTime()) / (24 * 60 * 60 * 1000)
+          );
+          return diff === 0;
+        });
+      }).length;
+
+      const totalActiveTodayCount = activeSessionsToday.length;
+
+      let isComplianceOnTrack = isActive && activeSessionsToday.length > 0;
+      let isComplianceMissing = false;
+
+      if (isActive && activeSessionsToday.length > 0) {
+        // Check compliance for each active assignment today
+        for (const a of activeSessionsToday) {
+          const aLogs = cLogs.filter(
+            f => f.feedback.assignmentId === a.assignment.id
+          );
+          const sortedALogs = [...aLogs].sort(
+            (x, y) =>
+              new Date(y.feedback.submittedAt).getTime() -
+              new Date(x.feedback.submittedAt).getTime()
+          );
+          const latestLog = sortedALogs[0];
+          if (latestLog) {
+            const logDate = new Date(latestLog.feedback.submittedAt);
+            const date1 = new Date(todayStr + "T00:00:00");
+            const date2 = new Date(
+              logDate.getFullYear(),
+              logDate.getMonth(),
+              logDate.getDate()
+            );
+            const diff = Math.floor(
+              (date1.getTime() - date2.getTime()) / (24 * 60 * 60 * 1000)
+            );
+            if (diff > 1) {
+              isComplianceOnTrack = false;
+              isComplianceMissing = true;
+            }
+          } else {
+            // Never logged
+            // If it started today, it's not marked as missing yet. Otherwise, it is missing.
+            if (a.assignment.startDate !== todayStr) {
+              isComplianceOnTrack = false;
+              isComplianceMissing = true;
+            }
+          }
+        }
+      } else {
+        isComplianceOnTrack = false;
+        isComplianceMissing = false;
+      }
 
       let category: "urgent" | "ontrack" | "suspended" = "suspended";
       if (!isActive) category = "suspended";
@@ -279,6 +391,8 @@ function ClientsTab() {
         latestPain,
         progressRate,
         activeCount: activeSessions.length,
+        completedTodayCount,
+        totalActiveTodayCount,
         alertMsg,
         category,
         isUrgent,
@@ -286,6 +400,8 @@ function ClientsTab() {
         isComplianceOnTrack,
         isComplianceMissing,
         unreadChatCount: c.unreadChatCount ?? 0,
+        earliestStartDate,
+        latestEndDate,
       };
     });
   }, [clients.data, assignments.data, feedback.data]);
@@ -579,31 +695,52 @@ function ClientsTab() {
             const isPending = data.client.status === "inactive";
             const isInactive = isSuspended || isPending;
 
-            const painBg =
-              isInactive || data.latestPain === null
-                ? "bg-[#F2F4F7] text-[#98A2B3] border-[#E4E7EC]"
-                : data.latestPain >= 7
-                  ? "bg-rose-50 text-rose-600 border-rose-200"
-                  : data.latestPain >= 4
-                    ? "bg-amber-50 text-amber-600 border-amber-200"
-                    : "bg-emerald-50 text-emerald-600 border-emerald-200";
-
-            const progressColor =
-              data.progressRate !== null && data.progressRate < 50
-                ? "#F59E0B"
-                : "#534AB7";
-
             const cardAccent =
               data.category === "urgent"
                 ? "border-l-rose-500"
-                : data.category === "ontrack"
-                  ? "border-l-emerald-500"
-                  : "border-l-[#D0D5DD]";
+                : data.isComplianceMissing
+                  ? "border-l-amber-500"
+                  : data.category === "ontrack"
+                    ? "border-l-emerald-500"
+                    : "border-l-[#D0D5DD]";
+
+            // Progress status variables
+            const isCompletedAll =
+              data.totalActiveTodayCount > 0 &&
+              data.completedTodayCount === data.totalActiveTodayCount;
+            const isCompletedSome =
+              data.totalActiveTodayCount > 0 &&
+              data.completedTodayCount > 0 &&
+              !isCompletedAll;
+
+            let todayBadgeClass = "";
+            let todayIcon = null;
+
+            if (isInactive) {
+              todayBadgeClass = "bg-slate-50 text-slate-400 border-slate-200";
+              todayIcon = null;
+            } else if (data.totalActiveTodayCount > 0) {
+              if (isCompletedAll) {
+                todayBadgeClass =
+                  "bg-emerald-50 text-emerald-700 border-emerald-200";
+                todayIcon = <Check className="size-3.5 text-emerald-600" />;
+              } else if (isCompletedSome) {
+                todayBadgeClass =
+                  "bg-indigo-50 text-indigo-700 border-indigo-200";
+                todayIcon = <Activity className="size-3.5 text-indigo-600" />;
+              } else {
+                todayBadgeClass = "bg-slate-50 text-slate-600 border-slate-200";
+                todayIcon = <Clock className="size-3.5 text-slate-400" />;
+              }
+            } else {
+              todayBadgeClass = "bg-slate-50 text-slate-500 border-slate-200";
+              todayIcon = <ClipboardList className="size-3.5 text-slate-400" />;
+            }
 
             return (
               <div
                 key={data.client.id}
-                className={`client-card-enter bg-white border border-[#E4E7EC] border-l-[3px] ${cardAccent} rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 group cursor-pointer ${
+                className={`client-card-enter bg-white border border-[#E4E7EC] border-l-[4px] ${cardAccent} rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 group cursor-pointer ${
                   isInactive ? "opacity-80" : ""
                 }`}
                 style={{ animationDelay: `${idx * 30}ms` }}
@@ -613,19 +750,44 @@ function ClientsTab() {
                   className="block"
                 >
                   <div className="px-5 py-4">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                      {/* ── Col 1: Identity ── */}
-                      <div className="flex-1 min-w-0 md:max-w-[220px]">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-semibold text-[#101828] text-[15px] leading-snug tracking-tight truncate">
-                            {data.client.name ?? `Patient #${data.client.id}`}
-                          </span>
-                          {data.unreadChatCount > 0 && (
-                            <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
-                              <MessageSquare className="size-3" />
-                              <span>{data.unreadChatCount}</span>
+                    <div className="flex flex-col md:flex-row md:items-center gap-6">
+                      {/* ── Col 1: Identity & Avatar ── */}
+                      <div className="flex-1 min-w-0 md:max-w-[240px]">
+                        <div className="flex items-center gap-3">
+                          {/* Initials Avatar */}
+                          <div
+                            className={`size-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border shadow-xs ${
+                              isInactive
+                                ? "bg-slate-50 border-slate-200 text-slate-400"
+                                : "bg-slate-50 border-slate-200 text-slate-700 font-sans"
+                            }`}
+                          >
+                            {getInitials(data.client.name)}
+                          </div>
+                          {/* Identity details */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <span className="font-bold text-[#101828] text-[15px] leading-snug tracking-tight truncate">
+                                {data.client.name ??
+                                  `Patient #${data.client.id}`}
+                              </span>
+                              {data.unreadChatCount > 0 && (
+                                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                                  <MessageSquare className="size-3" />
+                                  <span>{data.unreadChatCount}</span>
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-[#667085] truncate block">
+                              {data.client.email ?? "—"}
                             </span>
-                          )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── Col 2: Badges & Last Log Info ── */}
+                      <div className="md:w-44 flex flex-col gap-1 shrink-0">
+                        <div className="flex flex-wrap gap-1.5">
                           {isSuspended ? (
                             <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#F2F4F7] text-[#667085] border border-[#E4E7EC]">
                               Suspended
@@ -658,86 +820,130 @@ function ClientsTab() {
                             </>
                           )}
                         </div>
-                        <span className="text-xs text-[#667085] truncate block leading-relaxed">
-                          {data.client.email ?? "—"}
-                        </span>
-                        {!isSuspended && (
+                        {!isInactive && (
                           <span
-                            className={`text-[10px] font-medium mt-0.5 block ${data.isComplianceMissing ? "text-amber-600 font-semibold" : "text-[#98A2B3]"}`}
+                            className={`text-[10px] font-semibold tracking-wide uppercase mt-0.5 ${data.isComplianceMissing ? "text-amber-600" : "text-[#98A2B3]"}`}
                           >
                             {data.lastLogLabel}
                           </span>
                         )}
                       </div>
 
-                      {/* ── Col 2: Pain Level ── */}
-                      <div className="flex items-center gap-2 md:w-24 md:justify-center">
-                        {data.activeCount > 0 ? (
-                          <div
-                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm font-semibold ${painBg}`}
-                          >
-                            {data.latestPain !== null &&
-                              data.latestPain >= 7 && (
-                                <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
-                              )}
-                            <span className="tabular-nums">
-                              {data.latestPain !== null
-                                ? `${data.latestPain}/10`
-                                : "—"}
-                            </span>
-                          </div>
-                        ) : (
+                      {/* ── Col 3: Exercises Completed Today ── */}
+                      <div className="flex items-center md:w-56 shrink-0">
+                        {isInactive ? (
                           <div className="h-9 w-9 flex items-center justify-center bg-[#F2F4F7] text-[#98A2B3] rounded-lg border border-[#E4E7EC]">
                             <span className="text-sm font-bold">—</span>
+                          </div>
+                        ) : (
+                          <div
+                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold shadow-xs ${todayBadgeClass}`}
+                          >
+                            {todayIcon}
+                            <span className="tabular-nums">
+                              {data.totalActiveTodayCount > 0 ? (
+                                <FormattedMessage
+                                  id="physio.dashboard.exercisesCompletedToday"
+                                  defaultMessage="{completed} / {total} {completed, plural, =1 {Exercise} other {Exercises}} Completed Today"
+                                  values={{
+                                    completed: data.completedTodayCount,
+                                    total: data.totalActiveTodayCount,
+                                  }}
+                                />
+                              ) : (
+                                <FormattedMessage
+                                  id="physio.dashboard.noExercisesToday"
+                                  defaultMessage="No exercises today"
+                                />
+                              )}
+                            </span>
                           </div>
                         )}
                       </div>
 
-                      {/* ── Col 3: Progress ── */}
-                      <div className="md:w-36">
-                        <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1.5 font-sans">
-                          Progress
-                        </span>
-                        {data.progressRate !== null ? (
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-sm font-semibold text-[#101828] tabular-nums w-9 shrink-0">
-                              {data.progressRate}%
-                            </span>
-                            <div className="progress-track flex-1">
+                      {/* ── Col 4: Treatment Period ── */}
+                      <div className="md:w-56 flex-shrink-0 shrink-0">
+                        {data.earliestStartDate &&
+                        data.latestEndDate &&
+                        data.progressRate !== null ? (
+                          <div className="space-y-1.5">
+                            {/* Dates row */}
+                            <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="size-3.5 text-[#98A2B3]" />
+                                <span className="tabular-nums">
+                                  {formatDate(data.earliestStartDate)}
+                                </span>
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="size-3.5 text-[#98A2B3]" />
+                                <span className="tabular-nums">
+                                  {formatDate(data.latestEndDate)}
+                                </span>
+                              </span>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div
+                              className="progress-track"
+                              role="progressbar"
+                              aria-valuenow={data.progressRate}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                            >
                               <div
                                 className="progress-fill"
                                 style={{
                                   width: `${data.progressRate}%`,
-                                  background: progressColor,
+                                  background: "#6366F1",
                                 }}
+                              />
+                            </div>
+
+                            {/* Completion percent text */}
+                            <div className="flex justify-end text-[10px] text-[#98A2B3] font-semibold tracking-wide uppercase leading-none">
+                              <FormattedMessage
+                                id="client.history.completePercent"
+                                defaultMessage="{percent}% Complete"
+                                values={{ percent: data.progressRate }}
                               />
                             </div>
                           </div>
                         ) : (
                           <span className="text-xs text-[#98A2B3] font-medium font-sans">
-                            No active sessions
+                            <FormattedMessage
+                              id="physio.dashboard.noActiveSessions"
+                              defaultMessage="No active sessions"
+                            />
                           </span>
                         )}
                       </div>
 
-                      {/* ── Col 4: Active Exercises ── */}
-                      <div className="md:w-32">
+                      {/* ── Col 5: Active Exercises ── */}
+                      <div className="md:w-32 shrink-0">
                         <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest block mb-1">
                           Active Exercises
                         </span>
-                        <span className="text-sm font-semibold text-[#344054]">
-                          {data.activeCount}
-                          <span className="font-normal text-[#667085] ml-1">
-                            {data.activeCount !== 1 ? "exercises" : "exercise"}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="p-1 rounded bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                            <Dumbbell className="size-3.5 text-[#667085]" />
+                          </div>
+                          <span className="text-sm font-semibold text-[#344054]">
+                            {data.activeCount}
+                            <span className="font-normal text-[#667085] ml-1">
+                              {data.activeCount !== 1
+                                ? "exercises"
+                                : "exercise"}
+                            </span>
                           </span>
-                        </span>
+                        </div>
                       </div>
 
                       {/* ── CTA ── */}
                       <div className="flex items-center justify-end shrink-0 md:ml-auto">
-                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#534AB7] group-hover:text-[#534AB7]/90 transition-colors">
-                          View details
-                          <ChevronRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-[#534AB7] bg-white group-hover:bg-[#534AB7] group-hover:text-white group-hover:border-[#534AB7] transition-all duration-200 shadow-xs">
+                          <span>View details</span>
+                          <ChevronRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
                         </span>
                       </div>
                     </div>
@@ -1026,6 +1232,19 @@ function ExerciseDialog({
 
 function AssignmentsTab() {
   const intl = useIntl();
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      return intl.formatDate(d, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const assignments = trpc.physio.listMyAssignments.useQuery();
   const clients = trpc.physio.listMyClients.useQuery();
   const exercises = trpc.physio.listMyExercises.useQuery();
@@ -1363,21 +1582,30 @@ function AssignmentsTab() {
                 <TableCell className="w-[8%] text-center">
                   {row.assignment.reps}
                 </TableCell>
-                <TableCell className="w-[25%] text-sm text-slate-500 font-mono">
-                  {row.assignment.startDate} → {row.assignment.endDate}
+                <TableCell className="w-[25%] text-xs text-slate-500 font-medium">
+                  {formatDate(row.assignment.startDate)} –{" "}
+                  {formatDate(row.assignment.endDate)}
                 </TableCell>
                 <TableCell className="w-[10%] text-center">
                   <Badge
                     variant="outline"
                     className={
                       row.assignment.status === "active"
-                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50/80 border font-semibold text-[10px] rounded-full"
-                        : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-100 border font-semibold text-[10px] rounded-full"
+                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50/80 font-bold text-[10px] rounded-full uppercase tracking-wide px-2.5 py-0.5"
+                        : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 font-bold text-[10px] rounded-full uppercase tracking-wide px-2.5 py-0.5"
                     }
                   >
-                    {row.assignment.status === "active"
-                      ? "Active Exercise"
-                      : row.assignment.status}
+                    {row.assignment.status === "active" ? (
+                      <FormattedMessage
+                        id="client.today.activeExercise"
+                        defaultMessage="Active Exercise"
+                      />
+                    ) : (
+                      <FormattedMessage
+                        id="client.history.completed"
+                        defaultMessage="Completed"
+                      />
+                    )}
                   </Badge>
                 </TableCell>
                 <TableCell className="w-[4%] text-right">
@@ -1385,7 +1613,15 @@ function AssignmentsTab() {
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      if (confirm("Delete assignment?"))
+                      if (
+                        confirm(
+                          intl.formatMessage({
+                            id: "physio.assign.deleteConfirm",
+                            defaultMessage:
+                              "Are you sure you want to delete this assignment?",
+                          })
+                        )
+                      )
                         del.mutate({ id: row.assignment.id });
                     }}
                   >

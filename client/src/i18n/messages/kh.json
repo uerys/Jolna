@@ -94,6 +94,10 @@
   "physio.dashboard.compliance.missed": "ខកខានផ្ដល់ព័ត៌មាន",
   "physio.dashboard.badge.ontrack": "តាមកាលវិភាគ",
   "physio.dashboard.badge.missed": "ខកខានផ្ដល់ព័ត៌មាន",
+  "physio.dashboard.exercisesCompletedToday": "បានបញ្ចប់លំហាត់ប្រាណ {completed}/{total} ថ្ងៃនេះ",
+  "physio.dashboard.noExercisesToday": "គ្មានលំហាត់ប្រាណថ្ងៃនេះទេ",
+  "physio.dashboard.treatmentPeriod": "រយៈពេលព្យាបាល",
+  "physio.dashboard.noActiveSessions": "គ្មានវគ្គសកម្មទេ",
   "physio.tab.clients": "អ្នកជំងឺរបស់ខ្ញុំ",
   "physio.tab.exercises": "គំរូលំហាត់ប្រាណ",
   "physio.tab.assignments": "កិច្ចការបានផ្ដល់",
@@ -128,6 +132,7 @@
   "physio.assign.endDate": "ថ្ងៃបញ្ចប់",
   "physio.assign.submit": "ផ្ដល់",
   "physio.assign.created": "បានផ្ដល់កិច្ចការ។",
+  "physio.assign.deleteConfirm": "តើអ្នកប្រាកដជាចង់លុបកិច្ចការដែលបានផ្ដល់ជូននេះមែនទេ?",
 
   "physio.monitor.painTrend": "គន្លងនៃការឈឺចាប់",
   "physio.monitor.completion": "អត្រាបញ្ចប់",

@@ -94,6 +94,10 @@
   "physio.dashboard.compliance.missed": "Missing submissions",
   "physio.dashboard.badge.ontrack": "On track",
   "physio.dashboard.badge.missed": "Missed submission",
+  "physio.dashboard.exercisesCompletedToday": "{completed}/{total} {completed, plural, =1 {Exercise} other {Exercises}} Completed Today",
+  "physio.dashboard.noExercisesToday": "No exercises today",
+  "physio.dashboard.treatmentPeriod": "Treatment Period",
+  "physio.dashboard.noActiveSessions": "No active sessions",
   "physio.tab.clients": "My patients",
   "physio.tab.exercises": "Exercise templates",
   "physio.tab.assignments": "Assignments",
@@ -128,6 +132,7 @@
   "physio.assign.endDate": "End date",
   "physio.assign.submit": "Assign",
   "physio.assign.created": "Assignment created.",
+  "physio.assign.deleteConfirm": "Are you sure you want to delete this assignment?",
 
   "physio.monitor.painTrend": "Pain trajectory",
   "physio.monitor.completion": "Completion rate",
