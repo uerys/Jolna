@@ -263,8 +263,10 @@ function ClientsTab() {
 
       const hasActiveAssignments = activeSessions.length > 0;
       const loggedRecently = diffDays !== null && diffDays <= 1;
-      const isComplianceOnTrack = isActive && hasActiveAssignments && loggedRecently;
-      const isComplianceMissing = isActive && hasActiveAssignments && !loggedRecently;
+      const isComplianceOnTrack =
+        isActive && hasActiveAssignments && loggedRecently;
+      const isComplianceMissing =
+        isActive && hasActiveAssignments && !loggedRecently;
 
       let category: "urgent" | "ontrack" | "suspended" = "suspended";
       if (!isActive) category = "suspended";
@@ -342,7 +344,13 @@ function ClientsTab() {
     });
 
     return list;
-  }, [clientDataList, triageFilter, searchQuery, clientStatusFilter, complianceFilter]);
+  }, [
+    clientDataList,
+    triageFilter,
+    searchQuery,
+    clientStatusFilter,
+    complianceFilter,
+  ]);
 
   if (isLoading) {
     return (
@@ -443,7 +451,10 @@ function ClientsTab() {
         {/* Compliance filter */}
         <div className="w-full md:w-auto shrink-0 flex items-center gap-2">
           <span className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-widest shrink-0">
-            <FormattedMessage id="physio.dashboard.filter.compliance" defaultMessage="Compliance" />
+            <FormattedMessage
+              id="physio.dashboard.filter.compliance"
+              defaultMessage="Compliance"
+            />
           </span>
           <Select
             value={complianceFilter}
@@ -454,13 +465,22 @@ function ClientsTab() {
             </SelectTrigger>
             <SelectContent className="bg-white border border-[#E4E7EC] text-xs shadow-lg rounded-xl">
               <SelectItem value="all">
-                <FormattedMessage id="physio.dashboard.compliance.all" defaultMessage="All compliance" />
+                <FormattedMessage
+                  id="physio.dashboard.compliance.all"
+                  defaultMessage="All compliance"
+                />
               </SelectItem>
               <SelectItem value="ontrack">
-                <FormattedMessage id="physio.dashboard.compliance.ontrack" defaultMessage="On track" />
+                <FormattedMessage
+                  id="physio.dashboard.compliance.ontrack"
+                  defaultMessage="On track"
+                />
               </SelectItem>
               <SelectItem value="missed">
-                <FormattedMessage id="physio.dashboard.compliance.missed" defaultMessage="Missing submissions" />
+                <FormattedMessage
+                  id="physio.dashboard.compliance.missed"
+                  defaultMessage="Missing submissions"
+                />
               </SelectItem>
             </SelectContent>
           </Select>
@@ -518,9 +538,15 @@ function ClientsTab() {
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
               Compliance:{" "}
               {complianceFilter === "ontrack" ? (
-                <FormattedMessage id="physio.dashboard.compliance.ontrack" defaultMessage="On track" />
+                <FormattedMessage
+                  id="physio.dashboard.compliance.ontrack"
+                  defaultMessage="On track"
+                />
               ) : (
-                <FormattedMessage id="physio.dashboard.compliance.missed" defaultMessage="Missing submissions" />
+                <FormattedMessage
+                  id="physio.dashboard.compliance.missed"
+                  defaultMessage="Missing submissions"
+                />
               )}
               <button
                 onClick={() => setComplianceFilter("all")}
@@ -615,12 +641,18 @@ function ClientsTab() {
                               </span>
                               {data.isComplianceOnTrack && (
                                 <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <FormattedMessage id="physio.dashboard.badge.ontrack" defaultMessage="On Track" />
+                                  <FormattedMessage
+                                    id="physio.dashboard.badge.ontrack"
+                                    defaultMessage="On Track"
+                                  />
                                 </span>
                               )}
                               {data.isComplianceMissing && (
                                 <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-amber-50 text-amber-700 border border-amber-200">
-                                  <FormattedMessage id="physio.dashboard.badge.missed" defaultMessage="Missed Submission" />
+                                  <FormattedMessage
+                                    id="physio.dashboard.badge.missed"
+                                    defaultMessage="Missed Submission"
+                                  />
                                 </span>
                               )}
                             </>
@@ -630,7 +662,9 @@ function ClientsTab() {
                           {data.client.email ?? "—"}
                         </span>
                         {!isSuspended && (
-                          <span className={`text-[10px] font-medium mt-0.5 block ${data.isComplianceMissing ? "text-amber-600 font-semibold" : "text-[#98A2B3]"}`}>
+                          <span
+                            className={`text-[10px] font-medium mt-0.5 block ${data.isComplianceMissing ? "text-amber-600 font-semibold" : "text-[#98A2B3]"}`}
+                          >
                             {data.lastLogLabel}
                           </span>
                         )}

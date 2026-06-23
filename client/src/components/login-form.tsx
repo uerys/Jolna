@@ -91,12 +91,12 @@ export function LoginForm() {
             >
               Password
             </label>
-            <a
-              href="#"
+            <Link
+              href="/forgot-password"
               className="ml-auto text-xs text-gray-500 hover:text-gray-800 hover:underline"
             >
               Forgot your password?
-            </a>
+            </Link>
           </div>
           <div className="relative">
             <input

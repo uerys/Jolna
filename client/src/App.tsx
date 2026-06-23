@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import ForgotPassword from "@/pages/ForgotPassword";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/about"} component={About} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/register"} component={Register} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/chat"} component={Chat} />

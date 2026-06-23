@@ -5,7 +5,7 @@ import PublicLayout from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Mail, Clock } from "lucide-react";
 
 export default function Contact() {
   const intl = useIntl();
@@ -204,22 +204,6 @@ export default function Contact() {
                   </div>
                 </div>
 
-                {/* Phone */}
-                <div className="flex gap-3">
-                  <Phone className="size-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-900">
-                      <FormattedMessage
-                        id="contact.info.phone"
-                        defaultMessage="Phone"
-                      />
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      +855 23 996 111
-                    </p>
-                  </div>
-                </div>
-
                 {/* Email */}
                 <div className="flex gap-3">
                   <Mail className="size-5 text-blue-600 shrink-0 mt-0.5" />
@@ -230,9 +214,7 @@ export default function Contact() {
                         defaultMessage="Email"
                       />
                     </h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      info@jolna.org
-                    </p>
+                    <p className="text-xs text-slate-500 mt-1">—</p>
                   </div>
                 </div>
 

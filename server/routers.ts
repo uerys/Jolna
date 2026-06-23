@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { IMPERSONATE_COOKIE, publicProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/localAuth";
 import { getUserById, getUserByEmail, upsertUser } from "./db";
+import { listUsers, createNotification } from "./db";
+import { sendEmail } from "./_core/mailer";
 import { type DecodedIdToken } from "firebase-admin/auth";
 import { firebaseAuth } from "./_core/firebaseAdmin";
 import { adminRouter } from "./routers/admin";
@@ -204,6 +206,78 @@ export const appRouter = router({
       ctx.res.clearCookie(IMPERSONATE_COOKIE, { path: "/" });
       return { success: true } as const;
     }),
+    forgotPassword: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email({ message: "Invalid email" }),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const user = await getUserByEmail(input.email);
+        if (!user) {
+          // Always return success to prevent email enumeration
+          return { success: true };
+        }
+
+        const admins = await listUsers({ role: "admin", status: "active" });
+        if (admins.length === 0) {
+          return { success: true };
+        }
+
+        const requesterName = user.name || "Unknown User";
+        const requesterEmail = user.email || "No email";
+
+        let emailSent = false;
+        for (const admin of admins) {
+          if (!admin.email) continue;
+          const emailContent = `
+            <div style="font-family: sans-serif; line-height: 1.5; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+              <h2 style="color: #534AB7;">Password Reset Request</h2>
+              <p>A user has requested a password reset on JOLNA:</p>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 6px 0; font-weight: bold; width: 30%;">Name:</td>
+                  <td style="padding: 6px 0;">${requesterName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding: 6px 0; font-weight: bold;">Email:</td>
+                  <td style="padding: 6px 0;">${requesterEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-weight: bold;">User ID:</td>
+                  <td style="padding: 6px 0;">#${user.id}</td>
+                </tr>
+              </table>
+              <p>Please log in to your Admin Panel to reset their password:</p>
+              <div style="margin: 20px 0;">
+                <a href="http://localhost:3000/admin/users" style="background-color: #534AB7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Go to User Management</a>
+              </div>
+            </div>
+          `;
+
+          const result = await sendEmail(
+            admin.email,
+            `Password Reset Request - ${requesterName}`,
+            emailContent
+          );
+          if (result.success) {
+            emailSent = true;
+          }
+        }
+
+        for (const admin of admins) {
+          await createNotification({
+            recipientId: admin.id,
+            actorId: user.id,
+            type: "password_reset_requested",
+            title: "Password Reset Request",
+            content: `${requesterName} is requesting a password reset.`,
+            href: "/admin/users",
+          });
+        }
+
+        return { success: true };
+      }),
   }),
   admin: adminRouter,
   physio: physioRouter,

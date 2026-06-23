@@ -223,7 +223,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               />
             </p>
             <p className="text-[11px] text-slate-400 mt-2 leading-relaxed italic">
-              * <FormattedMessage
+              *{" "}
+              <FormattedMessage
                 id="footer.disclaimer"
                 defaultMessage="This project is a research study. All data is mocked and used for demonstration purposes only."
               />
