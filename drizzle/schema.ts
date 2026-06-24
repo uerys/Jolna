@@ -43,6 +43,7 @@ export const NOTIFICATION_TYPES = [
   "password_reset_requested",
   "physio_assigned",
   "client_assigned",
+  "assignment_modified",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

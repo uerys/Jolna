@@ -7,11 +7,21 @@ vi.mock("./db", () => {
     updateUserFields: vi.fn(),
     createNotification: vi.fn(),
     createAuditLog: vi.fn(),
+    getAssignmentById: vi.fn(),
+    getExerciseById: vi.fn(),
+    updateAssignment: vi.fn(),
   };
 });
 
 import { appRouter } from "./routers";
-import { getUserById, updateUserFields, createNotification } from "./db";
+import {
+  getUserById,
+  updateUserFields,
+  createNotification,
+  getAssignmentById,
+  getExerciseById,
+  updateAssignment,
+} from "./db";
 
 // Helper to make admin context
 function makeAdminCtx() {
@@ -24,6 +34,23 @@ function makeAdminCtx() {
     originalUser: {
       id: 1,
       role: "admin",
+      status: "active",
+    } as any,
+    req: {} as any,
+    res: {} as any,
+  };
+}
+
+function makePhysioCtx() {
+  return {
+    user: {
+      id: 2,
+      role: "physiotherapist",
+      status: "active",
+    } as any,
+    originalUser: {
+      id: 2,
+      role: "physiotherapist",
       status: "active",
     } as any,
     req: {} as any,
@@ -155,5 +182,51 @@ describe("Admin physiotherapist assignment notifications", () => {
       physiotherapistId: 20,
     });
     expect(createNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("Physiotherapist exercise modification notifications", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should create a notification for the client when the physiotherapist modifies their exercise assignment", async () => {
+    const assignment = {
+      id: 5,
+      clientId: 10,
+      exerciseId: 30,
+      physiotherapistId: 2,
+    };
+    const clientUser = {
+      id: 10,
+      name: "Test Client",
+      languagePreference: "en",
+    };
+    const exercise = { id: 30, title: "Knee Stretch" };
+
+    vi.mocked(getAssignmentById).mockResolvedValue(assignment as any);
+    vi.mocked(getUserById).mockResolvedValue(clientUser as any);
+    vi.mocked(getExerciseById).mockResolvedValue(exercise as any);
+
+    const caller = appRouter.createCaller(makePhysioCtx());
+    await caller.physio.updateAssignment({
+      id: 5,
+      patch: {
+        reps: 15,
+        sets: 3,
+      },
+    });
+
+    expect(updateAssignment).toHaveBeenCalledWith(5, { reps: 15, sets: 3 });
+    expect(createNotification).toHaveBeenCalledTimes(1);
+    expect(createNotification).toHaveBeenCalledWith({
+      recipientId: 10,
+      actorId: 2,
+      type: "assignment_modified",
+      title: "Exercise Details Modified / ព័ត៌មានលម្អិតលំហាត់ត្រូវបានកែប្រែ",
+      content:
+        'The details for "Knee Stretch" have been updated by your physiotherapist. / ព័ត៌មានលម្អិតសម្រាប់ "Knee Stretch" ត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយគ្រូពេទ្យព្យាបាលដោយចលនារបស់អ្នក។',
+      href: "/client/exercises",
+    });
   });
 });

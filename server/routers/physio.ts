@@ -367,6 +367,20 @@ export const physioRouter = router({
         description: `Updated assignment #${input.id}`,
       });
 
+      const client = await getUserById(assignment.clientId);
+      const exercise = await getExerciseById(assignment.exerciseId);
+      if (client && exercise) {
+        await createNotification({
+          recipientId: client.id,
+          actorId: ctx.user.id,
+          type: "assignment_modified",
+          title:
+            "Exercise Details Modified / ព័ត៌មានលម្អិតលំហាត់ត្រូវបានកែប្រែ",
+          content: `The details for "${exercise.title}" have been updated by your physiotherapist. / ព័ត៌មានលម្អិតសម្រាប់ "${exercise.title}" ត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយគ្រូពេទ្យព្យាបាលដោយចលនារបស់អ្នក។`,
+          href: "/client/exercises",
+        });
+      }
+
       return { success: true };
     }),
 
