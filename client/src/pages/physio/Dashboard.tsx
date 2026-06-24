@@ -1292,6 +1292,22 @@ function AssignmentsTab() {
     }
   }, [exerciseId, exercises.data]);
 
+  // Reset form fields when the dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setClientId("");
+      setExerciseId("");
+      setReps("10");
+      setSets("1");
+      setStartDate(today);
+      setEndDate(fortnight);
+      setInjuryType("");
+      setExerciseType("");
+      setDailyFrequency("1");
+      setExercisePreview(null);
+    }
+  }, [open, today, fortnight]);
+
   // If there's only one client or one exercise, preselect them to speed up assignment
   useEffect(() => {
     if (!clientId && clients.data?.length === 1)
@@ -1540,6 +1556,9 @@ function AssignmentsTab() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -1560,6 +1579,9 @@ function AssignmentsTab() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -1710,6 +1732,9 @@ function AssignmentsTab() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -1730,6 +1755,9 @@ function AssignmentsTab() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}

@@ -242,6 +242,7 @@
 
   "form.required": "Required",
   "form.invalidUrl": "Enter a valid URL.",
+  "common.other": "Other",
   "common.loading": "Loading…",
   "common.cancel": "Cancel",
   "common.collapse": "Collapse",
