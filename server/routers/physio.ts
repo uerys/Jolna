@@ -35,16 +35,11 @@ import {
 } from "../db";
 import { getDb } from "../db";
 import { eq, and, sql } from "drizzle-orm";
-import {
-  ASSIGNMENT_STATUSES,
-  INJURY_TYPES,
-  EXERCISE_TYPES,
-  notifications,
-} from "../../drizzle/schema";
+import { ASSIGNMENT_STATUSES, notifications } from "../../drizzle/schema";
 
 const AssignmentStatusEnum = z.enum(ASSIGNMENT_STATUSES);
-const InjuryTypeEnum = z.enum(INJURY_TYPES);
-const ExerciseTypeEnum = z.enum(EXERCISE_TYPES);
+const InjuryTypeEnum = z.string();
+const ExerciseTypeEnum = z.string();
 const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");

@@ -103,55 +103,8 @@ import {
 } from "lucide-react";
 
 // Types matching the schema structures
-type InjuryType =
-  | "muscle_strain"
-  | "ligament_sprain"
-  | "fracture_recovery"
-  | "post_surgery"
-  | "joint_pain"
-  | "back_pain"
-  | "neck_pain"
-  | "shoulder_injury"
-  | "knee_injury"
-  | "ankle_injury"
-  | "tendonitis"
-  | "other";
-
-type ExerciseType =
-  | "strength"
-  | "flexibility"
-  | "balance"
-  | "endurance"
-  | "mobility"
-  | "stretching"
-  | "functional"
-  | "other";
-
-const INJURY_TYPES: readonly InjuryType[] = [
-  "muscle_strain",
-  "ligament_sprain",
-  "fracture_recovery",
-  "post_surgery",
-  "joint_pain",
-  "back_pain",
-  "neck_pain",
-  "shoulder_injury",
-  "knee_injury",
-  "ankle_injury",
-  "tendonitis",
-  "other",
-];
-
-const EXERCISE_TYPES: readonly ExerciseType[] = [
-  "strength",
-  "flexibility",
-  "balance",
-  "endurance",
-  "mobility",
-  "stretching",
-  "functional",
-  "other",
-];
+type InjuryType = string;
+type ExerciseType = string;
 
 const PAIN_SCORE_CLASSES: Record<
   number,
@@ -451,8 +404,8 @@ export default function PhysioClientDetail() {
   const [editDailyFrequency, setEditDailyFrequency] = useState<string>("1");
   const [editStartDate, setEditStartDate] = useState<string>("");
   const [editEndDate, setEditEndDate] = useState<string>("");
-  const [editInjuryType, setEditInjuryType] = useState<string>("other");
-  const [editExerciseType, setEditExerciseType] = useState<string>("other");
+  const [editInjuryType, setEditInjuryType] = useState<string>("");
+  const [editExerciseType, setEditExerciseType] = useState<string>("");
   const [editExerciseTitle, setEditExerciseTitle] = useState<string>("");
 
   // New Exercise Form States
@@ -463,8 +416,8 @@ export default function PhysioClientDetail() {
     new Date().toLocaleDateString("en-CA")
   );
   const [newEndDate, setNewEndDate] = useState<string>("");
-  const [newInjuryType, setNewInjuryType] = useState<string>("other");
-  const [newExerciseType, setNewExerciseType] = useState<string>("other");
+  const [newInjuryType, setNewInjuryType] = useState<string>("");
+  const [newExerciseType, setNewExerciseType] = useState<string>("");
   const [newDailyFrequency, setNewDailyFrequency] = useState<string>("1");
 
   // Mock visits and progress notes states
@@ -562,8 +515,8 @@ export default function PhysioClientDetail() {
       setNewReps("10");
       setNewStartDate(new Date().toLocaleDateString("en-CA"));
       setNewEndDate("");
-      setNewInjuryType("other");
-      setNewExerciseType("other");
+      setNewInjuryType("");
+      setNewExerciseType("");
       setNewDailyFrequency("1");
     },
     onError: err => {
@@ -2115,13 +2068,11 @@ export default function PhysioClientDetail() {
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="strength">Strength</SelectItem>
-                      <SelectItem value="mobility">Mobility</SelectItem>
-                      <SelectItem value="flexibility">Flexibility</SelectItem>
-                      <SelectItem value="balance">Balance</SelectItem>
-                      <SelectItem value="endurance">Endurance</SelectItem>
-                      <SelectItem value="stretching">Stretching</SelectItem>
-                      <SelectItem value="functional">Functional</SelectItem>
+                      {(customExTypes.data ?? []).map(type => (
+                        <SelectItem key={type.id} value={type.name}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2136,9 +2087,9 @@ export default function PhysioClientDetail() {
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-slate-200 text-xs shadow-md rounded-lg">
                       <SelectItem value="all">All Injury Types</SelectItem>
-                      {INJURY_TYPES.map(t => (
-                        <SelectItem key={t} value={t}>
-                          {formatInjuryType(t)}
+                      {(customInjTypes.data ?? []).map(type => (
+                        <SelectItem key={type.id} value={type.name}>
+                          {type.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -3033,11 +2984,6 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {INJURY_TYPES.map(t => (
-                          <SelectItem key={t} value={t}>
-                            {formatInjuryType(t)}
-                          </SelectItem>
-                        ))}
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3058,11 +3004,6 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {EXERCISE_TYPES.map(t => (
-                          <SelectItem key={t} value={t}>
-                            {formatExerciseType(t)}
-                          </SelectItem>
-                        ))}
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3187,11 +3128,6 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {INJURY_TYPES.map(t => (
-                          <SelectItem key={t} value={t}>
-                            {formatInjuryType(t)}
-                          </SelectItem>
-                        ))}
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3212,11 +3148,6 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
-                        {EXERCISE_TYPES.map(t => (
-                          <SelectItem key={t} value={t}>
-                            {formatExerciseType(t)}
-                          </SelectItem>
-                        ))}
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3380,28 +3311,6 @@ export default function PhysioClientDetail() {
                           <CommandList>
                             <CommandEmpty>No diagnosis found.</CommandEmpty>
                             <CommandGroup>
-                              {INJURY_TYPES.filter(
-                                t => !selectedDiagnoses.includes(t)
-                              ).map(t => (
-                                <CommandItem
-                                  key={t}
-                                  value={t}
-                                  onSelect={currentValue => {
-                                    if (
-                                      !selectedDiagnoses.includes(currentValue)
-                                    ) {
-                                      setSelectedDiagnoses([
-                                        ...selectedDiagnoses,
-                                        currentValue,
-                                      ]);
-                                    }
-                                    setComboOpen(false);
-                                  }}
-                                  className="text-sm cursor-pointer hover:bg-slate-100"
-                                >
-                                  {formatInjuryType(t)}
-                                </CommandItem>
-                              ))}
                               {(customInjTypes.data ?? [])
                                 .filter(
                                   type => !selectedDiagnoses.includes(type.name)

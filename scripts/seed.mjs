@@ -136,6 +136,31 @@ async function ensureFeedback({
   );
 }
 
+async function ensureCustomExerciseType(name) {
+  const existing = await q(
+    `SELECT id FROM custom_exercise_types WHERE name = ? LIMIT 1`,
+    [name]
+  );
+  if (existing.length) return existing[0].id;
+  const result = await q(
+    `INSERT INTO custom_exercise_types (name) VALUES (?)`,
+    [name]
+  );
+  return result.insertId;
+}
+
+async function ensureCustomInjuryType(name) {
+  const existing = await q(
+    `SELECT id FROM custom_injury_types WHERE name = ? LIMIT 1`,
+    [name]
+  );
+  if (existing.length) return existing[0].id;
+  const result = await q(`INSERT INTO custom_injury_types (name) VALUES (?)`, [
+    name,
+  ]);
+  return result.insertId;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -284,6 +309,16 @@ try {
     notes: "No pain during calf raises.",
     daysAgo: 0,
   });
+
+  console.log("  seeding custom exercise and injury types…");
+  await ensureCustomExerciseType("Strength");
+  await ensureCustomExerciseType("Flexibility");
+  await ensureCustomExerciseType("Balance");
+
+  await ensureCustomInjuryType("Muscle Strain");
+  await ensureCustomInjuryType("Ligament Sprain");
+  await ensureCustomInjuryType("Knee Injury");
+  console.log("  custom exercise & injury types ok");
 
   console.log("  feedback ok");
   console.log("Seed complete.");

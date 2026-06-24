@@ -41,7 +41,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { EXERCISE_TYPES, INJURY_TYPES } from "../../../../drizzle/schema";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Plus,
@@ -58,6 +57,7 @@ import {
   ClipboardList,
   Activity,
   Dumbbell,
+  Pencil,
 } from "lucide-react";
 
 export default function PhysioDashboard() {
@@ -1255,11 +1255,11 @@ function AssignmentsTab() {
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState<string>("");
   const [exerciseId, setExerciseId] = useState<string>("");
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
   const fortnight = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 14);
-    return d.toISOString().slice(0, 10);
+    return d.toLocaleDateString("en-CA");
   }, []);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(fortnight);
@@ -1307,11 +1307,77 @@ function AssignmentsTab() {
       await utils.physio.listMyAssignments.invalidate();
       toast.success(intl.formatMessage({ id: "physio.assign.created" }));
       setOpen(false);
+      // Reset form fields
+      setClientId("");
+      setExerciseId("");
+      setReps("10");
+      setSets("1");
+      setStartDate(today);
+      setEndDate(fortnight);
+      setInjuryType("");
+      setExerciseType("");
+      setDailyFrequency("1");
+      setExercisePreview(null);
     },
   });
   const del = trpc.physio.deleteAssignment.useMutation({
     onSuccess: () => utils.physio.listMyAssignments.invalidate(),
   });
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
+  const [editReps, setEditReps] = useState<string>("1");
+  const [editSets, setEditSets] = useState<string>("1");
+  const [editDailyFrequency, setEditDailyFrequency] = useState<string>("1");
+  const [editStartDate, setEditStartDate] = useState<string>("");
+  const [editEndDate, setEditEndDate] = useState<string>("");
+  const [editInjuryType, setEditInjuryType] = useState<string>("");
+  const [editExerciseType, setEditExerciseType] = useState<string>("");
+  const [editExerciseTitle, setEditExerciseTitle] = useState<string>("");
+
+  const updateAssignmentMutation = trpc.physio.updateAssignment.useMutation({
+    onSuccess: async () => {
+      await utils.physio.listMyAssignments.invalidate();
+      toast.success("Assignment updated successfully");
+      setIsEditOpen(false);
+    },
+    onError: err => {
+      toast.error(err.message || "Failed to update assignment");
+    },
+  });
+
+  const handleEditClick = (row: any) => {
+    setEditAssignmentId(row.assignment.id);
+    setEditReps(String(row.assignment.reps));
+    setEditSets(String(row.assignment.sets));
+    setEditDailyFrequency(String(row.assignment.dailyFrequency ?? 1));
+    setEditStartDate(row.assignment.startDate);
+    setEditEndDate(row.assignment.endDate);
+    setEditInjuryType(row.assignment.injuryType);
+    setEditExerciseType(row.assignment.exerciseType);
+    setEditExerciseTitle(row.exercise.title);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editAssignmentId) return;
+    if (new Date(editEndDate) < new Date(editStartDate)) {
+      toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
+      return;
+    }
+    updateAssignmentMutation.mutate({
+      id: editAssignmentId,
+      patch: {
+        reps: Number(editReps),
+        sets: Number(editSets),
+        dailyFrequency: Number(editDailyFrequency),
+        startDate: editStartDate,
+        endDate: editEndDate,
+        injuryType: editInjuryType,
+        exerciseType: editExerciseType,
+      },
+    });
+  };
 
   return (
     <Card>
@@ -1343,7 +1409,7 @@ function AssignmentsTab() {
               <div className="space-y-4 my-2 pt-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Patient
                     </Label>
                     <Select
@@ -1363,7 +1429,7 @@ function AssignmentsTab() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Select Exercise Template
                     </Label>
                     <Select
@@ -1386,7 +1452,7 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Reps
                     </Label>
                     <Input
@@ -1402,7 +1468,7 @@ function AssignmentsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Sets
                     </Label>
                     <Input
@@ -1418,7 +1484,7 @@ function AssignmentsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       PER DAY
                     </Label>
                     <Input
@@ -1437,7 +1503,7 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Start Date
                     </Label>
                     <Input
@@ -1448,7 +1514,7 @@ function AssignmentsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       End Date
                     </Label>
                     <Input
@@ -1463,7 +1529,7 @@ function AssignmentsTab() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Injury Type
                     </Label>
                     <Select
@@ -1471,7 +1537,7 @@ function AssignmentsTab() {
                       onValueChange={v => setInjuryType(v)}
                     >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
-                        <SelectValue placeholder="Other" />
+                        <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
                         {(customInjTypes.data ?? []).map(type => (
@@ -1483,7 +1549,7 @@ function AssignmentsTab() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans">
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Exercise Type
                     </Label>
                     <Select
@@ -1491,7 +1557,7 @@ function AssignmentsTab() {
                       onValueChange={v => setExerciseType(v)}
                     >
                       <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
-                        <SelectValue placeholder="Other" />
+                        <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
                         {(customExTypes.data ?? []).map(type => (
@@ -1514,7 +1580,7 @@ function AssignmentsTab() {
                   <FormattedMessage id="common.cancel" />
                 </Button>
                 <Button
-                  disabled={!clientId || !exerciseId}
+                  disabled={!clientId || !exerciseId || assign.isPending}
                   size="sm"
                   className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
                   onClick={() => {
@@ -1540,7 +1606,158 @@ function AssignmentsTab() {
                     });
                   }}
                 >
-                  <FormattedMessage id="physio.assign.submit" />
+                  {assign.isPending ? (
+                    "Assigning..."
+                  ) : (
+                    <FormattedMessage id="physio.assign.submit" />
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog: Edit Assignment */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
+              <DialogHeader>
+                <DialogTitle className="text-slate-950 font-bold text-lg">
+                  Edit Assignment: {editExerciseTitle}
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 text-xs">
+                  Modify the parameters for this exercise assignment.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 my-2 pt-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Reps
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={500}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editReps}
+                      onChange={e => setEditReps(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Sets
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editSets}
+                      onChange={e => setEditSets(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      PER DAY
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editDailyFrequency}
+                      onChange={e => setEditDailyFrequency(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Start Date
+                    </Label>
+                    <Input
+                      type="date"
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editStartDate}
+                      onChange={e => setEditStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      End Date
+                    </Label>
+                    <Input
+                      type="date"
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editEndDate}
+                      onChange={e => setEditEndDate(e.target.value)}
+                      min={editStartDate}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Injury Type
+                    </Label>
+                    <Select
+                      value={editInjuryType}
+                      onValueChange={setEditInjuryType}
+                    >
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Injury Class" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {(customInjTypes.data ?? []).map(type => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Exercise Type
+                    </Label>
+                    <Select
+                      value={editExerciseType}
+                      onValueChange={setEditExerciseType}
+                    >
+                      <SelectTrigger className="h-10 mt-1 bg-white border-slate-200 text-slate-700">
+                        <SelectValue placeholder="Exercise Class" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        {(customExTypes.data ?? []).map(type => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-6 border-t border-slate-100 pt-4 gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditOpen(false)}
+                  className="border-slate-200 text-xs font-semibold h-9 rounded-lg px-4"
+                >
+                  <FormattedMessage id="common.cancel" />
+                </Button>
+                <Button
+                  onClick={handleEditSubmit}
+                  disabled={updateAssignmentMutation.isPending}
+                  size="sm"
+                  className="bg-[#534AB7] hover:bg-[#534AB7]/90 text-white font-bold text-xs h-9 rounded-lg px-4 shadow-sm"
+                >
+                  {updateAssignmentMutation.isPending
+                    ? "Saving..."
+                    : "Save Changes"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1556,7 +1773,7 @@ function AssignmentsTab() {
               <TableHead className="w-[8%] text-center">Reps</TableHead>
               <TableHead className="w-[25%]">Period</TableHead>
               <TableHead className="w-[10%] text-center">Status</TableHead>
-              <TableHead className="w-[4%]" />
+              <TableHead className="w-[8%]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1608,25 +1825,36 @@ function AssignmentsTab() {
                     )}
                   </Badge>
                 </TableCell>
-                <TableCell className="w-[4%] text-right">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      if (
-                        confirm(
-                          intl.formatMessage({
-                            id: "physio.assign.deleteConfirm",
-                            defaultMessage:
-                              "Are you sure you want to delete this assignment?",
-                          })
+                <TableCell className="w-[8%] text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditClick(row)}
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600 rounded-md"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 rounded-md"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            intl.formatMessage({
+                              id: "physio.assign.deleteConfirm",
+                              defaultMessage:
+                                "Are you sure you want to delete this assignment?",
+                            })
+                          )
                         )
-                      )
-                        del.mutate({ id: row.assignment.id });
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                          del.mutate({ id: row.assignment.id });
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

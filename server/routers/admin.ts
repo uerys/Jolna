@@ -2,13 +2,14 @@ import { z } from "zod";
 import { validateCambodianPhoneNumber } from "../../shared/phoneValidation";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
-import { deleteUser, getUserById, listUsers, updateUserFields } from "../db";
 import {
-  ACCOUNT_STATUSES,
-  INJURY_TYPES,
-  LANGUAGES,
-  ROLES,
-} from "../../drizzle/schema";
+  deleteUser,
+  getUserById,
+  listUsers,
+  updateUserFields,
+  createNotification,
+} from "../db";
+import { ACCOUNT_STATUSES, LANGUAGES, ROLES } from "../../drizzle/schema";
 import { createAuditLog } from "../db";
 import { sdk } from "../_core/localAuth";
 import { sendEmail } from "../_core/mailer";
@@ -51,7 +52,7 @@ export const adminRouter = router({
           status: StatusEnum.optional(),
           languagePreference: LanguageEnum.optional(),
           physiotherapistId: z.number().int().positive().nullable().optional(),
-          injuryType: z.enum(INJURY_TYPES).nullable().optional(),
+          injuryType: z.string().nullable().optional(),
           nextClinicVisit: z.string().nullable().optional(),
         }),
       })
@@ -74,7 +75,28 @@ export const adminRouter = router({
           });
         }
       }
+      const client = await getUserById(input.id);
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+      const oldPhysioId = client.physiotherapistId;
+      const newPhysioId = input.patch.physiotherapistId;
+
       const result = await updateUserFields(input.id, input.patch);
+
+      if (newPhysioId !== undefined && oldPhysioId !== newPhysioId) {
+        await handlePhysioAssignmentNotification({
+          clientId: input.id,
+          clientName: input.patch.name ?? client.name ?? "Client",
+          oldPhysioId,
+          newPhysioId,
+          actorId: ctx.originalUser?.id ?? ctx.user.id,
+        });
+      }
+
       await createAuditLog({
         actorId: ctx.originalUser?.id ?? ctx.user.id,
         action: "user_updated",
@@ -144,11 +166,31 @@ export const adminRouter = router({
         physiotherapistId: z.number().int().positive().nullable(),
       })
     )
-    .mutation(async ({ input }) =>
-      updateUserFields(input.clientId, {
-        physiotherapistId: input.physiotherapistId,
-      })
-    ),
+    .mutation(async ({ input, ctx }) => {
+      const client = await getUserById(input.clientId);
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found",
+        });
+      }
+      const oldPhysioId = client.physiotherapistId;
+      const newPhysioId = input.physiotherapistId;
+      const result = await updateUserFields(input.clientId, {
+        physiotherapistId: newPhysioId,
+      });
+
+      if (oldPhysioId !== newPhysioId) {
+        await handlePhysioAssignmentNotification({
+          clientId: input.clientId,
+          clientName: client.name ?? "Client",
+          oldPhysioId,
+          newPhysioId,
+          actorId: ctx.originalUser?.id ?? ctx.user.id,
+        });
+      }
+      return result;
+    }),
 
   createUser: adminProcedure
     .input(
@@ -213,3 +255,69 @@ export const adminRouter = router({
       return { success: true };
     }),
 });
+
+async function handlePhysioAssignmentNotification({
+  clientId,
+  clientName,
+  oldPhysioId,
+  newPhysioId,
+  actorId,
+}: {
+  clientId: number;
+  clientName: string;
+  oldPhysioId: number | null;
+  newPhysioId: number | null;
+  actorId: number;
+}) {
+  // 1. If assigned to a new physiotherapist
+  if (newPhysioId !== null && oldPhysioId !== newPhysioId) {
+    const physio = await getUserById(newPhysioId);
+    if (physio) {
+      // Notify client
+      await createNotification({
+        recipientId: clientId,
+        actorId: actorId,
+        type: "physio_assigned",
+        title:
+          "Physiotherapist Assigned / គ្រូពេទ្យព្យាបាលដោយចលនាត្រូវបានចាត់តាំង",
+        content: `${physio.name || "A physiotherapist"} has been assigned to you. / ${physio.name || "គ្រូពេទ្យព្យាបាលដោយចលនា"} ត្រូវបានចាត់តាំងជូនអ្នកហើយ។`,
+        href: "/client/exercises",
+      });
+
+      // Notify physiotherapist
+      await createNotification({
+        recipientId: newPhysioId,
+        actorId: actorId,
+        type: "client_assigned",
+        title: "New Client Assigned / អ្នកជំងឺថ្មីត្រូវបានចាត់តាំង",
+        content: `${clientName} has been assigned to you. / ${clientName} ត្រូវបានចាត់តាំងជូនអ្នកហើយ។`,
+        href: `/physio/clients/${clientId}`,
+      });
+    }
+  }
+
+  // 2. If unassigned (physiotherapist set to null)
+  if (newPhysioId === null && oldPhysioId !== null) {
+    // Notify client
+    await createNotification({
+      recipientId: clientId,
+      actorId: actorId,
+      type: "physio_assigned",
+      title:
+        "Physiotherapist Unassigned / គ្រូពេទ្យព្យាបាលដោយចលនាត្រូវបានដកចេញ",
+      content:
+        "You have been unassigned from your physiotherapist. / អ្នកត្រូវបានដកចេញពីគ្រូពេទ្យព្យាបាលដោយចលនារបស់អ្នកហើយ។",
+      href: "/",
+    });
+
+    // Notify old physiotherapist
+    await createNotification({
+      recipientId: oldPhysioId,
+      actorId: actorId,
+      type: "client_assigned",
+      title: "Client Unassigned / អ្នកជំងឺត្រូវបានដកចេញ",
+      content: `${clientName} has been unassigned from you. / ${clientName} ត្រូវបានដកចេញពីអ្នកហើយ។`,
+      href: "/physio",
+    });
+  }
+}

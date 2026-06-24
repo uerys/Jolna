@@ -802,41 +802,11 @@ export async function listAuditLogs(opts?: {
   return rows;
 }
 
-function formatInjuryTypeLocal(type: string): string {
-  return type
-    .split("_")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function formatExerciseTypeLocal(type: string): string {
-  return type.charAt(0).toUpperCase() + type.slice(1);
-}
-
 export async function listCustomExerciseTypes() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const rows = await db.select().from(customExerciseTypes);
-  if (rows.length === 0) {
-    const defaults = [
-      "strength",
-      "flexibility",
-      "balance",
-      "endurance",
-      "mobility",
-      "stretching",
-      "functional",
-      "other",
-    ];
-    await db
-      .insert(customExerciseTypes)
-      .values(defaults.map(name => ({ name: formatExerciseTypeLocal(name) })));
-    return db
-      .select()
-      .from(customExerciseTypes)
-      .orderBy(asc(customExerciseTypes.name));
-  }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -851,29 +821,6 @@ export async function listCustomInjuryTypes() {
   if (!db) throw new Error("Database not available");
 
   const rows = await db.select().from(customInjuryTypes);
-  if (rows.length === 0) {
-    const defaults = [
-      "muscle_strain",
-      "ligament_sprain",
-      "fracture_recovery",
-      "post_surgery",
-      "joint_pain",
-      "back_pain",
-      "neck_pain",
-      "shoulder_injury",
-      "knee_injury",
-      "ankle_injury",
-      "tendonitis",
-      "other",
-    ];
-    await db
-      .insert(customInjuryTypes)
-      .values(defaults.map(name => ({ name: formatInjuryTypeLocal(name) })));
-    return db
-      .select()
-      .from(customInjuryTypes)
-      .orderBy(asc(customInjuryTypes.name));
-  }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
 

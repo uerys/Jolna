@@ -41,6 +41,8 @@ export const NOTIFICATION_TYPES = [
   "feedback_submitted",
   "new_message",
   "password_reset_requested",
+  "physio_assigned",
+  "client_assigned",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
