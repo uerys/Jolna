@@ -775,17 +775,16 @@ export default function PhysioClientDetail() {
       });
     }
 
-    let combined = [
-      ...(feedbackEnriched.data ?? []).map(f => ({
-        feedback: {
-          ...f.feedback,
-          isMissed: false,
-        },
-        exercise: f.exercise,
-        assignment: f.assignment,
-      })),
-      ...missedLogs,
-    ];
+    let combined = showMissedDays
+      ? missedLogs
+      : (feedbackEnriched.data ?? []).map(f => ({
+          feedback: {
+            ...f.feedback,
+            isMissed: false,
+          },
+          exercise: f.exercise,
+          assignment: f.assignment,
+        }));
 
     if (viewMode === "historical") {
       if (filterYear !== "all") {

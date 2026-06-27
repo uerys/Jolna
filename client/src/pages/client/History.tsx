@@ -442,21 +442,22 @@ export default function ClientHistory() {
       });
     }
 
-    let combined = [
-      ...(feedbackEnriched.data ?? []).map(f => ({
-        feedback: {
-          ...f.feedback,
-          isMissed: false,
-        },
-        exercise: f.exercise,
-        assignment: f.assignment,
-      })),
-      ...missedLogs,
-    ];
+    let combined: any[] = showMissedDays
+      ? missedLogs
+      : (feedbackEnriched.data ?? []).map(f => ({
+          feedback: {
+            ...f.feedback,
+            isMissed: false,
+          },
+          exercise: f.exercise,
+          assignment: f.assignment,
+        }));
 
     if (highPainOnly) {
       combined = combined.filter(
-        f => f.feedback.painScore !== null && f.feedback.painScore >= 7
+        f =>
+          f.feedback.isMissed ||
+          (f.feedback.painScore !== null && f.feedback.painScore >= 7)
       );
     }
 
