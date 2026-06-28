@@ -454,7 +454,7 @@ export default function PhysioClientDetail() {
   );
 
   useEffect(() => {
-    if (client.data?.injuryType) {
+    if (client.data?.injuryType && client.data.injuryType !== "none") {
       setSelectedDiagnoses(
         client.data.injuryType
           .split(",")
@@ -501,6 +501,15 @@ export default function PhysioClientDetail() {
     enabled: isAssignOpen && isQueryEnabled,
   });
 
+  useEffect(() => {
+    if (!newExerciseId) return;
+    const ex = exercisesList.data?.find(e => String(e.id) === newExerciseId);
+    if (ex) {
+      if (typeof ex.defaultReps === "number") setNewReps(String(ex.defaultReps));
+      if (typeof ex.defaultSets === "number") setNewSets(String(ex.defaultSets));
+      if ((ex as any).exerciseType) setNewExerciseType((ex as any).exerciseType);
+    }
+  }, [newExerciseId, exercisesList.data]);
   // Mutations
   const assignMutation = trpc.physio.assignExercise.useMutation({
     onSuccess: async () => {
@@ -572,13 +581,10 @@ export default function PhysioClientDetail() {
   );
 
   const handleDiagnosisSubmit = () => {
-    if (selectedDiagnoses.length === 0) {
-      toast.error("Please select at least one diagnosis.");
-      return;
-    }
+    const injuryType = selectedDiagnoses.length === 0 ? "none" : selectedDiagnoses.join(",");
     updateDiagnosisMutation.mutate({
       clientId,
-      injuryType: selectedDiagnoses.join(","),
+      injuryType,
     });
   };
 

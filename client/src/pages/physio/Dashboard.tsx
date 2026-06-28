@@ -298,12 +298,12 @@ function ClientsTab() {
 
       // Pain warning alert message
       let alertMsg = "";
-      if (isActive && latestPain !== null && latestPain >= 7) {
+      if (isActive && latestPain !== null && latestPain >= 4) {
         alertMsg = `⚠️ Severe pain reported: ${latestPain}/10`;
       }
 
-      // Categories: active users are urgent (pain >= 7) or ontrack (others)
-      const isUrgent = isActive && latestPain !== null && latestPain >= 7;
+      // Categories: active users are urgent (pain >= 4) or ontrack (others)
+      const isUrgent = isActive && latestPain !== null && latestPain >= 4;
       const isOnTrack = isActive && !isUrgent;
 
       const activeSessionsToday = cAssignments.filter(a => {
@@ -499,10 +499,10 @@ function ClientsTab() {
           </div>
           <div>
             <h3 className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-0.5">
-              Urgent Pain Triage
+              Urgent Pain
             </h3>
             <p className="text-xs text-[#667085] font-normal leading-relaxed">
-              Clients reporting severe pain (≥7/10) requiring immediate
+              Clients reporting severe pain (≥4/10) requiring immediate
               intervention
             </p>
           </div>
@@ -992,7 +992,13 @@ function ExercisesTab() {
   const utils = trpc.useUtils();
 
   const del = trpc.physio.deleteExercise.useMutation({
-    onSuccess: () => utils.physio.listMyExercises.invalidate(),
+    onSuccess: () => {
+      utils.physio.listMyExercises.invalidate();
+      toast.success("Exercise template deleted successfully");
+    },
+    onError: err => {
+      toast.error(err.message || "Failed to delete exercise template");
+    },
   });
 
   return (
@@ -1093,21 +1099,31 @@ function ExerciseDialog({
   const [en, setEn] = useState(exercise?.instructionsEn ?? "");
   const [kh, setKh] = useState(exercise?.instructionsKh ?? "");
   const [videoUrl, setVideoUrl] = useState(exercise?.videoUrl ?? "");
-  const [defaultReps, setDefaultReps] = useState(exercise?.defaultReps ?? 10);
-  const [defaultSets, setDefaultSets] = useState<number>(
-    exercise?.defaultSets ?? 1
+  const [defaultReps, setDefaultReps] = useState<string>(
+    exercise?.defaultReps ? String(exercise.defaultReps) : "10"
+  );
+  const [defaultSets, setDefaultSets] = useState<string>(
+    exercise?.defaultSets ? String(exercise.defaultSets) : "1"
   );
 
   const create = trpc.physio.createExercise.useMutation({
     onSuccess: async () => {
       await utils.physio.listMyExercises.invalidate();
+      toast.success("Exercise template created successfully");
       onClose();
+    },
+    onError: err => {
+      toast.error(err.message || "Failed to create exercise template");
     },
   });
   const update = trpc.physio.updateExercise.useMutation({
     onSuccess: async () => {
       await utils.physio.listMyExercises.invalidate();
+      toast.success("Exercise template updated successfully");
       onClose();
+    },
+    onError: err => {
+      toast.error(err.message || "Failed to update exercise template");
     },
   });
 
@@ -1116,6 +1132,8 @@ function ExerciseDialog({
       toast.error(intl.formatMessage({ id: "form.required" }));
       return;
     }
+    const repsVal = defaultReps === "" ? 10 : Number(defaultReps);
+    const setsVal = defaultSets === "" ? 1 : Number(defaultSets);
     if (exercise) {
       update.mutate({
         id: exercise.id,
@@ -1124,8 +1142,8 @@ function ExerciseDialog({
           instructionsEn: en,
           instructionsKh: kh,
           videoUrl,
-          defaultReps,
-          defaultSets,
+          defaultReps: repsVal,
+          defaultSets: setsVal,
         },
       });
     } else {
@@ -1134,8 +1152,8 @@ function ExerciseDialog({
         instructionsEn: en,
         instructionsKh: kh,
         videoUrl,
-        defaultReps,
-        defaultSets,
+        defaultReps: repsVal,
+        defaultSets: setsVal,
       });
     }
   }
@@ -1196,7 +1214,7 @@ function ExerciseDialog({
               min={1}
               max={100}
               value={defaultSets}
-              onChange={e => setDefaultSets(Number(e.target.value))}
+              onChange={e => setDefaultSets(e.target.value)}
             />
           </div>
           <div>
@@ -1208,7 +1226,7 @@ function ExerciseDialog({
               min={1}
               max={500}
               value={defaultReps}
-              onChange={e => setDefaultReps(Number(e.target.value))}
+              onChange={e => setDefaultReps(e.target.value)}
             />
           </div>
         </div>
