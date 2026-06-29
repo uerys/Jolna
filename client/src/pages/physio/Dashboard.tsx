@@ -41,6 +41,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/contexts/I18nContext";
+import { formatRepsOrDuration } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Plus,
@@ -980,8 +982,10 @@ type Exercise = {
   instructionsEn: string;
   instructionsKh: string;
   videoUrl: string;
-  defaultReps: number;
+  defaultReps: number | null;
   defaultSets?: number;
+  defaultDurationMin?: number | null;
+  defaultDurationSec?: number | null;
 };
 
 function ExercisesTab() {
@@ -1036,10 +1040,15 @@ function ExercisesTab() {
               <div className="min-w-0">
                 <div className="font-medium">{e.title}</div>
                 <div className="text-sm text-muted-foreground line-clamp-2">
-                  {e.instructionsEn}
+                  {e.instructionsEn || e.instructionsKh}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Default: {e.defaultSets ?? 1} sets · {e.defaultReps} reps ·{" "}
+                  Default: {e.defaultSets ?? 1} sets
+                  {e.defaultReps !== null && e.defaultReps !== undefined && ` · ${e.defaultReps} reps`}
+                  {((e.defaultDurationMin !== null && e.defaultDurationMin !== undefined && e.defaultDurationMin > 0) ||
+                    (e.defaultDurationSec !== null && e.defaultDurationSec !== undefined && e.defaultDurationSec > 0)) &&
+                    ` · ${e.defaultDurationMin || 0}m ${e.defaultDurationSec || 0}s`}
+                  {" · "}
                   <a
                     href={e.videoUrl}
                     target="_blank"
@@ -1100,10 +1109,22 @@ function ExerciseDialog({
   const [kh, setKh] = useState(exercise?.instructionsKh ?? "");
   const [videoUrl, setVideoUrl] = useState(exercise?.videoUrl ?? "");
   const [defaultReps, setDefaultReps] = useState<string>(
-    exercise?.defaultReps ? String(exercise.defaultReps) : "10"
+    exercise?.defaultReps !== null && exercise?.defaultReps !== undefined
+      ? String(exercise.defaultReps)
+      : exercise ? "" : "10"
   );
   const [defaultSets, setDefaultSets] = useState<string>(
     exercise?.defaultSets ? String(exercise.defaultSets) : "1"
+  );
+  const [defaultDurationMin, setDefaultDurationMin] = useState<string>(
+    exercise?.defaultDurationMin !== null && exercise?.defaultDurationMin !== undefined
+      ? String(exercise.defaultDurationMin)
+      : ""
+  );
+  const [defaultDurationSec, setDefaultDurationSec] = useState<string>(
+    exercise?.defaultDurationSec !== null && exercise?.defaultDurationSec !== undefined
+      ? String(exercise.defaultDurationSec)
+      : ""
   );
 
   const create = trpc.physio.createExercise.useMutation({
@@ -1128,12 +1149,26 @@ function ExerciseDialog({
   });
 
   function submit() {
-    if (!title || !en || !kh || !videoUrl) {
+    if (!title || !videoUrl) {
       toast.error(intl.formatMessage({ id: "form.required" }));
       return;
     }
-    const repsVal = defaultReps === "" ? 10 : Number(defaultReps);
+    if (!en.trim() && !kh.trim()) {
+      toast.error(intl.formatMessage({ id: "physio.exercise.instructionsRequired" }));
+      return;
+    }
+    const repsVal = defaultReps === "" ? null : Number(defaultReps);
     const setsVal = defaultSets === "" ? 1 : Number(defaultSets);
+    const durationMinVal = defaultDurationMin === "" ? null : Number(defaultDurationMin);
+    const durationSecVal = defaultDurationSec === "" ? null : Number(defaultDurationSec);
+
+    const hasReps = repsVal !== null && repsVal > 0;
+    const hasDuration = (durationMinVal !== null && durationMinVal > 0) || (durationSecVal !== null && durationSecVal > 0);
+    if (!hasReps && !hasDuration) {
+      toast.error(intl.formatMessage({ id: "physio.exercise.eitherRepsOrDurationRequired" }));
+      return;
+    }
+
     if (exercise) {
       update.mutate({
         id: exercise.id,
@@ -1144,6 +1179,8 @@ function ExerciseDialog({
           videoUrl,
           defaultReps: repsVal,
           defaultSets: setsVal,
+          defaultDurationMin: durationMinVal,
+          defaultDurationSec: durationSecVal,
         },
       });
     } else {
@@ -1154,6 +1191,8 @@ function ExerciseDialog({
         videoUrl,
         defaultReps: repsVal,
         defaultSets: setsVal,
+        defaultDurationMin: durationMinVal,
+        defaultDurationSec: durationSecVal,
       });
     }
   }
@@ -1229,6 +1268,34 @@ function ExerciseDialog({
               onChange={e => setDefaultReps(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>
+                <FormattedMessage id="physio.exercise.defaultDurationMin" />
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                max={180}
+                value={defaultDurationMin}
+                onChange={e => setDefaultDurationMin(e.target.value)}
+                placeholder="Min"
+              />
+            </div>
+            <div>
+              <Label>
+                <FormattedMessage id="physio.exercise.defaultDurationSec" />
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={defaultDurationSec}
+                onChange={e => setDefaultDurationSec(e.target.value)}
+                placeholder="Sec"
+              />
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -1250,6 +1317,7 @@ function ExerciseDialog({
 
 function AssignmentsTab() {
   const intl = useIntl();
+  const { language } = useI18n();
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr + "T00:00:00");
@@ -1283,13 +1351,17 @@ function AssignmentsTab() {
   const [endDate, setEndDate] = useState(fortnight);
   const [reps, setReps] = useState<string | number>(10);
   const [sets, setSets] = useState<string | number>(1);
+  const [durationMin, setDurationMin] = useState<string | number>("");
+  const [durationSec, setDurationSec] = useState<string | number>("");
   const [injuryType, setInjuryType] = useState<string>("");
   const [exerciseType, setExerciseType] = useState<string>("");
   const [dailyFrequency, setDailyFrequency] = useState<string | number>(1);
   const [exercisePreview, setExercisePreview] = useState<null | {
     title: string;
-    defaultReps?: number;
+    defaultReps?: number | null;
     defaultSets?: number;
+    defaultDurationMin?: number | null;
+    defaultDurationSec?: number | null;
     exerciseType?: string;
   }>(null);
 
@@ -1298,13 +1370,25 @@ function AssignmentsTab() {
     if (!exerciseId) return;
     const ex = exercises.data?.find(e => String(e.id) === exerciseId);
     if (ex) {
-      if (typeof ex.defaultReps === "number") setReps(String(ex.defaultReps));
+      if (typeof ex.defaultReps === "number") {
+        setReps(String(ex.defaultReps));
+      } else {
+        setReps("");
+      }
       if (typeof ex.defaultSets === "number") setSets(String(ex.defaultSets));
-      if ((ex as any).exerciseType) setExerciseType((ex as any).exerciseType);
+      if ((ex as any).exerciseType && (ex as any).exerciseType !== "other") {
+        setExerciseType((ex as any).exerciseType);
+      }
+      
+      setDurationMin(ex.defaultDurationMin !== null && ex.defaultDurationMin !== undefined ? String(ex.defaultDurationMin) : "");
+      setDurationSec(ex.defaultDurationSec !== null && ex.defaultDurationSec !== undefined ? String(ex.defaultDurationSec) : "");
+
       setExercisePreview({
         title: ex.title,
         defaultReps: ex.defaultReps,
         defaultSets: ex.defaultSets,
+        defaultDurationMin: ex.defaultDurationMin,
+        defaultDurationSec: ex.defaultDurationSec,
         exerciseType: (ex as any).exerciseType,
       });
     }
@@ -1317,6 +1401,8 @@ function AssignmentsTab() {
       setExerciseId("");
       setReps("10");
       setSets("1");
+      setDurationMin("");
+      setDurationSec("");
       setStartDate(today);
       setEndDate(fortnight);
       setInjuryType("");
@@ -1331,6 +1417,14 @@ function AssignmentsTab() {
     if (!clientId && clients.data?.length === 1)
       setClientId(String(clients.data[0].id));
   }, [clients.data, clientId]);
+  // When a patient is selected, pre-populate their injuryType into the form
+  useEffect(() => {
+    if (!clientId) return;
+    const client = clients.data?.find(c => String(c.id) === clientId);
+    if (client && client.injuryType && client.injuryType !== "other" && client.injuryType !== "none") {
+      setInjuryType(client.injuryType);
+    }
+  }, [clientId, clients.data]);
   useEffect(() => {
     if (!exerciseId && exercises.data?.length === 1)
       setExerciseId(String(exercises.data[0].id));
@@ -1346,6 +1440,8 @@ function AssignmentsTab() {
       setExerciseId("");
       setReps("10");
       setSets("1");
+      setDurationMin("");
+      setDurationSec("");
       setStartDate(today);
       setEndDate(fortnight);
       setInjuryType("");
@@ -1362,13 +1458,14 @@ function AssignmentsTab() {
   const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
   const [editReps, setEditReps] = useState<string>("1");
   const [editSets, setEditSets] = useState<string>("1");
+  const [editDurationMin, setEditDurationMin] = useState<string>("");
+  const [editDurationSec, setEditDurationSec] = useState<string>("");
   const [editDailyFrequency, setEditDailyFrequency] = useState<string>("1");
   const [editStartDate, setEditStartDate] = useState<string>("");
   const [editEndDate, setEditEndDate] = useState<string>("");
   const [editInjuryType, setEditInjuryType] = useState<string>("");
   const [editExerciseType, setEditExerciseType] = useState<string>("");
   const [editExerciseTitle, setEditExerciseTitle] = useState<string>("");
-
   const updateAssignmentMutation = trpc.physio.updateAssignment.useMutation({
     onSuccess: async () => {
       await utils.physio.listMyAssignments.invalidate();
@@ -1382,7 +1479,7 @@ function AssignmentsTab() {
 
   const handleEditClick = (row: any) => {
     setEditAssignmentId(row.assignment.id);
-    setEditReps(String(row.assignment.reps));
+    setEditReps(row.assignment.reps !== null && row.assignment.reps !== undefined ? String(row.assignment.reps) : "");
     setEditSets(String(row.assignment.sets));
     setEditDailyFrequency(String(row.assignment.dailyFrequency ?? 1));
     setEditStartDate(row.assignment.startDate);
@@ -1390,6 +1487,8 @@ function AssignmentsTab() {
     setEditInjuryType(row.assignment.injuryType);
     setEditExerciseType(row.assignment.exerciseType);
     setEditExerciseTitle(row.exercise.title);
+    setEditDurationMin(row.assignment.durationMin !== null && row.assignment.durationMin !== undefined ? String(row.assignment.durationMin) : "");
+    setEditDurationSec(row.assignment.durationSec !== null && row.assignment.durationSec !== undefined ? String(row.assignment.durationSec) : "");
     setIsEditOpen(true);
   };
 
@@ -1399,11 +1498,24 @@ function AssignmentsTab() {
       toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
       return;
     }
+    const repsNum = editReps === "" ? null : Number(editReps);
+    const durationMinNum = editDurationMin === "" ? null : Number(editDurationMin);
+    const durationSecNum = editDurationSec === "" ? null : Number(editDurationSec);
+
+    const hasReps = repsNum !== null && repsNum > 0;
+    const hasDuration = (durationMinNum !== null && durationMinNum > 0) || (durationSecNum !== null && durationSecNum > 0);
+    if (!hasReps && !hasDuration) {
+      toast.error(intl.formatMessage({ id: "physio.assign.eitherRepsOrDurationRequired" }));
+      return;
+    }
+
     updateAssignmentMutation.mutate({
       id: editAssignmentId,
       patch: {
-        reps: Number(editReps),
+        reps: repsNum,
         sets: Number(editSets),
+        durationMin: durationMinNum,
+        durationSec: durationSecNum,
         dailyFrequency: Number(editDailyFrequency),
         startDate: editStartDate,
         endDate: editEndDate,
@@ -1538,6 +1650,42 @@ function AssignmentsTab() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Minutes)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={180}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={durationMin as unknown as string}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setDurationMin(v === "" ? "" : Number(v));
+                      }}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Seconds)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={durationSec as unknown as string}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setDurationSec(v === "" ? "" : Number(v));
+                      }}
+                      placeholder="Sec"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Start Date
                     </Label>
                     <Input
@@ -1630,11 +1778,24 @@ function AssignmentsTab() {
                       );
                       return;
                     }
+                    const repsNum = reps === "" ? null : Number(reps);
+                    const durationMinNum = durationMin === "" ? null : Number(durationMin);
+                    const durationSecNum = durationSec === "" ? null : Number(durationSec);
+
+                    const hasReps = repsNum !== null && repsNum > 0;
+                    const hasDuration = (durationMinNum !== null && durationMinNum > 0) || (durationSecNum !== null && durationSecNum > 0);
+                    if (!hasReps && !hasDuration) {
+                      toast.error(intl.formatMessage({ id: "physio.assign.eitherRepsOrDurationRequired" }));
+                      return;
+                    }
+
                     assign.mutate({
                       clientId: Number(clientId),
                       exerciseId: Number(exerciseId),
-                      reps: reps === "" ? undefined : Number(reps),
+                      reps: repsNum,
                       sets: sets === "" ? undefined : Number(sets),
+                      durationMin: durationMinNum,
+                      durationSec: durationSecNum,
                       dailyFrequency:
                         dailyFrequency === ""
                           ? undefined
@@ -1711,6 +1872,36 @@ function AssignmentsTab() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Minutes)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={180}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editDurationMin}
+                      onChange={e => setEditDurationMin(e.target.value)}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Seconds)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editDurationSec}
+                      onChange={e => setEditDurationSec(e.target.value)}
+                      placeholder="Sec"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -1816,8 +2007,8 @@ function AssignmentsTab() {
               <TableHead className="w-[20%]">Patient</TableHead>
               <TableHead className="w-[25%]">Exercise</TableHead>
               <TableHead className="w-[8%] text-center">Sets</TableHead>
-              <TableHead className="w-[8%] text-center">Reps</TableHead>
-              <TableHead className="w-[25%]">Period</TableHead>
+              <TableHead className="w-[12%] text-center">Reps / Duration</TableHead>
+              <TableHead className="w-[21%]">Period</TableHead>
               <TableHead className="w-[10%] text-center">Status</TableHead>
               <TableHead className="w-[8%]" />
             </TableRow>
@@ -1842,10 +2033,15 @@ function AssignmentsTab() {
                 <TableCell className="w-[8%] text-center">
                   {row.assignment.sets}
                 </TableCell>
-                <TableCell className="w-[8%] text-center">
-                  {row.assignment.reps}
+                <TableCell className="w-[12%] text-center font-medium">
+                  {formatRepsOrDuration(
+                    row.assignment.reps,
+                    row.assignment.durationMin,
+                    row.assignment.durationSec,
+                    language
+                  )}
                 </TableCell>
-                <TableCell className="w-[25%] text-xs text-slate-500 font-medium">
+                <TableCell className="w-[21%] text-xs text-slate-500 font-medium">
                   {formatDate(row.assignment.startDate)} –{" "}
                   {formatDate(row.assignment.endDate)}
                 </TableCell>

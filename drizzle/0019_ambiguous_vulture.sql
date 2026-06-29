@@ -1,0 +1,1 @@
+ALTER TABLE `exercises` MODIFY COLUMN `defaultSets` int NOT NULL DEFAULT 1;

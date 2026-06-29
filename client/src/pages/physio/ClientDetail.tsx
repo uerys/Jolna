@@ -72,6 +72,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/contexts/I18nContext";
+import { formatPrescriptionShort } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
@@ -379,6 +381,7 @@ export default function PhysioClientDetail() {
   const clientId = Number(id);
   const { user, loading } = useAuth();
   const intl = useIntl();
+  const { language } = useI18n();
   const utils = trpc.useUtils();
   const customExTypes = trpc.physio.listCustomExerciseTypes.useQuery();
   const customInjTypes = trpc.physio.listCustomInjuryTypes.useQuery();
@@ -401,21 +404,28 @@ export default function PhysioClientDetail() {
   const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
   const [editReps, setEditReps] = useState<string>("1");
   const [editSets, setEditSets] = useState<string>("1");
+  const [editDurationMin, setEditDurationMin] = useState<string>("");
+  const [editDurationSec, setEditDurationSec] = useState<string>("");
   const [editDailyFrequency, setEditDailyFrequency] = useState<string>("1");
   const [editStartDate, setEditStartDate] = useState<string>("");
   const [editEndDate, setEditEndDate] = useState<string>("");
   const [editInjuryType, setEditInjuryType] = useState<string>("");
   const [editExerciseType, setEditExerciseType] = useState<string>("");
   const [editExerciseTitle, setEditExerciseTitle] = useState<string>("");
-
   // New Exercise Form States
   const [newExerciseId, setNewExerciseId] = useState<string>("");
   const [newSets, setNewSets] = useState<string>("1");
   const [newReps, setNewReps] = useState<string>("10");
-  const [newStartDate, setNewStartDate] = useState<string>(
-    new Date().toLocaleDateString("en-CA")
-  );
-  const [newEndDate, setNewEndDate] = useState<string>("");
+  const [newDurationMin, setNewDurationMin] = useState<string>("");
+  const [newDurationSec, setNewDurationSec] = useState<string>("");
+  const today = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
+  const fortnight = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toLocaleDateString("en-CA");
+  }, []);
+  const [newStartDate, setNewStartDate] = useState<string>(today);
+  const [newEndDate, setNewEndDate] = useState<string>(fortnight);
   const [newInjuryType, setNewInjuryType] = useState<string>("");
   const [newExerciseType, setNewExerciseType] = useState<string>("");
   const [newDailyFrequency, setNewDailyFrequency] = useState<string>("1");
@@ -501,13 +511,29 @@ export default function PhysioClientDetail() {
     enabled: isAssignOpen && isQueryEnabled,
   });
 
+  // Pre-populate client's injuryType when the assign dialog opens
+  useEffect(() => {
+    if (isAssignOpen && client.data?.injuryType && client.data.injuryType !== "other" && client.data.injuryType !== "none") {
+      setNewInjuryType(client.data.injuryType);
+    }
+  }, [isAssignOpen, client.data?.injuryType]);
+
   useEffect(() => {
     if (!newExerciseId) return;
     const ex = exercisesList.data?.find(e => String(e.id) === newExerciseId);
     if (ex) {
-      if (typeof ex.defaultReps === "number") setNewReps(String(ex.defaultReps));
+      if (typeof ex.defaultReps === "number") {
+        setNewReps(String(ex.defaultReps));
+      } else {
+        setNewReps("");
+      }
       if (typeof ex.defaultSets === "number") setNewSets(String(ex.defaultSets));
-      if ((ex as any).exerciseType) setNewExerciseType((ex as any).exerciseType);
+      if ((ex as any).exerciseType && (ex as any).exerciseType !== "other") {
+        setNewExerciseType((ex as any).exerciseType);
+      }
+
+      setNewDurationMin(ex.defaultDurationMin !== null && ex.defaultDurationMin !== undefined ? String(ex.defaultDurationMin) : "");
+      setNewDurationSec(ex.defaultDurationSec !== null && ex.defaultDurationSec !== undefined ? String(ex.defaultDurationSec) : "");
     }
   }, [newExerciseId, exercisesList.data]);
   // Mutations
@@ -522,8 +548,10 @@ export default function PhysioClientDetail() {
       setNewExerciseId("");
       setNewSets("1");
       setNewReps("10");
-      setNewStartDate(new Date().toLocaleDateString("en-CA"));
-      setNewEndDate("");
+      setNewDurationMin("");
+      setNewDurationSec("");
+      setNewStartDate(today);
+      setNewEndDate(fortnight);
       setNewInjuryType("");
       setNewExerciseType("");
       setNewDailyFrequency("1");
@@ -1084,11 +1112,24 @@ export default function PhysioClientDetail() {
       toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
       return;
     }
+    const repsNum = newReps === "" ? null : Number(newReps);
+    const durationMinNum = newDurationMin === "" ? null : Number(newDurationMin);
+    const durationSecNum = newDurationSec === "" ? null : Number(newDurationSec);
+
+    const hasReps = repsNum !== null && repsNum > 0;
+    const hasDuration = (durationMinNum !== null && durationMinNum > 0) || (durationSecNum !== null && durationSecNum > 0);
+    if (!hasReps && !hasDuration) {
+      toast.error(intl.formatMessage({ id: "physio.assign.eitherRepsOrDurationRequired" }));
+      return;
+    }
+
     assignMutation.mutate({
       exerciseId: Number(newExerciseId),
       clientId,
       sets: Number(newSets),
-      reps: Number(newReps),
+      reps: repsNum,
+      durationMin: durationMinNum,
+      durationSec: durationSecNum,
       dailyFrequency: Math.max(1, Number(newDailyFrequency) || 1),
       startDate: newStartDate,
       endDate: newEndDate,
@@ -1105,7 +1146,7 @@ export default function PhysioClientDetail() {
 
   const handleEditClick = (a: any) => {
     setEditAssignmentId(a.assignment.id);
-    setEditReps(String(a.assignment.reps));
+    setEditReps(a.assignment.reps !== null && a.assignment.reps !== undefined ? String(a.assignment.reps) : "");
     setEditSets(String(a.assignment.sets));
     setEditDailyFrequency(String(a.assignment.dailyFrequency ?? 1));
     setEditStartDate(a.assignment.startDate);
@@ -1113,6 +1154,8 @@ export default function PhysioClientDetail() {
     setEditInjuryType(a.assignment.injuryType);
     setEditExerciseType(a.assignment.exerciseType);
     setEditExerciseTitle(a.exercise.title);
+    setEditDurationMin(a.assignment.durationMin !== null && a.assignment.durationMin !== undefined ? String(a.assignment.durationMin) : "");
+    setEditDurationSec(a.assignment.durationSec !== null && a.assignment.durationSec !== undefined ? String(a.assignment.durationSec) : "");
     setIsEditOpen(true);
   };
 
@@ -1122,11 +1165,24 @@ export default function PhysioClientDetail() {
       toast.error(intl.formatMessage({ id: "physio.assign.invalidDates" }));
       return;
     }
+    const repsNum = editReps === "" ? null : Number(editReps);
+    const durationMinNum = editDurationMin === "" ? null : Number(editDurationMin);
+    const durationSecNum = editDurationSec === "" ? null : Number(editDurationSec);
+
+    const hasReps = repsNum !== null && repsNum > 0;
+    const hasDuration = (durationMinNum !== null && durationMinNum > 0) || (durationSecNum !== null && durationSecNum > 0);
+    if (!hasReps && !hasDuration) {
+      toast.error(intl.formatMessage({ id: "physio.assign.eitherRepsOrDurationRequired" }));
+      return;
+    }
+
     updateAssignmentMutation.mutate({
       id: editAssignmentId,
       patch: {
-        reps: parseInt(editReps),
+        reps: repsNum,
         sets: parseInt(editSets),
+        durationMin: durationMinNum,
+        durationSec: durationSecNum,
         dailyFrequency: parseInt(editDailyFrequency),
         startDate: editStartDate,
         endDate: editEndDate,
@@ -2303,7 +2359,13 @@ export default function PhysioClientDetail() {
                               {formatDateShort(a.assignment.endDate)}
                             </TableCell>
                             <TableCell className="text-slate-800 text-sm font-semibold font-mono">
-                              {a.assignment.sets} × {a.assignment.reps}
+                              {formatPrescriptionShort(
+                                a.assignment.sets,
+                                a.assignment.reps,
+                                a.assignment.durationMin,
+                                a.assignment.durationSec,
+                                { lang: language }
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -2496,8 +2558,18 @@ export default function PhysioClientDetail() {
                                 ),
                               },
                               {
-                                label: "Sets & Reps",
-                                value: `${a.assignment.sets} × ${a.assignment.reps}`,
+                                label: a.assignment.reps !== null && a.assignment.reps !== undefined && (a.assignment.durationMin || a.assignment.durationSec)
+                                  ? intl.formatMessage({ id: "client.today.detail.setsRepsDuration", defaultMessage: "Sets, Reps & Duration" })
+                                  : a.assignment.reps !== null && a.assignment.reps !== undefined
+                                    ? intl.formatMessage({ id: "client.today.detail.setsReps", defaultMessage: "Sets & Reps" })
+                                    : intl.formatMessage({ id: "client.today.detail.setsDuration", defaultMessage: "Sets & Duration" }),
+                                value: formatPrescriptionShort(
+                                  a.assignment.sets,
+                                  a.assignment.reps,
+                                  a.assignment.durationMin,
+                                  a.assignment.durationSec,
+                                  { lang: language }
+                                ),
                               },
                               {
                                 label: "Daily Target",
@@ -2953,6 +3025,36 @@ export default function PhysioClientDetail() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Minutes)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={180}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={newDurationMin}
+                      onChange={e => setNewDurationMin(e.target.value)}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Seconds)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={newDurationSec}
+                      onChange={e => setNewDurationSec(e.target.value)}
+                      placeholder="Sec"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Start Date
                     </Label>
                     <Input
@@ -2989,6 +3091,9 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3009,6 +3114,9 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3097,6 +3205,37 @@ export default function PhysioClientDetail() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Minutes)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={180}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editDurationMin}
+                      onChange={e => setEditDurationMin(e.target.value)}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Duration (Seconds)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      className="h-10 mt-1 bg-white border-slate-200 focus:ring-indigo-600 text-slate-700"
+                      value={editDurationSec}
+                      onChange={e => setEditDurationSec(e.target.value)}
+                      placeholder="Sec"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Start Date
                     </Label>
                     <Input
@@ -3133,6 +3272,9 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Injury Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customInjTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
@@ -3153,6 +3295,9 @@ export default function PhysioClientDetail() {
                         <SelectValue placeholder="Exercise Class" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border border-slate-200 shadow-md">
+                        <SelectItem value="other">
+                          <FormattedMessage id="common.other" defaultMessage="Other" />
+                        </SelectItem>
                         {(customExTypes.data ?? []).map(type => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}

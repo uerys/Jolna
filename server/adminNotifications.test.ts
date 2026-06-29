@@ -229,4 +229,36 @@ describe("Physiotherapist exercise modification notifications", () => {
       href: "/client/exercises",
     });
   });
+
+  it("should support modifying exercise assignment with duration instead of reps", async () => {
+    const assignment = {
+      id: 5,
+      exerciseId: 30,
+      clientId: 10,
+      physiotherapistId: 2,
+    };
+    const clientUser = {
+      id: 10,
+      name: "Test Client",
+      languagePreference: "en",
+    };
+    const exercise = { id: 30, title: "Knee Stretch" };
+
+    vi.mocked(getAssignmentById).mockResolvedValue(assignment as any);
+    vi.mocked(getUserById).mockResolvedValue(clientUser as any);
+    vi.mocked(getExerciseById).mockResolvedValue(exercise as any);
+
+    const caller = appRouter.createCaller(makePhysioCtx());
+    await caller.physio.updateAssignment({
+      id: 5,
+      patch: {
+        reps: null,
+        durationMin: 2,
+        durationSec: 30,
+      },
+    });
+
+    expect(updateAssignment).toHaveBeenCalledWith(5, { reps: null, durationMin: 2, durationSec: 30 });
+    expect(createNotification).toHaveBeenCalledTimes(1);
+  });
 });

@@ -127,6 +127,20 @@
       "when": 1782308787799,
       "tag": "0017_gorgeous_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1782721584434,
+      "tag": "0018_dusty_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1782721646762,
+      "tag": "0019_ambiguous_vulture",
+      "breakpoints": true
     }
   ]
 }

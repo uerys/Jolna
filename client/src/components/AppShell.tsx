@@ -147,7 +147,7 @@ export default function AppShell({ children, sidebar }: Readonly<Props>) {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-50">
+                  <SelectTrigger className="w-64">
                     <SelectValue>
                       {impersonating
                         ? `Viewing as ${user?.name ?? user?.email ?? "user"}`

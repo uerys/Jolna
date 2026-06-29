@@ -43,6 +43,8 @@ export async function runReminderJob() {
           id: assignments.id,
           sets: assignments.sets,
           reps: assignments.reps,
+          durationMin: assignments.durationMin,
+          durationSec: assignments.durationSec,
           exerciseTitle: exercises.title,
         })
         .from(assignments)
@@ -90,8 +92,29 @@ export async function runReminderJob() {
 
       const exerciseListHtml = activeTodayAssignments
         .map(
-          a =>
-            `<li><strong>${a.exerciseTitle}</strong> — ធ្វើចំនួន ${a.sets} សិត x ${a.reps} ដង (${a.sets} sets x ${a.reps} reps)</li>`
+          a => {
+            const hasReps = a.reps !== null && a.reps !== undefined;
+            const hasDuration = (a.durationMin !== null && a.durationMin !== undefined && a.durationMin > 0) ||
+                                (a.durationSec !== null && a.durationSec !== undefined && a.durationSec > 0);
+            
+            let specKh = "";
+            let specEn = "";
+            if (hasReps && hasDuration) {
+              const dur = [a.durationMin ? `${a.durationMin}m` : "", a.durationSec ? `${a.durationSec}s` : ""].filter(Boolean).join(" ");
+              const durKh = [a.durationMin ? `${a.durationMin} នាទី` : "", a.durationSec ? `${a.durationSec} វិនាទី` : ""].filter(Boolean).join(" ");
+              specKh = ` x ${a.reps} ដង (${durKh})`;
+              specEn = ` x ${a.reps} reps (${dur})`;
+            } else if (hasReps) {
+              specKh = ` x ${a.reps} ដង`;
+              specEn = ` x ${a.reps} reps`;
+            } else if (hasDuration) {
+              const dur = [a.durationMin ? `${a.durationMin}m` : "", a.durationSec ? `${a.durationSec}s` : ""].filter(Boolean).join(" ");
+              const durKh = [a.durationMin ? `${a.durationMin} នាទី` : "", a.durationSec ? `${a.durationSec} វិនាទី` : ""].filter(Boolean).join(" ");
+              specKh = ` x ${durKh}`;
+              specEn = ` x ${dur}`;
+            }
+            return `<li><strong>${a.exerciseTitle}</strong> — ធ្វើចំនួន ${a.sets} សិត${specKh} (${a.sets} sets${specEn})</li>`;
+          }
         )
         .join("");
 

@@ -25,6 +25,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { formatPrescriptionShort } from "@/lib/utils";
 import { useI18n } from "@/contexts/I18nContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -497,6 +498,62 @@ function YouTubeInlinePlayer({
 
   return <div ref={containerRef} className="w-full h-full" />;
 }
+function formatPrescription(
+  sets: number,
+  reps: number | null | undefined,
+  durationMin: number | null | undefined,
+  durationSec: number | null | undefined,
+  dailyFrequency: number,
+  lang: "en" | "kh"
+) {
+  let detail = "";
+  const hasReps = reps !== null && reps !== undefined;
+  const hasDuration = (durationMin !== null && durationMin !== undefined && durationMin > 0) ||
+                      (durationSec !== null && durationSec !== undefined && durationSec > 0);
+                      
+  if (lang === "kh") {
+    detail = `${sets} សិត`;
+    if (hasReps && hasDuration) {
+      const durText = [
+        durationMin ? `${durationMin} នាទី` : "",
+        durationSec ? `${durationSec} វិនាទី` : ""
+      ].filter(Boolean).join(" ");
+      detail += ` × ${reps} ដង (${durText})`;
+    } else if (hasReps) {
+      detail += ` × ${reps} ដង`;
+    } else if (hasDuration) {
+      const durText = [
+        durationMin ? `${durationMin} នាទី` : "",
+        durationSec ? `${durationSec} វិនាទី` : ""
+      ].filter(Boolean).join(" ");
+      detail += ` × ${durText}`;
+    }
+    detail += ` • ${dailyFrequency} ដង/ថ្ងៃ`;
+  } else {
+    const setsText = sets === 1 ? "set" : "sets";
+    detail = `${sets} ${setsText}`;
+    if (hasReps && hasDuration) {
+      const repsText = reps === 1 ? "rep" : "reps";
+      const durText = [
+        durationMin ? `${durationMin}m` : "",
+        durationSec ? `${durationSec}s` : ""
+      ].filter(Boolean).join(" ");
+      detail += ` × ${reps} ${repsText} (${durText})`;
+    } else if (hasReps) {
+      const repsText = reps === 1 ? "rep" : "reps";
+      detail += ` × ${reps} ${repsText}`;
+    } else if (hasDuration) {
+      const durText = [
+        durationMin ? `${durationMin}m` : "",
+        durationSec ? `${durationSec}s` : ""
+      ].filter(Boolean).join(" ");
+      detail += ` × ${durText}`;
+    }
+    const timesText = dailyFrequency === 1 ? "time" : "times";
+    detail += ` • ${dailyFrequency} ${timesText}/day`;
+  }
+  return detail;
+}
 function ExerciseCard({
   assignment,
   exercise,
@@ -506,8 +563,10 @@ function ExerciseCard({
 }: {
   assignment: {
     id: number;
-    reps: number;
+    reps: number | null;
     sets: number;
+    durationMin: number | null;
+    durationSec: number | null;
     dailyFrequency: number;
     startDate: string;
     endDate: string;
@@ -538,7 +597,9 @@ function ExerciseCard({
   const isDoneToday = (todayLogCount ?? 0) >= dailyFrequency;
 
   const instructions =
-    language === "kh" ? exercise.instructionsKh : exercise.instructionsEn;
+    (language === "kh" ? exercise.instructionsKh : exercise.instructionsEn) ||
+    exercise.instructionsEn ||
+    exercise.instructionsKh;
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -717,13 +778,13 @@ function ExerciseCard({
                 {exercise.title}
               </CardTitle>
               <p className="text-sm font-medium text-muted-foreground mt-1.5">
-                {intl.formatMessage(
-                  { id: "client.today.prescription" },
-                  {
-                    sets: assignment.sets,
-                    reps: assignment.reps,
-                    dailyFrequency: assignment.dailyFrequency,
-                  }
+                {formatPrescription(
+                  assignment.sets,
+                  assignment.reps,
+                  assignment.durationMin,
+                  assignment.durationSec,
+                  assignment.dailyFrequency,
+                  language
                 )}
               </p>
             </div>
@@ -989,15 +1050,27 @@ function ExerciseCard({
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">
-                  <FormattedMessage id="client.today.detail.setsReps" />
+                  {assignment.reps !== null && assignment.reps !== undefined && (assignment.durationMin || assignment.durationSec) ? (
+                    <FormattedMessage id="client.today.detail.setsRepsDuration" defaultMessage="Sets, Reps & Duration" />
+                  ) : assignment.reps !== null && assignment.reps !== undefined ? (
+                    <FormattedMessage id="client.today.detail.setsReps" />
+                  ) : (
+                    <FormattedMessage id="client.today.detail.setsDuration" defaultMessage="Sets & Duration" />
+                  )}
                 </span>
                 <p className="font-medium">
-                  {assignment.sets} × {assignment.reps} (
-                  {intl.formatMessage(
+                  {formatPrescriptionShort(
+                    assignment.sets,
+                    assignment.reps,
+                    assignment.durationMin,
+                    assignment.durationSec,
+                    { lang: language, withLabels: true }
+                  )}
+                  {" "}
+                  ({intl.formatMessage(
                     { id: "client.today.detail.dailyTarget" },
                     { dailyFrequency: assignment.dailyFrequency }
-                  )}
-                  )
+                  )})
                 </p>
               </div>
               <div>

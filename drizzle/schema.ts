@@ -131,8 +131,10 @@ export const exercises = mysqlTable(
     exerciseType: varchar("exerciseType", { length: 255 })
       .default("other")
       .notNull(),
-    defaultReps: int("defaultReps").notNull().default(10),
+    defaultReps: int("defaultReps"),
     defaultSets: int("defaultSets").notNull().default(1),
+    defaultDurationMin: int("defaultDurationMin"),
+    defaultDurationSec: int("defaultDurationSec"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -161,8 +163,10 @@ export const assignments = mysqlTable(
     exerciseType: varchar("exerciseType", { length: 255 })
       .default("other")
       .notNull(),
-    reps: int("reps").notNull(),
+    reps: int("reps"),
     sets: int("sets").notNull().default(1),
+    durationMin: int("durationMin"),
+    durationSec: int("durationSec"),
     dailyFrequency: int("dailyFrequency").notNull().default(1),
     startDate: date("startDate", { mode: "string" }).notNull(),
     endDate: date("endDate", { mode: "string" }).notNull(),

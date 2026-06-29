@@ -96,13 +96,34 @@ export const physioRouter = router({
     .input(
       z.object({
         title: z.string().min(1).max(255),
-        instructionsEn: z.string().min(1),
-        instructionsKh: z.string().min(1),
+        instructionsEn: z.string().default(""),
+        instructionsKh: z.string().default(""),
         videoUrl: z.string().url().max(1024),
         exerciseType: ExerciseTypeEnum.optional(),
-        defaultReps: z.number().int().min(1).max(500),
-        defaultSets: z.number().int().min(1).max(100),
+        defaultReps: z.number().int().min(1).max(500).optional().nullable(),
+        defaultSets: z.number().int().min(1).max(100).optional(),
+        defaultDurationMin: z.number().int().min(0).max(180).optional().nullable(),
+        defaultDurationSec: z.number().int().min(0).max(59).optional().nullable(),
       })
+      .refine(
+        data => data.instructionsEn.trim().length > 0 || data.instructionsKh.trim().length > 0,
+        {
+          message: "At least one of English or Khmer instructions must be provided",
+          path: ["instructionsEn"],
+        }
+      )
+      .refine(
+        data => {
+          const hasReps = typeof data.defaultReps === "number" && data.defaultReps > 0;
+          const hasDuration = (typeof data.defaultDurationMin === "number" && data.defaultDurationMin > 0) ||
+                              (typeof data.defaultDurationSec === "number" && data.defaultDurationSec > 0);
+          return hasReps || hasDuration;
+        },
+        {
+          message: "Either default reps or duration must be provided",
+          path: ["defaultReps"]
+        }
+      )
     )
     .mutation(({ ctx, input }) =>
       createExercise({
@@ -118,12 +139,14 @@ export const physioRouter = router({
         id: z.number().int().positive(),
         patch: z.object({
           title: z.string().min(1).max(255).optional(),
-          instructionsEn: z.string().min(1).optional(),
-          instructionsKh: z.string().min(1).optional(),
+          instructionsEn: z.string().optional(),
+          instructionsKh: z.string().optional(),
           videoUrl: z.string().url().max(1024).optional(),
           exerciseType: ExerciseTypeEnum.optional(),
-          defaultReps: z.number().int().min(1).max(500).optional(),
+          defaultReps: z.number().int().min(1).max(500).optional().nullable(),
           defaultSets: z.number().int().min(1).max(100).optional(),
+          defaultDurationMin: z.number().int().min(0).max(180).optional().nullable(),
+          defaultDurationSec: z.number().int().min(0).max(59).optional().nullable(),
         }),
       })
     )
@@ -132,6 +155,16 @@ export const physioRouter = router({
       if (!ex) throw new TRPCError({ code: "NOT_FOUND" });
       if (ex.createdBy !== ctx.user.id)
         throw new TRPCError({ code: "FORBIDDEN" });
+
+      const en = input.patch.instructionsEn !== undefined ? input.patch.instructionsEn : ex.instructionsEn;
+      const kh = input.patch.instructionsKh !== undefined ? input.patch.instructionsKh : ex.instructionsKh;
+      if (!en.trim() && !kh.trim()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "At least one of English or Khmer instructions must be provided",
+        });
+      }
+
       return updateExercise(input.id, input.patch);
     }),
 
@@ -231,8 +264,10 @@ export const physioRouter = router({
         clientId: z.number().int().positive(),
         injuryType: InjuryTypeEnum.optional(),
         exerciseType: ExerciseTypeEnum.optional(),
-        reps: z.number().int().min(1).max(500).optional(),
+        reps: z.number().int().min(1).max(500).optional().nullable(),
         sets: z.number().int().min(1).max(100).optional(),
+        durationMin: z.number().int().min(0).max(180).optional().nullable(),
+        durationSec: z.number().int().min(0).max(59).optional().nullable(),
         dailyFrequency: z.number().int().min(1).max(20).default(1).optional(),
         startDate: dateString,
         endDate: dateString,
@@ -245,8 +280,10 @@ export const physioRouter = router({
       if (client?.physiotherapistId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      const repsToUse = input.reps ?? ex.defaultReps;
-      const setsToUse = input.sets ?? ex.defaultSets ?? 1;
+      const repsToUse = input.reps !== undefined ? input.reps : ex.defaultReps;
+      const setsToUse = input.sets !== undefined ? input.sets : ex.defaultSets;
+      const durationMinToUse = input.durationMin !== undefined ? input.durationMin : ex.defaultDurationMin;
+      const durationSecToUse = input.durationSec !== undefined ? input.durationSec : ex.defaultDurationSec;
       const assignment = await createAssignment({
         exerciseId: input.exerciseId,
         clientId: input.clientId,
@@ -255,6 +292,8 @@ export const physioRouter = router({
         exerciseType: input.exerciseType ?? ex.exerciseType ?? "other",
         reps: repsToUse,
         sets: setsToUse,
+        durationMin: durationMinToUse,
+        durationSec: durationSecToUse,
         dailyFrequency: input.dailyFrequency ?? 1,
         startDate: input.startDate,
         endDate: input.endDate,
@@ -342,8 +381,10 @@ export const physioRouter = router({
         patch: z.object({
           injuryType: InjuryTypeEnum.optional(),
           exerciseType: ExerciseTypeEnum.optional(),
-          reps: z.number().int().min(1).max(500).optional(),
+          reps: z.number().int().min(1).max(500).optional().nullable(),
           sets: z.number().int().min(1).max(100).optional(),
+          durationMin: z.number().int().min(0).max(180).optional().nullable(),
+          durationSec: z.number().int().min(0).max(59).optional().nullable(),
           dailyFrequency: z.number().int().min(1).max(20).optional(),
           startDate: dateString.optional(),
           endDate: dateString.optional(),

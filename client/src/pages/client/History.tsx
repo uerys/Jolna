@@ -30,6 +30,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useI18n } from "@/contexts/I18nContext";
+import { formatPrescriptionShort } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   AreaChart,
@@ -253,6 +255,7 @@ const CustomizedActiveDot = ({
 
 export default function ClientHistory() {
   const { user, loading } = useAuth();
+  const { language } = useI18n();
   const isClient = !!user && (user.role === "client" || user.role === "user");
   const intl = useIntl();
   const isMobile = useIsMobile();
@@ -1107,10 +1110,22 @@ export default function ClientHistory() {
                     <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2.5 mb-2">
                       <div>
                         <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                          <FormattedMessage id="client.today.detail.setsReps" />
+                          {a.assignment.reps !== null && a.assignment.reps !== undefined && (a.assignment.durationMin || a.assignment.durationSec) ? (
+                            <FormattedMessage id="client.today.detail.setsRepsDuration" defaultMessage="Sets, Reps & Duration" />
+                          ) : a.assignment.reps !== null && a.assignment.reps !== undefined ? (
+                            <FormattedMessage id="client.today.detail.setsReps" />
+                          ) : (
+                            <FormattedMessage id="client.today.detail.setsDuration" defaultMessage="Sets & Duration" />
+                          )}
                         </span>
                         <p className="font-medium text-slate-800 text-sm mt-0.5">
-                          {a.assignment.sets} × {a.assignment.reps}
+                          {formatPrescriptionShort(
+                            a.assignment.sets,
+                            a.assignment.reps,
+                            a.assignment.durationMin,
+                            a.assignment.durationSec,
+                            { lang: language }
+                          )}
                         </p>
                       </div>
                       <div>

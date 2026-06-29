@@ -167,3 +167,97 @@ describe("sendTestEmail", () => {
     ).rejects.toThrow("Failed to send test email");
   });
 });
+describe("exercise creation validation", () => {
+  it("rejects when both English and Khmer instructions are empty", async () => {
+    const caller = appRouter.createCaller(makeCtx("physiotherapist"));
+    await expect(
+      caller.physio.createExercise({
+        title: "Test Exercise",
+        instructionsEn: "",
+        instructionsKh: "",
+        videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+        defaultReps: 10,
+        defaultSets: 3,
+      })
+    ).rejects.toThrow();
+  });
+
+  it("passes validation when only English instructions are provided", async () => {
+    const caller = appRouter.createCaller(makeCtx("physiotherapist"));
+    const result = await caller.physio.createExercise({
+      title: "Test Exercise",
+      instructionsEn: "Only English instructions here",
+      instructionsKh: "",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+      defaultReps: 10,
+      defaultSets: 3,
+    });
+    expect(result).toMatchObject({
+      title: "Test Exercise",
+      instructionsEn: "Only English instructions here",
+      instructionsKh: "",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+    });
+  });
+
+  it("passes validation when only Khmer instructions are provided", async () => {
+    const caller = appRouter.createCaller(makeCtx("physiotherapist"));
+    const result = await caller.physio.createExercise({
+      title: "Test Exercise",
+      instructionsEn: "",
+      instructionsKh: "សេចក្តីណែនាំជាភាសាខ្មែរ",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+      defaultReps: 10,
+      defaultSets: 3,
+    });
+    expect(result).toMatchObject({
+      title: "Test Exercise",
+      instructionsEn: "",
+      instructionsKh: "សេចក្តីណែនាំជាភាសាខ្មែរ",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+    });
+  });
+
+  it("rejects updating an exercise to have both instructions empty", async () => {
+    const caller = appRouter.createCaller(makeCtx("physiotherapist"));
+    const created = await caller.physio.createExercise({
+      title: "Update Test Exercise",
+      instructionsEn: "English",
+      instructionsKh: "Khmer",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+      defaultReps: 10,
+      defaultSets: 3,
+    });
+    await expect(
+      caller.physio.updateExercise({
+        id: created.id,
+        patch: {
+          instructionsEn: "",
+          instructionsKh: "",
+        },
+      })
+    ).rejects.toThrow();
+  });
+
+  it("allows updating only one instruction language to be empty", async () => {
+    const caller = appRouter.createCaller(makeCtx("physiotherapist"));
+    const created = await caller.physio.createExercise({
+      title: "Update Test Exercise",
+      instructionsEn: "English",
+      instructionsKh: "Khmer",
+      videoUrl: "https://www.youtube.com/embed/J2jWMY2sfB0",
+      defaultReps: 10,
+      defaultSets: 3,
+    });
+    const updated = await caller.physio.updateExercise({
+      id: created.id,
+      patch: {
+        instructionsKh: "",
+      },
+    });
+    expect(updated).toMatchObject({
+      instructionsEn: "English",
+      instructionsKh: "",
+    });
+  });
+});
