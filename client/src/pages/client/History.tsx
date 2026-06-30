@@ -851,12 +851,12 @@ export default function ClientHistory() {
           </Card>
         </div>
 
-        {/* Pain Trajectory Chart */}
+        {/* Pain Score Chart */}
         <Card className="bg-white border border-slate-200 shadow-sm rounded-xl">
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-medium text-slate-900 font-sans">
-                <FormattedMessage id="client.history.painTrajectory" />
+                <FormattedMessage id="client.history.painScore" />
               </CardTitle>
               <p className="text-xs text-slate-400 font-normal">
                 {sortedData.length > 0

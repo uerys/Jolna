@@ -57,7 +57,7 @@ function ChartTick({
 }
 
 /**
- * Physio-wide monitoring overview: aggregated pain trajectory across all clients +
+ * Physio-wide monitoring overview: aggregated pain score across all clients +
  * high-pain alerts within the last 24h.
  */
 export function MonitoringOverview() {
@@ -153,8 +153,7 @@ export function MonitoringOverview() {
       <Card className="transition-shadow hover:shadow-md">
         <CardHeader className="pb-3">
           <CardTitle className="text-base sm:text-lg">
-            <FormattedMessage id="physio.monitor.painTrend" /> — average across
-            clients
+            <FormattedMessage id="physio.monitor.painTrendAvg" />
           </CardTitle>
         </CardHeader>
         <CardContent className="h-72 sm:h-[420px] rounded-3xl bg-white text-slate-900 shadow-inner">

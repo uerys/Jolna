@@ -141,7 +141,7 @@
   "physio.assign.created": "បានផ្ដល់កិច្ចការ។",
   "physio.assign.deleteConfirm": "តើអ្នកប្រាកដជាចង់លុបកិច្ចការដែលបានផ្ដល់ជូននេះមែនទេ?",
 
-  "physio.monitor.painTrend": "គន្លងនៃការឈឺចាប់",
+  "physio.monitor.painTrend": "កម្រិតនៃការឈឺចាប់",
   "physio.monitor.completion": "អត្រាបញ្ចប់",
   "physio.monitor.history": "ប្រវត្តិវគ្គ",
   "physio.monitor.noData": "មិនទាន់មានទិន្នន័យយោបល់ទេ។",
@@ -214,7 +214,7 @@
   "client.history.table.painScore": "កម្រិតឈឺ",
   "client.history.table.completion": "ការបញ្ចប់",
   "client.history.table.patientNotes": "កំណត់ចំណាំអ្នកជំងឺ",
-  "client.history.painTrajectory": "តារាងគន្លងនៃការឈឺចាប់",
+  "client.history.painScore": "តារាងកម្រិតនៃការឈឺចាប់",
   "client.history.clinicalOverview": "ទិដ្ឋភាពទូទៅនៃការព្យាបាល",
   "client.history.noDataRange": "គ្មានទិន្នន័យ",
   "client.history.noLog": "មិនទាន់បានកត់ត្រា",
@@ -241,7 +241,7 @@
   "physio.detail.onlyPhysio": "មានតែអ្នកស្តារកាយប៉ុណ្ណោះតែអាចមើលទំព័រនេះ។",
   "physio.monitor.activeSessions": "វគ្គកំពុងតាមដាន",
   "physio.monitor.alertsCount": "ការរាយការណ៍កម្រិតឈឺខ្ពស់ (48 ម៉ោង)",
-  "physio.monitor.painTrendAvg": "គន្លងនៃការឈឺចាប់ — មធ្យមភាគនៃអ្នកជំងឺទាំងអស់",
+  "physio.monitor.painTrendAvg": "កម្រិតនៃការឈឺចាប់ — មធ្យមភាគនៃអ្នកជំងឺទាំងអស់",
 
   "common.notAuthorised": "មិនមានសិទ្ធិចូល",
   "common.dashboard": "ផ្ទាំងគ្រប់គ្រង",

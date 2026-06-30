@@ -141,7 +141,7 @@
   "physio.assign.created": "Assignment created.",
   "physio.assign.deleteConfirm": "Are you sure you want to delete this assignment?",
 
-  "physio.monitor.painTrend": "Pain trajectory",
+  "physio.monitor.painTrend": "Pain score",
   "physio.monitor.completion": "Completion rate",
   "physio.monitor.history": "Session history",
   "physio.monitor.noData": "No feedback data yet.",
@@ -215,7 +215,7 @@
   "client.history.table.painScore": "Pain score",
   "client.history.table.completion": "Completion",
   "client.history.table.patientNotes": "Patient Notes",
-  "client.history.painTrajectory": "Pain Trajectory",
+  "client.history.painScore": "Pain Score",
   "client.history.clinicalOverview": "Clinical overview",
   "client.history.noDataRange": "No data range",
   "client.history.noLog": "No log submitted",
@@ -242,7 +242,7 @@
   "physio.detail.onlyPhysio": "Only physiotherapists can view this page.",
   "physio.monitor.activeSessions": "Active sessions tracked",
   "physio.monitor.alertsCount": "High-pain alerts (48h)",
-  "physio.monitor.painTrendAvg": "Pain trajectory — average across patients",
+  "physio.monitor.painTrendAvg": "Pain score — average across patients",
 
   "common.notAuthorised": "Not authorised",
   "common.dashboard": "Dashboard",
